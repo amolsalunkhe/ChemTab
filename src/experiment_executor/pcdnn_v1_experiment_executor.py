@@ -81,10 +81,12 @@ class PCDNNV1ExperimentExecutor:
         
                 
         #TODO:uncomment
-        #for itr in range(1,11):
+        for itr in range(1,11):
 		
 		#TODO:comment
-        for itr in range(1,2):
+        #for itr in range(1,2):
+
+            print(f'training model: {itr}') 
             
             t = time.process_time()
             
@@ -143,12 +145,12 @@ class PCDNNV1ExperimentExecutor:
         #Experiments  
         
         #TODO:uncomment
-        #dataTypes = ["randomequaltraintestsplit","frameworkincludedtrainexcludedtest"]
-        #inputTypes = ["AllSpeciesZmixCpv","AllSpeciesZmixPCA","AllSpeciesPurePCA","AllSpeciesSparsePCA","AllSpeciesZmixAndPurePCA","AllSpeciesZmixAndSparsePCA"]
+        dataTypes = ["randomequaltraintestsplit","frameworkincludedtrainexcludedtest"]
+        inputTypes = ["AllSpeciesZmixCpv","AllSpeciesZmixPCA","AllSpeciesPurePCA","AllSpeciesSparsePCA","AllSpeciesZmixAndPurePCA","AllSpeciesZmixAndSparsePCA"]
         
         #TODO:comment
-        dataTypes = ["frameworkincludedtrainexcludedtest"]
-        inputTypes = ["AllSpeciesZmixAndPurePCA"]
+        #dataTypes = ["frameworkincludedtrainexcludedtest"]
+        #inputTypes = ["AllSpeciesZmixAndPurePCA"]
         
         concatenateZmix = 'N'
         
@@ -180,10 +182,10 @@ class PCDNNV1ExperimentExecutor:
                 
                 if inputType.find('PCA') != -1:
                     #TODO:uncomment                    
-                    #noOfCpvs = [item for item in range(1, 6)]
+                    noOfCpvs = [item for item in range(1, 6)]
                     
                     #TODO:comment                    
-                    noOfCpvs = [item for item in range(2, 3)]
+                    #noOfCpvs = [item for item in range(2, 3)]
                     
                     for noOfCpv in noOfCpvs:
                         

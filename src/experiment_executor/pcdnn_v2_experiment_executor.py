@@ -81,15 +81,16 @@ class PCDNNV2ExperimentExecutor:
         
         
         #TODO:uncomment    
-        #for itr in range(1,11):
+        for itr in range(1,11):
         
         #TODO:comment    
-        for itr in range(1,2):    
+        #for itr in range(1,2):    
             
+            print(f'training model: {itr}')
             t = time.process_time()
 
             if concatenateZmix == 'Y':
-                history = self.model.fit({"species_input":X_train, "zmix":zmix_train}, {"prediction":Y_train},validation_split=0.2,verbose=0,epochs=100)
+                history = self.model.fit({"species_input":X_train, "Zmix":zmix_train}, {"prediction":Y_train},validation_split=0.2,verbose=0,epochs=100)
             else:
                 history = self.model.fit({"species_input":X_train}, {"prediction":Y_train},validation_split=0.2,verbose=0,epochs=100)
             
@@ -100,7 +101,7 @@ class PCDNNV2ExperimentExecutor:
             t = time.process_time()
 
             if concatenateZmix == 'Y':
-                predictions = self.model.predict({"species_input":X_test, "zmix":zmix_test})
+                predictions = self.model.predict({"species_input":X_test, "Zmix":zmix_test})
             else:
                 predictions = self.model.predict({"species_input":X_test})
                 
@@ -146,27 +147,27 @@ class PCDNNV2ExperimentExecutor:
         #Experiments  
         
         #TODO:uncomment
-        #dataTypes = ["randomequaltraintestsplit","frameworkincludedtrainexcludedtest"]
-        #inputTypes = ["AllSpecies","AllSpeciesAndZmix"]
+        dataTypes = ["randomequaltraintestsplit","frameworkincludedtrainexcludedtest"]
+        inputTypes = ["AllSpecies","AllSpeciesAndZmix"]
         
 
         #TODO:comment
-        dataTypes = ["randomequaltraintestsplit"]
-        inputTypes = ["AllSpeciesAndZmix"]
+        #dataTypes = ["randomequaltraintestsplit"]
+        #inputTypes = ["AllSpeciesAndZmix"]
         
         
         
         concatenateZmix = 'N'
         
         #TODO:uncomment
-        #kernel_constraints = ['Y','N']
-        #kernel_regularizers = ['Y','N']
-        #activity_regularizers = ['Y','N']        
+        kernel_constraints = ['Y','N']
+        kernel_regularizers = ['Y','N']
+        activity_regularizers = ['Y','N']        
        
         #TODO:comment
-        kernel_constraints = ['Y']
-        kernel_regularizers = ['Y']
-        activity_regularizers = ['Y']        
+        #kernel_constraints = ['Y']
+        #kernel_regularizers = ['Y']
+        #activity_regularizers = ['Y']        
        
         for dataType in dataTypes:
             print('=================== ' + dataType + ' ===================')
@@ -190,10 +191,10 @@ class PCDNNV2ExperimentExecutor:
                     concatenateZmix = 'N'
                 
                 #TODO:uncomment    
-                #noOfCpvs = [item for item in range(2, 6)]
+                noOfCpvs = [item for item in range(2, 6)]
 
                 #TODO:comment    
-                noOfCpvs = [item for item in range(2, 3)]
+                #noOfCpvs = [item for item in range(2, 3)]
 
                 for noOfCpv in noOfCpvs:
                     for kernel_constraint in kernel_constraints:
