@@ -14,6 +14,9 @@ from experiment_executor.pcdnn_v1_experiment_executor import PCDNNV1ExperimentEx
 from experiment_executor.pcdnn_v2_experiment_executor import PCDNNV2ExperimentExecutor
 
 from models.gpmodel import GPModel
+from models.simplednn import SimpleDNNModel
+from models.pcdnnv1 import PCDNNV1Model
+from models.pcdnnv2 import PCDNNV2Model
 import pandas as pd
 
 def run_gp_experiments(dm):
@@ -50,6 +53,8 @@ def run_simple_dnn_experiments(dm):
 
     expExectr = DNNExperimentExecutor()
 
+    expExectr.setModelFactory(SimpleDNNModel())
+
     expExectr.executeExperiments(dm, "Simple_DNN", df_dnnexperimentTracker)
 
     df_dnnexperimentTracker.to_csv('SimpleDNN_Experiment_Results.csv', sep='\t',encoding='utf-8', index=False)
@@ -65,6 +70,8 @@ def run_pcdnn_v1_experiments(dm):
     df_pcdnnexperimentTracker = pd.DataFrame(columns=dnnexperimentTrackingFields)
 
     expExectr = PCDNNV1ExperimentExecutor()
+    
+    expExectr.setModelFactory(PCDNNV1Model())
     
     expExectr.executeExperiments(dm, "PCDNNV1", df_pcdnnexperimentTracker)
 
@@ -82,6 +89,8 @@ def run_pcdnn_v2_experiments(dm):
     df_pcdnnexperimentTracker = pd.DataFrame(columns=dnnexperimentTrackingFields)
 
     expExectr = PCDNNV2ExperimentExecutor()
+    
+    expExectr.setModelFactory(PCDNNV2Model())
     
     expExectr.executeExperiments(dm, "PCDNNV2", df_pcdnnexperimentTracker)
 

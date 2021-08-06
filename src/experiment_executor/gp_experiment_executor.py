@@ -47,7 +47,7 @@ class GPExperimentExecutor:
         #inputTypes = ["ZmixCpv","ZmixPCA","SparsePCA","PurePCA","ZmixAndPurePCA","ZmixAndSparsePCA","ZmixAllSpecies","AllSpecies"] #for production -- uncomment this
         
 		#TODO:comment        
-		dataTypes = ["frameworkincludedtrainexcludedtest"] #for testing -- comment this 
+        dataTypes = ["frameworkincludedtrainexcludedtest"] #for testing -- comment this 
         inputTypes = ["ZmixCpv"] #for testing -- comment this
         
         for dataType in dataTypes:

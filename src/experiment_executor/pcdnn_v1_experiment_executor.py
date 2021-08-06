@@ -5,16 +5,11 @@ Created on Thu Aug  5 09:09:34 2021
 @author: amol
 """
 
-import tensorflow as tf
-from tensorflow import keras
-from tensorflow.keras import layers
-from tensorflow.keras.layers.experimental import preprocessing
-from tensorflow.keras.callbacks import EarlyStopping
+
 import time
 import pandas as pd
 import matplotlib.pyplot as plt
-# patient early stopping
-es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=45)
+from .error_manager import ErrorManager
 
 class PCDNNV1ExperimentExecutor:
     def __init__(self):
@@ -26,114 +21,27 @@ class PCDNNV1ExperimentExecutor:
         self.pred_time = None
         self.err = None
         self.df_err = None 
-        self.width = 512
-        self.halfwidth = 128 
         self.predicitions = None
-    
+        self.errManager = ErrorManager()
+        self.modelFactory = None
+            
     def setModel(self,model):
         self.model = model
-        
+
+    def setModelFactory(self,modelFactory):
+        self.modelFactory = modelFactory        
+
     def getPredicitons(self):
         return self.predicitions
-
-    def build_and_compile_pcdnn_v1_wo_zmix_model(self,noOfInputNeurons,noOfCpv):
-
-        species_inputs = keras.Input(shape=(noOfInputNeurons,), name="species_input")
-
-        linear_reduced_dims = layers.Dense(noOfCpv, name="linear_layer")(species_inputs)
-
-        x = layers.Dense(32, activation="relu")(linear_reduced_dims)
-        x = layers.Dense(64, activation="relu")(x)
-        x = layers.Dense(128, activation="relu")(x)
-        x = layers.Dense(256, activation="relu")(x)
-        x = layers.Dense(512, activation="relu")(x)
-        x = layers.Dense(256, activation="relu")(x)
-        x = layers.Dense(128, activation="relu")(x)
-        x = layers.Dense(64, activation="relu")(x)
-        x = layers.Dense(32, activation="relu")(x)
-        #Predict the source energy
-        souener_pred = layers.Dense(1, name="prediction")(x)
-
-        physics_pred = layers.Dense(noOfCpv, name="physics")(linear_reduced_dims)
         
-        model = keras.Model(inputs=[species_inputs],outputs=[souener_pred,physics_pred])
-
-        opt = keras.optimizers.Adam(learning_rate=0.001)
-        
-        model.compile(loss={"physics": keras.losses.MeanAbsoluteError(),"prediction": keras.losses.MeanAbsoluteError()},loss_weights=[2.0, 0.2],optimizer=opt)
-        
-        return model
-
-    def build_and_compile_pcdnn_v1_with_zmix_model(self,noOfInputNeurons,noOfCpv):
-
-        species_inputs = keras.Input(shape=(noOfInputNeurons,), name="species_input")
-        
-        linear_reduced_dims = layers.Dense(noOfCpv, name="linear_layer")(species_inputs)
-
-        zmix = keras.Input(shape=(1,), name="zmix")
-            
-        x = layers.concatenate([linear_reduced_dims,zmix])
-        x = layers.Dense(32, activation="relu")(x)
-        x = layers.Dense(64, activation="relu")(x)
-        x = layers.Dense(128, activation="relu")(x)
-        x = layers.Dense(256, activation="relu")(x)
-        x = layers.Dense(512, activation="relu")(x)
-        x = layers.Dense(256, activation="relu")(x)
-        x = layers.Dense(128, activation="relu")(x)
-        x = layers.Dense(64, activation="relu")(x)
-        x = layers.Dense(32, activation="relu")(x)
-        #Predict the source energy
-        souener_pred = layers.Dense(1, name="prediction")(x)
-
-        physics_pred = layers.Dense(noOfCpv, name="physics")(linear_reduced_dims)
-        
-        model = keras.Model(inputs=[species_inputs,zmix],outputs=[souener_pred,physics_pred])
-
-        opt = keras.optimizers.Adam(learning_rate=0.001)
-        
-        model.compile(loss={"physics": keras.losses.MeanAbsoluteError(),"prediction": keras.losses.MeanAbsoluteError()},loss_weights=[2.0, 0.2],optimizer=opt)
-        
-        return model
-    
-    def executeExperiment(self,dataManager, modelType, dataType="randomequaltraintestsplit",inputType="ZmixPCA",noOfCpv=5):
-        self.dm = dataManager
-        
-        self.modelType = modelType
-        
-        dataSetMethod = inputType + '_' + dataType
-        
-        self.dm.createTrainTestData(dataSetMethod,noOfCpv, None, None)
-        
-        #(self,X_train, Y_train, X_test, Y_test, rom_train = None, rom_test = None, zmix_train = None, zmix_test = None, Y_scaler = None)
-        self.fitModelAndCalcErr(self.dm.X_train, self.dm.Y_train, self.dm.X_test, self.dm.Y_test,self.dm.rom_train, self.dm.rom_test, self.dm.zmix_train, self.dm.zmix_test, self.dm.outputScaler)
-        
-        if inputType.find('Zmix') != -1:
-            ZmixPresent = 'Y'
-        else:
-            ZmixPresent = 'N'
-
-                            #['Model','Dataset','Cpv Type','#Cpv',"ZmixExists",'MAE','TAE','MSE','TSE','#Pts','FitTime','PredTime','MAX-MAE','MAX-TAE','MAX-MSE','MAX-TSE','MIN-MAE','MIN-TAE','MIN-MSE','MIN-TSE']
-
-        experimentResults = [self.modelType, dataType,inputType,str(noOfCpv), ZmixPresent,str(self.df_err['MAE'].mean()),str(self.df_err['TAE'].mean()),str(self.df_err['MSE'].mean()),str(self.df_err['TSE'].mean()),str(self.df_err['#Pts'].mean()),str(self.fit_time),str(self.pred_time),str(self.df_err['MAE'].max()),str(self.df_err['TAE'].max()),str(self.df_err['MSE'].max()),str(self.df_err['TSE'].max()),str(self.df_err['MAE'].min()),str(self.df_err['TAE'].min()),str(self.df_err['MSE'].min()),str(self.df_err['TSE'].min())]
-
-        printStr = "self.modelType: "+ self.modelType+ " dataType: "  + dataType+ " inputType:"+inputType+ " noOfCpv:"+str(noOfCpv)+ " ZmixPresent:" + ZmixPresent + " MAE:" +str(self.err[2])
-
-        print(printStr)
-    
     def executeSingleExperiment(self,noOfInputNeurons,dataSetMethod,dataType,inputType,ZmixPresent,noOfCpv,concatenateZmix):
-        
         
         #                           dataSetMethod,noOfCpvs, ipscaler, opscaler
         self.dm.createTrainTestData(dataSetMethod,noOfCpv, None, "MinMaxScaler")
         
-        if concatenateZmix == 'N':
-            print("--------------------self.build_and_compile_pcdnn_v1_wo_zmix_model----------------------")
-            self.model = self.build_and_compile_pcdnn_v1_wo_zmix_model(noOfInputNeurons,noOfCpv)
+        print("--------------------self.build_and_compile_pcdnn_v1_model----------------------")
+        self.model = self.modelFactory.build_and_compile_model(noOfInputNeurons,noOfCpv,concatenateZmix)
             
-        else:
-            self.model = self.build_and_compile_pcdnn_v1_with_zmix_model(noOfInputNeurons,noOfCpv)
-
-        
         self.model.summary()
 
         #(self,X_train, Y_train, X_test, Y_test, rom_train = None, rom_test = None, zmix_train = None, zmix_test = None, Y_scaler = None)
@@ -221,7 +129,7 @@ class PCDNNV1ExperimentExecutor:
                 
             #sns.residplot(Y_pred.flatten(), getResiduals(Y_test,Y_pred))
 
-            errs.append(self.computeError (Y_pred, Y_test))
+            errs.append(self.errManager.computeError (Y_pred, Y_test))
         
         self.fit_time = sum(fit_times)/len(fit_times)
         
@@ -295,55 +203,7 @@ class PCDNNV1ExperimentExecutor:
                     print('------------------ ' + str(noOfNeurons) + ' ------------------')
                     self.executeSingleExperiment(noOfNeurons,dataSetMethod,dataType,inputType,ZmixPresent,noOfCpv,concatenateZmix)
         
-    def computeError (self,Y_pred, Y_test):
-        evaluation_df_1 = pd.DataFrame()
-
-        evaluation_df_1['souener'] = Y_test.flatten()
-
-        evaluation_df_1['souener_pred'] = Y_pred.flatten()
-
-        evaluation_df_1['souener_pred_L1'] = evaluation_df_1['souener'] - evaluation_df_1['souener_pred'] 
-
-        evaluation_df_1['souener_pred_L2'] = evaluation_df_1['souener_pred_L1'] * evaluation_df_1['souener_pred_L1']
-
-        evaluation_df_1['souener_pred_L1Percent'] = ((evaluation_df_1['souener'] - evaluation_df_1['souener_pred'])/evaluation_df_1['souener']) 
-
-        TotalAbsoluteError = evaluation_df_1['souener_pred_L1'].abs().sum()
-
-        TotalSquaredError = evaluation_df_1['souener_pred_L2'].abs().sum()
-
-        MeanAbsoluteError = evaluation_df_1['souener_pred_L1'].abs().sum()/evaluation_df_1['souener_pred_L1'].abs().count()
-
-        MeanSquaredError = evaluation_df_1['souener_pred_L2'].abs().sum()/evaluation_df_1['souener_pred_L2'].abs().count()
-
-        NumPoints = evaluation_df_1['souener_pred_L1Percent'].abs().count()
-
-        MeanPercentageError = evaluation_df_1['souener_pred_L1Percent'].abs().sum()/NumPoints
-
-        return [TotalAbsoluteError,TotalSquaredError,MeanAbsoluteError,MeanSquaredError,MeanPercentageError,NumPoints]
-
-            
-    def printError (self,err):
-        TotalAbsoluteError = err[0]
-
-        TotalSquaredError = err[1]
-
-        MeanAbsoluteError = err[2]
-
-        MeanSquaredError = err[3]
-
-        MeanPercentageError = err[4]
-
-        NumPoints = err[5]
-        
-        print ('Total Absolute Error: ', TotalAbsoluteError)
-        print ('Mean Absolute Error: ', MeanAbsoluteError)
-        print ('Mean Percentage Error: ', MeanPercentageError)
-        print ('Total Squared Error: ', TotalSquaredError)
-        print ('Mean Squared Error: ', MeanSquaredError)
-        print ('Number of Points: ', NumPoints)
-
-
+    
     def plot_loss_physics_and_regression(self,history):
         
         f = plt.figure(figsize=(10,3))
