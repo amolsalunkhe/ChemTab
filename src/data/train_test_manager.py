@@ -32,7 +32,9 @@ class DataManager:
         self.Y_test = None
         self.Y_scaled_train = None
         self.Y_scaled_test = None
-        
+        self.input_data_cols = None
+        self.output_data_cols = None        
+
         return
 
     def _createTrainTestDfs(self,method):
@@ -147,7 +149,10 @@ class DataManager:
         self.Y_train = self.df_training [output_data_cols].values
         self.Y_test = self.df_testing [output_data_cols].values
         print("In _createTrainTestData Y_test.shape: " + str(self.Y_test.shape))
-        
+       
+        self.input_data_cols = input_data_cols
+        self.output_data_cols = output_data_cols
+ 
         return
     
     def _setInputOutputScalers(self, ipscaler, opscaler):
