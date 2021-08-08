@@ -101,7 +101,7 @@ class PCDNNV2ExperimentExecutor:
             t = time.process_time()
 
             if concatenateZmix == 'Y':
-                history = self.model.fit({"species_input":X_train, "zmix":zmix_train}, {"prediction":Y_train},validation_split=0.2,verbose=0,epochs=100)
+                history = self.model.fit({"species_input":X_train, "Zmix":zmix_train}, {"prediction":Y_train},validation_split=0.2,verbose=0,epochs=100)
             else:
                 history = self.model.fit({"species_input":X_train}, {"prediction":Y_train},validation_split=0.2,verbose=0,epochs=100)
             
@@ -112,7 +112,7 @@ class PCDNNV2ExperimentExecutor:
             t = time.process_time()
 
             if concatenateZmix == 'Y':
-                predictions = self.model.predict({"species_input":X_test, "zmix":zmix_test})
+                predictions = self.model.predict({"species_input":X_test, "Zmix":zmix_test})
             else:
                 predictions = self.model.predict({"species_input":X_test})
                 
