@@ -106,8 +106,6 @@ def main():
     dp.sparsePCAs()
     dp.zmixOrthogonalPCAs()
     df = dp.getDataframe()
-
-    df.to_csv('PCA_data.csv', index=False)
    
     '''
     print(df[dp.pure_pca_dim_cols].describe().transpose())
