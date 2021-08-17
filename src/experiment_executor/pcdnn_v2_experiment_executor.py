@@ -90,6 +90,7 @@ class PCDNNV2ExperimentExecutor:
 
             if concatenateZmix == 'Y':
                 history = self.model.fit({"species_input":X_train, "zmix":zmix_train}, {"prediction":Y_train},validation_split=0.2,verbose=0,epochs=100)
+                #history = self.model.fit([X_train, zmix_train], Y_train,validation_split=0.2,verbose=0,epochs=100)
             else:
                 history = self.model.fit({"species_input":X_train}, {"prediction":Y_train},validation_split=0.2,verbose=0,epochs=100)
             

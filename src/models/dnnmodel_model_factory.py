@@ -22,6 +22,7 @@ class DNNModelFactory:
         self.experimentSettings = None
         self.modelName = None
         self.concreteClassCustomObject = None
+        self.regressorLayerNamePrefix = "regressor_"
         print("Parent DNNModelFactory Instantiated")
     
     def setDataSetMethod(self,dataSetMethod):
@@ -46,17 +47,67 @@ class DNNModelFactory:
         return opt
     
     def getIntermediateLayers(self,x):
-        x = layers.Dense(32, activation="relu")(x)
-        x = layers.Dense(64, activation="relu")(x)
-        x = layers.Dense(128, activation="relu")(x)
-        x = layers.Dense(256, activation="relu")(x)
-        x = layers.Dense(512, activation="relu")(x)
-        x = layers.Dropout(0.5)(x)
-        x = layers.Dense(256, activation="relu")(x)
-        x = layers.Dense(128, activation="relu")(x)
-        x = layers.Dense(64, activation="relu")(x)
-        x = layers.Dense(32, activation="relu")(x)
+        layerNamePrefix = "regressor_" #self.regressorLayerNamePrefix
+        
+        '''
+        cnt = 0
+        x = layers.Dense(32,name=layerNamePrefix+str(cnt), activation="relu")(x)
+        
+        cnt = cnt + 1
+        x = layers.Dense(64,name=layerNamePrefix+str(cnt), activation="relu")(x)
+        cnt = cnt + 1
+        x = layers.Dense(128,name=layerNamePrefix+str(cnt), activation="relu")(x)
+        cnt = cnt + 1
+        x = layers.Dense(256,name=layerNamePrefix+str(cnt), activation="relu")(x)
+        cnt = cnt + 1
+        x = layers.Dense(512,name=layerNamePrefix+str(cnt), activation="relu")(x)
+        cnt = cnt + 1
+        x = layers.Dropout(0.5,noise_shape=None, seed=None, name=layerNamePrefix+str(cnt))(x)
+        cnt = cnt + 1
+        x = layers.Dense(256,name=layerNamePrefix+str(cnt), activation="relu")(x)
+        cnt = cnt + 1
+        x = layers.Dense(128,name=layerNamePrefix+str(cnt), activation="relu")(x)
+        cnt = cnt + 1
+        x = layers.Dense(64,name=layerNamePrefix+str(cnt), activation="relu")(x)
+        cnt = cnt + 1
+        x = layers.Dense(32,name=layerNamePrefix+str(cnt), activation="relu")(x)
         return x
+        '''
+        
+        def add_regularized_dense_layer(x, layer_size, activation_func='relu', dropout_rate=0.25):
+
+            x = layers.Dense(layer_size, activation=activation_func)(x)
+
+            x = layers.BatchNormalization()(x)
+
+            x = layers.Dropout(dropout_rate)(x)
+
+            return x
+
+        def add_regularized_dense_module(x, layer_sizes, activation_func='relu', dropout_rate=0.25):
+
+            assert len(layer_sizes)==3
+
+            skip_input = x = add_regularized_dense_layer(x, layer_sizes[0], activation_func=activation_func, dropout_rate=dropout_rate)
+
+            x = add_regularized_dense_layer(x, layer_sizes[1], activation_func=activation_func, dropout_rate=dropout_rate)
+
+            x = add_regularized_dense_layer(x, layer_sizes[2], activation_func=activation_func, dropout_rate=dropout_rate)
+
+            x = layers.Concatenate()([x, skip_input])
+
+            return x
+
+        x = add_regularized_dense_module(x, [32,64,128])
+
+        x = add_regularized_dense_module(x, [256,512,256])
+
+        x = add_regularized_dense_module(x, [128,64,32])
+
+
+        return x
+
+
     
     def saveCurrModelAsBestModel(self):
         #print("current directory " + os.getcwd())
@@ -119,42 +170,38 @@ class DNNModelFactory:
         return model
     
     def getRegressor(self):
-        model = None
-        
-        species_layer = None
-        
-        zmix_input = None
-        
-        linear_embedding_input = None
-        
-        concatenated_zmix_linear_embedding_layer = None
-        
-        for layer in self.model.layers:
-            print(layer.name) 
-            if layer.name == "species_input":
-                species_layer = layer
-            elif layer.name == "prediction":
-                prediction_layer = layer
-            elif layer.name == "zmix":
-                zmix_input =  keras.Input(shape=(layer._keras_shape,), name="zmix_input")
-            elif layer.name == "linear_embedding":
-                linear_embedding_input = keras.Input(shape=(layer._keras_shape,), name="linear_embedding_input")        
-            elif layer.name == "concatenated_zmix_linear_embedding":    
-                x = layers.Concatenate(name="concatenated_zmix_linear_embedding")([zmix_input, linear_embedding_input])
-            else:
-                x = x
-            
-        if zmix_layer is not None:
-            model = tf.keras.Model ([concatenated_zmix_linear_embedding_layer.input],[prediction_layer.output])
-            
-        else:
-           model = tf.keras.Model ([linear_embedding_layer.input],[prediction_layer.output])
-        
-        '''
-        self.model.layers.pop(0)
-        self.model.summary()
-        '''
-        
-        model.summary()
 
-        return model
+        #Copy the model configuration
+        model_cfg = self.model.get_config()
+       
+        
+        
+        model_cfg['layers'][0] = {
+                      'class_name': 'InputLayer',
+                      'config': {
+                          'batch_input_shape': (None, 2),
+                          'dtype': 'float32',
+                          'sparse': False,
+                          'ragged': False,
+                          'name': 'linear_embedding'
+                      },
+                      'name': 'linear_embedding',       
+                      'inbound_nodes': []
+                  }
+        
+        model_cfg['layers'].pop(2)
+        
+        model_cfg['input_layers'] = [['linear_embedding', 0, 0], ['zmix', 0, 0]]
+ 
+        regressor = tf.keras.Model().from_config(model_cfg,custom_objects=self.concreteClassCustomObject)        
+       
+        regressor.summary() 
+        
+        #Copy the Weights of the Layers
+        weights = [layer.get_weights() for layer in self.model.layers[3:]]
+        
+        for layer, weight in zip(regressor.layers[2:], weights):
+            layer.set_weights(weight)
+       
+        
+        return regressor

@@ -114,10 +114,27 @@ def run_pcdnn_v2_experiments(dm):
     #Get the Regressor
     regressor = expExectr.modelFactory.getRegressor()
         
+    reg_predicts = regressor.predict([zmix,pcdnnv2LinearEmbedding])#predict({'zmix':zmix,'linear_embedding':pcdnnv2LinearEmbedding})
+    print('Regressor Predicts')
+    print(reg_predicts)
+    
+    
+    bestModelPredicts = bestModel.predict({'zmix':zmix,'species_input':X})
+    print('Best Model Predicts')
+    print(bestModelPredicts)
+    
+    evaluation_df_1 = pd.DataFrame()
+
+    evaluation_df_1['best_model'] = bestModelPredicts.flatten()
+
+    evaluation_df_1['regressor'] = reg_predicts.flatten()
+    
+    print(evaluation_df_1.describe())
+    
     #df_pcdnnv2LinearEmbedding.to_csv('PCDNNV2_Linear_Embeddings.csv', sep='\t',encoding='utf-8', index=False)
 
     '''
-    TODO: Add the ErrorAnalysis
+    TODO: Add the ErrorAnalysis | Xpos & flameid
           Add the Explainability
           
     '''
@@ -163,12 +180,12 @@ def main():
     '''
     3. Run the PCDNN_v1 Experiments
     '''
-    run_pcdnn_v1_experiments(dm)
+    #run_pcdnn_v1_experiments(dm)
     
     '''
     4. Run the PCDNN_v2 Experiments
     '''
-    #run_pcdnn_v2_experiments(dm)
+    run_pcdnn_v2_experiments(dm)
     
     
 if __name__ == "__main__":
