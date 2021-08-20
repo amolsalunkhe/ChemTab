@@ -44,20 +44,28 @@ class DNNModelFactory:
         opt = keras.optimizers.Adam(learning_rate=learning_rate_fn)
                 
         return opt
-    
+   
     def getIntermediateLayers(self,x):
-        x = layers.Dense(32, activation="relu")(x)
-        x = layers.Dense(64, activation="relu")(x)
-        x = layers.Dense(128, activation="relu")(x)
-        x = layers.Dense(256, activation="relu")(x)
-        x = layers.Dense(512, activation="relu")(x)
-        x = layers.Dropout(0.5)(x)
-        x = layers.Dense(256, activation="relu")(x)
-        x = layers.Dense(128, activation="relu")(x)
-        x = layers.Dense(64, activation="relu")(x)
-        x = layers.Dense(32, activation="relu")(x)
+        def add_regularized_dense_layer(x, layer_size, activation_func='relu', dropout_rate=0.25):
+            x = layers.Dense(layer_size, activation=activation_func)(x)
+            x = layers.BatchNormalization()(x)
+            x = layers.Dropout(dropout_rate)(x)
+            return x
+
+        def add_regularized_dense_module(x, layer_sizes, activation_func='relu', dropout_rate=0.25):
+            assert len(layer_sizes)==3
+            skip_input = x = add_regularized_dense_layer(x, layer_sizes[0], activation_func=activation_func, dropout_rate=dropout_rate)
+            x = add_regularized_dense_layer(x, layer_sizes[1], activation_func=activation_func, dropout_rate=dropout_rate)
+            x = add_regularized_dense_layer(x, layer_sizes[2], activation_func=activation_func, dropout_rate=dropout_rate)
+            x = layers.Concatenate()([x, skip_input])
+            return x
+
+        x = add_regularized_dense_module(x, [32,64,128])
+        x = add_regularized_dense_module(x, [256,512,256])
+        x = add_regularized_dense_module(x, [128,64,32])
+
         return x
-    
+ 
     def saveCurrModelAsBestModel(self):
         #print("current directory " + os.getcwd())
         
