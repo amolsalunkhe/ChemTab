@@ -30,20 +30,17 @@ class PCDNNV1ModelFactory(DNNModelFactory):
 
             x = layers.Concatenate(name="concatenated_zmix_linear_embedding")([linear_reduced_dims,zmix])
        
-            x = self.getIntermediateLayers(x)
+            souener_pred = self.getRegressionLayers(x)
             
             inputs = [species_inputs,zmix]
         else:
-            x = self.getIntermediateLayers(linear_reduced_dims)
+            souener_pred = self.getRegressionLayers(linear_reduced_dims)
             
             inputs = [species_inputs]
             
-        #Predict the source energy
-        souener_pred = layers.Dense(1, name="prediction")(x)
-
         physics_pred = layers.Dense(noOfCpv, name="physics")(linear_reduced_dims)
-        
-        model = keras.Model(inputs=inputs,outputs=[souener_pred,physics_pred])
+ 
+        model = keras.Model(inputs=inputs, outputs=[souener_pred, physics_pred])
 
         opt = self.getOptimizer()
         

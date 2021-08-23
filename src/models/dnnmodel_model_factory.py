@@ -45,7 +45,8 @@ class DNNModelFactory:
                 
         return opt
    
-    def getIntermediateLayers(self,x):
+    def getRegressorLayers(self,x):
+        """Gets layers for regression module of model (renamed from get intermediate layers)"""
         def add_regularized_dense_layer(x, layer_size, activation_func='relu', dropout_rate=0.25):
             x = layers.Dense(layer_size, activation=activation_func)(x)
             x = layers.BatchNormalization()(x)
@@ -60,11 +61,17 @@ class DNNModelFactory:
             x = layers.Concatenate()([x, skip_input])
             return x
 
-        x = add_regularized_dense_module(x, [32,64,128])
-        x = add_regularized_dense_module(x, [256,512,256])
-        x = add_regularized_dense_module(x, [128,64,32])
+        input_ = layers.Input(tf.shape(x))
+    
+        output = add_regularized_dense_module(input_, [32,64,128])
+        output = add_regularized_dense_module(output, [256,512,256])
+        output = add_regularized_dense_module(output, [128,64,32])
 
-        return x
+        souener_pred = layers.Dense(1, name="prediction")(output)
+
+        regressor_model=keras.models.Model(inputs=input_, outputs=output)
+
+        return regressor_model(x)
  
     def saveCurrModelAsBestModel(self):
         #print("current directory " + os.getcwd())

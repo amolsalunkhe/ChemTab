@@ -80,7 +80,6 @@ class UncorrelatedFeaturesConstraint (Constraint):
         return {'weightage': self.weightage, 'encoding_dim':self.encoding_dim}
 
 class PCDNNV2ModelFactory(DNNModelFactory):
-
     def __init__(self):
         self.setModelName("PCDNNV2Model")
         self.setConcreteClassCustomObject({"PCDNNV2ModelFactory": PCDNNV2ModelFactory,"UncorrelatedFeaturesConstraint":UncorrelatedFeaturesConstraint,"WeightsOrthogonalityConstraint":WeightsOrthogonalityConstraint}) 
@@ -134,12 +133,8 @@ class PCDNNV2ModelFactory(DNNModelFactory):
         else:
             inputs = [species_inputs]
         
-        x = self.getIntermediateLayers(x)
-        
-        #Predict the source energy
-        souener_pred = layers.Dense(1, name="prediction")(x)
-
-        model = keras.Model(inputs=inputs,outputs=[souener_pred],)
+        souener_pred = self.getRegressorLayers(x)
+        model = keras.Model(inputs=inputs,outputs=souener_pred)
 
         opt = self.getOptimizer()
         
