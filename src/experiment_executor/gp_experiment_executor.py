@@ -43,13 +43,13 @@ class GPExperimentExecutor:
         #Experiments  
         
 		#TODO:uncomment
-        dataTypes = ["randomequaltraintestsplit","frameworkincludedtrainexcludedtest"] #for production -- uncomment this
-        inputTypes = ["ZmixCpv","ZmixPCA","SparsePCA","PurePCA","ZmixAndPurePCA","ZmixAndSparsePCA","ZmixAllSpecies","AllSpecies"] #for production -- uncomment this
+        #dataTypes = ["randomequaltraintestsplit","frameworkincludedtrainexcludedtest"] #for production -- uncomment this
+        #inputTypes = ["ZmixCpv","ZmixPCA","SparsePCA","PurePCA","ZmixAndPurePCA","ZmixAndSparsePCA","ZmixAllSpecies","AllSpecies"] #for production -- uncomment this
         
 		#TODO:comment        
-        #dataTypes = ["frameworkincludedtrainexcludedtest"] #for testing -- comment this 
-        #inputTypes = ["ZmixCpv"] #for testing -- comment this
-
+        dataTypes = ["frameworkincludedtrainexcludedtest"] #for testing -- comment this 
+        inputTypes = ["ZmixCpv"] #for testing -- comment this
+        
         for dataType in dataTypes:
             
             for inputType in inputTypes:
@@ -157,8 +157,6 @@ class GPExperimentExecutor:
         
         
     def fitModelAndCalcErr(self,X_train, Y_train, X_test, Y_test):
-
-        print(f'training model')
 
         t = time.process_time()
 
