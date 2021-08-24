@@ -64,6 +64,9 @@ class DNNModelFactory:
         assert noOfInputNeurons == inputs[0].shape[1]
         output = self.getLinearLayer(noOfInputNeurons, noOfCpv, **kwds)(inputs[0])
 
+        linear_emb_model = keras.models.Model(inputs=inputs[0], outputs=output, name="linear_embedding")
+        output = linear_emb_model(inputs[0])       
+ 
         # implicitly if there are 2 input layers then we want to add mix
         assert concatenateZmix == (len(inputs)>1)
         if concatenateZmix:
@@ -72,8 +75,8 @@ class DNNModelFactory:
             #Concatenate the Linear Embedding and Zmix together
             output = layers.Concatenate(name="concatenated_zmix_linear_embedding")([zmix, output])
 
-        linear_emb_model = keras.models.Model(inputs=inputs, outputs=output, name="linear_embedding")
-        return linear_emb_model(inputs)
+        #linear_emb_model = keras.models.Model(inputs=inputs, outputs=output, name="linear_embedding")
+        return output
 
     def addRegressorModel(self, x):
         """Gets layers for regression module of model (renamed from get intermediate layers)"""
@@ -95,6 +98,9 @@ class DNNModelFactory:
         # dimension that keras adds implicitly
         input_ = layers.Input(x.shape[1:])
     
+        # for debugging only
+        #output = add_regularized_dense_module(input_, [16,32,16])
+        
         output = add_regularized_dense_module(input_, [32,64,128])
         output = add_regularized_dense_module(output, [256,512,256])
         output = add_regularized_dense_module(output, [128,64,32])
@@ -109,8 +115,10 @@ class DNNModelFactory:
         #print("current directory " + os.getcwd())
 
         import os
-        os.mkdir('./models/best_models/')
-        
+        try:
+            os.mkdir('./models/best_models/')
+        except FileExistsError:
+            pass
         # open a file, where you ant to store the data
         file = open("./models/best_models/"+self.modelName+"_experimentSettings", "wb")
         
@@ -142,69 +150,15 @@ class DNNModelFactory:
         return self.model, self.experimentSettings 
     
     def getLinearEncoder(self):
-        
-        input_layer = None
-        
-        linear_embedding_layer = None
-        
-        zmix_layer =  None
-        
-        for layer in self.model.layers:
-            print(layer.name)            
-            if layer.name == "species_input":
-                input_layer = layer
-            if layer.name == "zmix":
-                zmix_layer = layer
-            if layer.name == "linear_embedding":
-                linear_embedding_layer = layer
-        
-        if zmix_layer is not None:
-            model = tf.keras.Model ([input_layer.input],[linear_embedding_layer.output])
-            
-        else:
-           model = tf.keras.Model ([input_layer.input],[linear_embedding_layer.output])
-        
+        model_layers = {layer.name: layer for layer in self.model.layers}
+        model = model_layers['linear_embedding'] # this 'layer' is actually a bonafied model
         model.summary()
 
         return model
     
     def getRegressor(self):
-        model = None
-        
-        species_layer = None
-        
-        zmix_input = None
-        
-        linear_embedding_input = None
-        
-        concatenated_zmix_linear_embedding_layer = None
-        
-        for layer in self.model.layers:
-            print(layer.name) 
-            if layer.name == "species_input":
-                species_layer = layer
-            elif layer.name == "prediction":
-                prediction_layer = layer
-            elif layer.name == "zmix":
-                zmix_input =  keras.Input(shape=(layer._keras_shape,), name="zmix_input")
-            elif layer.name == "linear_embedding":
-                linear_embedding_input = keras.Input(shape=(layer._keras_shape,), name="linear_embedding_input")        
-            elif layer.name == "concatenated_zmix_linear_embedding":    
-                x = layers.Concatenate(name="concatenated_zmix_linear_embedding")([zmix_input, linear_embedding_input])
-            else:
-                x = x
-            
-        if zmix_layer is not None:
-            model = tf.keras.Model ([concatenated_zmix_linear_embedding_layer.input],[prediction_layer.output])
-            
-        else:
-           model = tf.keras.Model ([linear_embedding_layer.input],[prediction_layer.output])
-        
-        '''
-        self.model.layers.pop(0)
-        self.model.summary()
-        '''
-        
+        model_layers = {layer.name: layer for layer in self.model.layers}
+        model = model_layers['prediction'] # unfortunately regressor is named this for compatibility with older code
         model.summary()
 
         return model

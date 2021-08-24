@@ -29,13 +29,10 @@ class PCDNNV1ModelFactory(DNNModelFactory):
         else:
             inputs = [species_inputs]
 
-        x = self.addLinearModel(inputs, noOfInputNeurons, noOfCpv,
-                                concatenateZmix=concatenateZmix,
-                                kernel_constraint=kernel_constraint,
-                                kernel_regularizer=kernel_regularizer,
-                                activity_regularizer=activity_regularizer)
+        linear_reduced_dims = self.addLinearModel(inputs, noOfInputNeurons, noOfCpv,
+                                concatenateZmix=concatenateZmix)
  
-        souener_pred = self.addRegressionLayers(x)
+        souener_pred = self.addRegressorModel(linear_reduced_dims)
 
         physics_pred = layers.Dense(noOfCpv, name="physics")(linear_reduced_dims)
 

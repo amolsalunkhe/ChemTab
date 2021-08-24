@@ -5,6 +5,8 @@ Created on Wed Aug  4 17:50:06 2021
 @author: amol
 """
 
+import os # this enables XLA optimized computations
+os.environ['TF_XLA_FLAGS'] = '--tf_xla_enable_xla_devices'
 
 from data.pre_processing import DataPreparer 
 from data.train_test_manager import DataManager 
@@ -153,12 +155,12 @@ def main():
     1. Run the GP Experiments
      
     '''
-    #run_gp_experiments(dm)
+    run_gp_experiments(dm)
     
     '''
     2. Run the Simple DNN Experiments
     '''
-    #run_simple_dnn_experiments(dm)
+    run_simple_dnn_experiments(dm)
         
     '''
     3. Run the PCDNN_v1 Experiments
@@ -168,7 +170,7 @@ def main():
     '''
     4. Run the PCDNN_v2 Experiments
     '''
-    #run_pcdnn_v2_experiments(dm)
+    run_pcdnn_v2_experiments(dm)
     
     
 if __name__ == "__main__":
