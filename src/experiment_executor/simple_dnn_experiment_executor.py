@@ -64,12 +64,12 @@ class DNNExperimentExecutor:
         #Experiments  
         
 		#TODO:uncomment
-        #dataTypes = ["randomequaltraintestsplit","frameworkincludedtrainexcludedtest"]
-        #inputTypes = ["ZmixCpv","ZmixPCA","SparsePCA","PurePCA","ZmixAndPurePCA","ZmixAndSparsePCA","ZmixAllSpecies","AllSpecies"]
+        dataTypes = ["randomequaltraintestsplit","frameworkincludedtrainexcludedtest"]
+        inputTypes = ["ZmixCpv","ZmixPCA","SparsePCA","PurePCA","ZmixAndPurePCA","ZmixAndSparsePCA","ZmixAllSpecies","AllSpecies"]
         
         #TODO:comment
-        dataTypes = ["frameworkincludedtrainexcludedtest"]
-        inputTypes = ["ZmixCpv"]
+        #dataTypes = ["frameworkincludedtrainexcludedtest"]
+        #inputTypes = ["ZmixCpv"]
         
         for dataType in dataTypes:
             print('=================== ' + dataType + ' ===================')
@@ -126,11 +126,11 @@ class DNNExperimentExecutor:
         #temp = 0
         
         #TODO:uncomment
-        #for itr in range(1,11):
+        for itr in range(1,11):
 		
 		#TODO:comment
-        for itr in range(1,2):
-            
+        #for itr in range(1,2):
+            print(f'training model: {itr}')
             t = time.process_time()
 
             self.model.fit(X_train, {"prediction":Y_train},validation_split=0.2,verbose=0,epochs=100)
@@ -162,7 +162,5 @@ class DNNExperimentExecutor:
         #computeAndPrintError(Y_pred, Y_test)
 
         self.df_err = pd.DataFrame(errs, columns = ['TAE', 'TSE', 'MAE', 'MSE', 'MAPE', '#Pts'])
-        
-        
         
         return
