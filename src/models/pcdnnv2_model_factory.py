@@ -119,21 +119,19 @@ class PCDNNV2ModelFactory(DNNModelFactory):
         
         species_inputs = keras.Input(shape=(noOfInputNeurons,), name="species_input")
         
-        x = self.getLinearLayer(noOfInputNeurons,noOfCpv,kernel_constraint,kernel_regularizer,activity_regularizer)(species_inputs)
-
-        
         if concatenateZmix == 'Y':
             zmix = keras.Input(shape=(1,), name="zmix")
-    
-            #Concatenate the Linear Embedding and Zmix together
-            x = layers.Concatenate(name="concatenated_zmix_linear_embedding")([zmix, x])
-
             inputs = [species_inputs,zmix]
-            
         else:
             inputs = [species_inputs]
-        
-        souener_pred = self.getRegressorLayers(x)
+       
+        x = self.addLinearModel(inputs, noOfInputNeurons, noOfCpv,
+                                concatenateZmix=concatenateZmix,
+                                kernel_constraint=kernel_constraint,
+                                kernel_regularizer=kernel_regularizer,
+                                activity_regularizer=activity_regularizer)
+ 
+        souener_pred = self.addRegressorModel(x)
         model = keras.Model(inputs=inputs,outputs=souener_pred)
 
         opt = self.getOptimizer()
@@ -141,6 +139,6 @@ class PCDNNV2ModelFactory(DNNModelFactory):
         model.compile(loss='mean_absolute_error',optimizer=opt)
         
         self.model = model
-        
+
         return model
 

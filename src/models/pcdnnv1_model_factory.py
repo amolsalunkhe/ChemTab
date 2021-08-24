@@ -22,30 +22,29 @@ class PCDNNV1ModelFactory(DNNModelFactory):
     def build_and_compile_model(self,noOfInputNeurons,noOfCpv,concatenateZmix):
 
         species_inputs = keras.Input(shape=(noOfInputNeurons,), name="species_input")
-        
-        linear_reduced_dims = layers.Dense(noOfCpv, name="linear_embedding")(species_inputs)
 
         if concatenateZmix == 'Y':
             zmix = keras.Input(shape=(1,), name="zmix")
-
-            x = layers.Concatenate(name="concatenated_zmix_linear_embedding")([linear_reduced_dims,zmix])
-       
-            souener_pred = self.getRegressionLayers(x)
-            
             inputs = [species_inputs,zmix]
         else:
-            souener_pred = self.getRegressionLayers(linear_reduced_dims)
-            
             inputs = [species_inputs]
-            
-        physics_pred = layers.Dense(noOfCpv, name="physics")(linear_reduced_dims)
+
+        x = self.addLinearModel(inputs, noOfInputNeurons, noOfCpv,
+                                concatenateZmix=concatenateZmix,
+                                kernel_constraint=kernel_constraint,
+                                kernel_regularizer=kernel_regularizer,
+                                activity_regularizer=activity_regularizer)
  
+        souener_pred = self.addRegressionLayers(x)
+
+        physics_pred = layers.Dense(noOfCpv, name="physics")(linear_reduced_dims)
+
         model = keras.Model(inputs=inputs, outputs=[souener_pred, physics_pred])
 
         opt = self.getOptimizer()
-        
+
         model.compile(loss={"physics": keras.losses.MeanAbsoluteError(),"prediction": keras.losses.MeanAbsoluteError()},loss_weights=[2.0, 0.2],optimizer=opt)
-        
+
         self.model = model
-        
+
         return model
