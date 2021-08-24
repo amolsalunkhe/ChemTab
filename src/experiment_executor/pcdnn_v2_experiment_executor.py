@@ -135,7 +135,7 @@ class PCDNNV2ExperimentExecutor:
         
         #computeAndPrintError(Y_pred, Y_test)
 
-        self.df_err = pd.DataFrame(errs, columns = ['TAE', 'TSE', 'MAE', 'MSE', 'MAPE', '#Pts'])
+        self.df_err = pd.DataFrame(errs)
         
         return  
 
@@ -147,7 +147,7 @@ class PCDNNV2ExperimentExecutor:
         #Experiments  
         
         #TODO:uncomment
-        dataTypes = ["randomequaltraintestsplit","frameworkincludedtrainexcludedtest"]
+        dataTypes = ["frameworkincludedtrainexcludedtest", "randomequalflamesplit"]#, "randomequaltraintestsplit"]
         inputTypes = ["AllSpecies","AllSpeciesAndZmix"]
         
 

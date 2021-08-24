@@ -71,13 +71,32 @@ class DataManager:
         
         return
 
+    @staticmethod
+    def train_test_split_on_flamekey(df, train_portion=0.5, seed=0):
+        import random
+        random.seed(seed)
+        flame_keys = list(set(df['flame_key_int']))
+        random.shuffle(flame_keys)
+        train_set_keys = flame_keys[:int(len(flame_keys)*train_portion)]
+        test_set_keys = flame_keys[int(len(flame_keys)*train_portion):]
+        print('train_set_keys: ', train_set_keys)
+        print('test_set_keys: ', test_set_keys)
+
+        train_set = df[np.isin(df['flame_key_int'], train_set_keys)]
+        test_set = df[np.isin(df['flame_key_int'], test_set_keys)]
+        print('train: ', train_set['flame_key_int'].unique()[:5])
+        print('test: ', test_set['flame_key_int'].unique()[:5])
+        return train_set, test_set    
+
     def _createTrainTestDfs(self,method):
 
-        if(method == "randomequaltraintestsplit"):
+        if method=='randomequalflamesplit':
+            df_shuffled= shuffle(self.df, random_state=0)
+            self.df_training, self.df_testing = self.train_test_split_on_flamekey(df_shuffled)
+        elif(method == "randomequaltraintestsplit"):
             df_shuffled= shuffle(self.df, random_state=0)
             self.df_training = df_shuffled[::2]
             self.df_testing = df_shuffled[1::2]
-
         else:
             training_flames_int = []
 

@@ -10,7 +10,7 @@ class ErrorManager:
         #print("Error Manager Instantiated")
         return 
     
-    def computeError (self,Y_pred, Y_test):
+    def computeError (self, Y_pred, Y_test):
         evaluation_df_1 = pd.DataFrame()
 
         evaluation_df_1['souener'] = Y_test.flatten()
@@ -31,11 +31,17 @@ class ErrorManager:
 
         MeanSquaredError = evaluation_df_1['souener_pred_L2'].abs().sum()/evaluation_df_1['souener_pred_L2'].abs().count()
 
+        MeanRelativeError = (evaluation_df_1['souener_pred_L1']/evaluation_df_1['souener']).abs().sum()/evaluation_df_1['souener_pred_L1'].abs().count()
+        TotalRelativeError = (evaluation_df_1['souener_pred_L1']/evaluation_df_1['souener']).abs().sum()/evaluation_df_1['souener_pred_L1'].abs().count()
+
         NumPoints = evaluation_df_1['souener_pred_L1Percent'].abs().count()
 
         MeanPercentageError = evaluation_df_1['souener_pred_L1Percent'].abs().sum()/NumPoints
 
-        return [TotalAbsoluteError,TotalSquaredError,MeanAbsoluteError,MeanSquaredError,MeanPercentageError,NumPoints]
+
+        columns = ['TAE', 'TSE', 'TRE', 'MAE', 'MSE', 'MRE', 'MAPE', '#Pts']
+        error_row = [TotalAbsoluteError,TotalSquaredError,TotalRelativeError,MeanAbsoluteError,MeanSquaredError,MeanRelativeError,MeanPercentageError,NumPoints]
+        return {k, v for k,v in zip(columns, error_row)}
             
     def printError (self,err):
         TotalAbsoluteError = err[0]

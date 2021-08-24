@@ -64,7 +64,7 @@ class DNNExperimentExecutor:
         #Experiments  
         
 		#TODO:uncomment
-        dataTypes = ["randomequaltraintestsplit","frameworkincludedtrainexcludedtest"]
+        dataTypes = ["frameworkincludedtrainexcludedtest", "randomequalflamesplit"]#, "randomequaltraintestsplit"] #for production -- uncomment this
         inputTypes = ["ZmixCpv","ZmixPCA","SparsePCA","PurePCA","ZmixAndPurePCA","ZmixAndSparsePCA","ZmixAllSpecies","AllSpecies"]
         
         #TODO:comment

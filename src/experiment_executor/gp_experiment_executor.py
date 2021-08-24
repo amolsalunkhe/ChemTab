@@ -1,15 +1,19 @@
 import time
 import pandas as pd
+from error_manager import ErrorManager
+
 class GPExperimentExecutor:
     def __init__(self):
         self.dm = None
         self.modelType = None
         self.model = None
         self.df_experimentTracker = None
+        self.errManager = ErrorManager()     
         self.fit_time = None
         self.pred_time = None
         self.err = None
-     
+
+
     def setModel(self,model):
         self.model = model
 
@@ -43,7 +47,7 @@ class GPExperimentExecutor:
         #Experiments  
         
 		#TODO:uncomment
-        dataTypes = ["randomequaltraintestsplit","frameworkincludedtrainexcludedtest"] #for production -- uncomment this
+        dataTypes = ["frameworkincludedtrainexcludedtest", "randomequalflamesplit"]#, "randomequaltraintestsplit"] #for production -- uncomment this
         inputTypes = ["ZmixCpv","ZmixPCA","SparsePCA","PurePCA","ZmixAndPurePCA","ZmixAndSparsePCA","ZmixAllSpecies","AllSpecies"] #for production -- uncomment this
         
 		#TODO:comment        
@@ -77,10 +81,7 @@ class GPExperimentExecutor:
                         self.df_experimentTracker.loc[len(self.df_experimentTracker)] = experimentResults        
 
                         printStr = "self.modelType: "+ self.modelType+ " dataType: "  + dataType+ " inputType:"+inputType+ " noOfCpv:"+str(noOfCpv)+ " ZmixPresent:" + ZmixPresent + " MAE:" +str(self.err[2])
-
                         print(printStr)
-                        
-                        
                 else:
                    
                     if inputType.find('ZmixCpv') != -1:
@@ -104,36 +105,7 @@ class GPExperimentExecutor:
                     printStr = "\t"
 
                     printStr = printStr.join(experimentResults)
-
         
-    def computeError (self,Y_pred, Y_test):
-        evaluation_df_1 = pd.DataFrame()
-
-        evaluation_df_1['souener'] = Y_test.flatten()
-
-        evaluation_df_1['souener_pred'] = Y_pred.flatten()
-
-        evaluation_df_1['souener_pred_L1'] = evaluation_df_1['souener'] - evaluation_df_1['souener_pred'] 
-
-        evaluation_df_1['souener_pred_L2'] = evaluation_df_1['souener_pred_L1'] * evaluation_df_1['souener_pred_L1']
-
-        evaluation_df_1['souener_pred_L1Percent'] = ((evaluation_df_1['souener'] - evaluation_df_1['souener_pred'])/evaluation_df_1['souener']) 
-
-        TotalAbsoluteError = evaluation_df_1['souener_pred_L1'].abs().sum()
-
-        TotalSquaredError = evaluation_df_1['souener_pred_L2'].abs().sum()
-
-        MeanAbsoluteError = evaluation_df_1['souener_pred_L1'].abs().sum()/evaluation_df_1['souener_pred_L1'].abs().count()
-
-        MeanSquaredError = evaluation_df_1['souener_pred_L2'].abs().sum()/evaluation_df_1['souener_pred_L2'].abs().count()
-
-        NumPoints = evaluation_df_1['souener_pred_L1Percent'].abs().count()
-
-        MeanPercentageError = evaluation_df_1['souener_pred_L1Percent'].abs().sum()/NumPoints
-
-        return [TotalAbsoluteError,TotalSquaredError,MeanAbsoluteError,MeanSquaredError,MeanPercentageError,NumPoints]
-
-            
     def printError (self,err):
         TotalAbsoluteError = err[0]
 
@@ -155,7 +127,6 @@ class GPExperimentExecutor:
         print ('Number of Points: ', NumPoints)
 
         
-        
     def fitModelAndCalcErr(self,X_train, Y_train, X_test, Y_test):
 
         print(f'training model')
@@ -174,6 +145,6 @@ class GPExperimentExecutor:
         
         #computeAndPrintError(Y_pred, Y_test)
 
-        self.err = self.computeError (Y_pred, Y_test)
+        self.err = self.errManager.computeError (Y_pred, Y_test)
         
         return 
