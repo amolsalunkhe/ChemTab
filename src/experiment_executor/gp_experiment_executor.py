@@ -1,6 +1,8 @@
 import time
 import pandas as pd
-from error_manager import ErrorManager
+from .error_manager import ErrorManager
+from copy import deepcopy
+
 
 class GPExperimentExecutor:
     def __init__(self):
@@ -12,6 +14,7 @@ class GPExperimentExecutor:
         self.fit_time = None
         self.pred_time = None
         self.err = None
+        self.debug_mode = False
 
 
     def setModel(self,model):
@@ -33,9 +36,12 @@ class GPExperimentExecutor:
         else:
             ZmixPresent = 'N'
 
-        experimentResults = [self.modelType, dataType,inputType,str(noOfCpv), ZmixPresent,str(self.err[2]),str(self.err[0]),str(self.err[3]),str(self.err[1]),str(self.err[5]),str(self.fit_time),str(self.pred_time)]
+        experimentResults = deepcopy(self.err)
+        experimentResults.update({'Model': self.modelType, 'Dataset': dataType, 'Cpv Type': inputType, '#Cpv': str(noOfCpv),
+                                  'ZmixExists': ZmixPresent, 'FitTime': self.fit_time, 'PredTime': self.pred_time})
+        #experimentResults = [self.modelType, dataType,inputType,str(noOfCpv), ZmixPresent,str(self.err[2]),str(self.err[0]),str(self.err[3]),str(self.err[1]),str(self.err[5]),str(self.fit_time),str(self.pred_time)]
 
-        printStr = "self.modelType: "+ self.modelType+ " dataType: "  + dataType+ " inputType:"+inputType+ " noOfCpv:"+str(noOfCpv)+ " ZmixPresent:" + ZmixPresent + " MAE:" +str(self.err[2])
+        printStr = "self.modelType: "+ self.modelType+ " dataType: "  + dataType+ " inputType:"+inputType+ " noOfCpv:"+str(noOfCpv)+ " ZmixPresent:" + ZmixPresent + " MAE:" +str(self.err['MAE'])
 
         print(printStr)
         
@@ -46,13 +52,15 @@ class GPExperimentExecutor:
         
         #Experiments  
         
-		#TODO:uncomment
-        dataTypes = ["frameworkincludedtrainexcludedtest", "randomequalflamesplit"]#, "randomequaltraintestsplit"] #for production -- uncomment this
-        inputTypes = ["ZmixCpv","ZmixPCA","SparsePCA","PurePCA","ZmixAndPurePCA","ZmixAndSparsePCA","ZmixAllSpecies","AllSpecies"] #for production -- uncomment this
-        
-		#TODO:comment        
-        #dataTypes = ["frameworkincludedtrainexcludedtest"] #for testing -- comment this 
-        #inputTypes = ["ZmixCpv"] #for testing -- comment this
+        if self.debug_mode:
+            #TODO:comment 
+            dataTypes = ["frameworkincludedtrainexcludedtest"] #for testing -- comment this 
+            inputTypes = ["ZmixCpv"] #for testing -- comment this
+        else:
+            #TODO:uncomment
+            dataTypes = ["frameworkincludedtrainexcludedtest", "randomequalflamesplit"]#, "randomequaltraintestsplit"] #for production -- uncomment this
+            inputTypes = ["ZmixCpv","ZmixPCA","SparsePCA","PurePCA","ZmixAndPurePCA","ZmixAndSparsePCA","ZmixAllSpecies","AllSpecies"] #for production -- uncomment this
+
 
         for dataType in dataTypes:
             
@@ -76,11 +84,14 @@ class GPExperimentExecutor:
                         
                         self.fitModelAndCalcErr(self.dm.X_train, self.dm.Y_train, self.dm.X_test, self.dm.Y_test)
                                                 
-                        experimentResults = [self.modelType, dataType,inputType,str(noOfCpv), ZmixPresent,str(self.err[2]),str(self.err[0]),str(self.err[3]),str(self.err[1]),str(self.err[5]),str(self.fit_time),str(self.pred_time)]
+                        experimentResults = deepcopy(self.err)
+                        experimentResults.update({'Model': self.modelType, 'Dataset': dataType, 'Cpv Type': inputType, '#Cpv': str(noOfCpv),
+                                                  'ZmixExists': ZmixPresent, 'FitTime': self.fit_time, 'PredTime': self.pred_time})
+                        #[self.modelType, dataType,inputType,str(noOfCpv), ZmixPresent,str(self.err[2]),str(self.err[0]),str(self.err[3]),str(self.err[1]),str(self.err[5]),str(self.fit_time),str(self.pred_time)]
 
                         self.df_experimentTracker.loc[len(self.df_experimentTracker)] = experimentResults        
 
-                        printStr = "self.modelType: "+ self.modelType+ " dataType: "  + dataType+ " inputType:"+inputType+ " noOfCpv:"+str(noOfCpv)+ " ZmixPresent:" + ZmixPresent + " MAE:" +str(self.err[2])
+                        printStr = "self.modelType: "+ self.modelType+ " dataType: "  + dataType+ " inputType:"+inputType+ " noOfCpv:"+str(noOfCpv)+ " ZmixPresent:" + ZmixPresent + " MAE:" +str(self.err['MAE'])
                         print(printStr)
                 else:
                    
@@ -94,11 +105,17 @@ class GPExperimentExecutor:
 
                     self.fitModelAndCalcErr(self.dm.X_train, self.dm.Y_train, self.dm.X_test, self.dm.Y_test)    
 
-                    experimentResults = [self.modelType, dataType,inputType,str(noOfCpv), ZmixPresent,str(self.err[2]),str(self.err[0]),str(self.err[3]),str(self.err[1]),str(self.err[5]),str(self.fit_time),str(self.pred_time)]
+                    #import pdb
+                    #pdb.set_trace()
+
+                    experimentResults = deepcopy(self.err)
+                    experimentResults.update({'Model': self.modelType, 'Dataset': dataType, 'Cpv Type': inputType, '#Cpv': str(noOfCpv),
+                                              'ZmixExists': ZmixPresent, 'FitTime': self.fit_time, 'PredTime': self.pred_time})
+                    #experimentResults = [self.modelType, dataType,inputType,str(noOfCpv), ZmixPresent,str(self.err[2]),str(self.err[0]),str(self.err[3]),str(self.err[1]),str(self.err[5]),str(self.fit_time),str(self.pred_time)]
                         
                     self.df_experimentTracker.loc[len(self.df_experimentTracker)] = experimentResults        
 
-                    printStr = "self.modelType: "+ self.modelType+ " dataType: "  + dataType+ " inputType:"+inputType+ " noOfCpv:"+str(noOfCpv)+ " ZmixPresent:" + ZmixPresent + " MAE:" +str(self.err[2])
+                    printStr = "self.modelType: "+ self.modelType+ " dataType: "  + dataType+ " inputType:"+inputType+ " noOfCpv:"+str(noOfCpv)+ " ZmixPresent:" + ZmixPresent + " MAE:" +str(self.err['MAE'])
 
                     print(printStr)
 
@@ -107,17 +124,17 @@ class GPExperimentExecutor:
                     printStr = printStr.join(experimentResults)
         
     def printError (self,err):
-        TotalAbsoluteError = err[0]
+        TotalAbsoluteError = err['TAE']
 
-        TotalSquaredError = err[1]
+        TotalSquaredError = err['TSE']
 
-        MeanAbsoluteError = err[2]
+        MeanAbsoluteError = err['MAE']
 
-        MeanSquaredError = err[3]
+        MeanSquaredError = err['MSE']
 
-        MeanPercentageError = err[4]
+        MeanPercentageError = err['MAPE']
 
-        NumPoints = err[5]
+        NumPoints = err['#Pts']
         
         print ('Total Absolute Error: ', TotalAbsoluteError)
         print ('Mean Absolute Error: ', MeanAbsoluteError)

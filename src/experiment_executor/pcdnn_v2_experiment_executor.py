@@ -79,12 +79,8 @@ class PCDNNV2ExperimentExecutor:
         
         errs = []
         
-        
-        #TODO:uncomment    
-        for itr in range(1,11):
-        
-        #TODO:comment    
-        #for itr in range(1,2):    
+        n = 2 if self.debug_mode else 11
+        for itr in range(1,n):    
             
             print(f'training model: {itr}')
             t = time.process_time()
@@ -145,29 +141,27 @@ class PCDNNV2ExperimentExecutor:
         self.df_experimentTracker = df_experimentTracker
         
         #Experiments  
-        
-        #TODO:uncomment
-        dataTypes = ["frameworkincludedtrainexcludedtest", "randomequalflamesplit"]#, "randomequaltraintestsplit"]
-        inputTypes = ["AllSpecies","AllSpeciesAndZmix"]
-        
-
-        #TODO:comment
-        #dataTypes = ["randomequaltraintestsplit"]
-        #inputTypes = ["AllSpeciesAndZmix"]
-        
-        
+        if self.debug_mode:
+            #TODO:comment
+            dataTypes = ["randomequaltraintestsplit"]
+            inputTypes = ["AllSpeciesAndZmix"]    
+        else:
+            #TODO:uncomment
+            dataTypes = ["frameworkincludedtrainexcludedtest", "randomequalflamesplit"]#, "randomequaltraintestsplit"]
+            inputTypes = ["AllSpecies","AllSpeciesAndZmix"]
         
         concatenateZmix = 'N'
         
-        #TODO:uncomment
-        kernel_constraints = ['Y','N']
-        kernel_regularizers = ['Y','N']
-        activity_regularizers = ['Y','N']        
-       
-        #TODO:comment
-        #kernel_constraints = ['Y']
-        #kernel_regularizers = ['Y']
-        #activity_regularizers = ['Y']        
+        if not self.debug_mode:
+            #TODO:uncomment
+            kernel_constraints = ['Y','N']
+            kernel_regularizers = ['Y','N']
+            activity_regularizers = ['Y','N']        
+        else:
+            #TODO:comment
+            kernel_constraints = ['Y']
+            kernel_regularizers = ['Y']
+            activity_regularizers = ['Y']        
        
         for dataType in dataTypes:
             print('=================== ' + dataType + ' ===================')
@@ -189,12 +183,9 @@ class PCDNNV2ExperimentExecutor:
                 else:
                     ZmixPresent = 'N'
                     concatenateZmix = 'N'
-                
-                #TODO:uncomment    
-                noOfCpvs = [item for item in range(2, 6)]
-
-                #TODO:comment    
-                #noOfCpvs = [item for item in range(2, 3)]
+           
+                m = 3 if self.debug_mode else 6
+                noOfCpvs = [item for item in range(2, m)]
 
                 for noOfCpv in noOfCpvs:
                     for kernel_constraint in kernel_constraints:

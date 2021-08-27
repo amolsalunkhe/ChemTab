@@ -63,13 +63,14 @@ class DNNExperimentExecutor:
         experiment_num = 0
         #Experiments  
         
-		#TODO:uncomment
-        dataTypes = ["frameworkincludedtrainexcludedtest", "randomequalflamesplit"]#, "randomequaltraintestsplit"] #for production -- uncomment this
-        inputTypes = ["ZmixCpv","ZmixPCA","SparsePCA","PurePCA","ZmixAndPurePCA","ZmixAndSparsePCA","ZmixAllSpecies","AllSpecies"]
-        
-        #TODO:comment
-        #dataTypes = ["frameworkincludedtrainexcludedtest"]
-        #inputTypes = ["ZmixCpv"]
+        if not self.debug_mode:
+		    #TODO:uncomment
+            dataTypes = ["frameworkincludedtrainexcludedtest", "randomequalflamesplit"]#, "randomequaltraintestsplit"] #for production -- uncomment this
+            inputTypes = ["ZmixCpv","ZmixPCA","SparsePCA","PurePCA","ZmixAndPurePCA","ZmixAndSparsePCA","ZmixAllSpecies","AllSpecies"]
+        else:
+            #TODO:comment
+            dataTypes = ["frameworkincludedtrainexcludedtest"]
+            inputTypes = ["ZmixCpv"]
         
         for dataType in dataTypes:
             print('=================== ' + dataType + ' ===================')
@@ -94,8 +95,10 @@ class DNNExperimentExecutor:
                     ZmixPresent = 'N'
                     
                 if inputType.find('PCA') != -1:
-                    
-                    noOfCpvs = [item for item in range(1, 6)]
+
+
+                    m = 2 if self.debug_mode else 6
+                    noOfCpvs = [item for item in range(1, m)]
                     
                     for noOfCpv in noOfCpvs:
                         noOfNeurons = noOfNeurons + 1                        
@@ -124,12 +127,9 @@ class DNNExperimentExecutor:
         errs = []
         
         #temp = 0
-        
-        #TODO:uncomment
-        for itr in range(1,11):
-		
-		#TODO:comment
-        #for itr in range(1,2):
+        n = 2 if self.debug_mode else 11
+
+        for itr in range(1,n):
             print(f'training model: {itr}')
             t = time.process_time()
 
@@ -147,8 +147,8 @@ class DNNExperimentExecutor:
             
             curr_errs = self.errManager.computeError (Y_pred, Y_test)
                 
-            if (len(errs) == 0) or ((len(errs) > 0) and (curr_errs[2] < self.min_mae)) :
-                self.min_mae = curr_errs[2]#MAE
+            if (len(errs) == 0) or ((len(errs) > 0) and (curr_errs['MAE'] < self.min_mae)) :
+                self.min_mae = curr_errs['MAE']#MAE
                 self.modelFactory.saveCurrModelAsBestModel()
                 #temp = temp + 1
                 

@@ -41,7 +41,7 @@ class ErrorManager:
 
         columns = ['TAE', 'TSE', 'TRE', 'MAE', 'MSE', 'MRE', 'MAPE', '#Pts']
         error_row = [TotalAbsoluteError,TotalSquaredError,TotalRelativeError,MeanAbsoluteError,MeanSquaredError,MeanRelativeError,MeanPercentageError,NumPoints]
-        return {k, v for k,v in zip(columns, error_row)}
+        return {k: v for k,v in zip(columns, error_row)}
             
     def printError (self,err):
         TotalAbsoluteError = err[0]

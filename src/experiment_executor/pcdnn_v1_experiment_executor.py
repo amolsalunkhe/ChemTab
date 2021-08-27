@@ -25,6 +25,7 @@ class PCDNNV1ExperimentExecutor:
         self.errManager = ErrorManager()
         self.modelFactory = None
         self.min_mae = 0
+        self.debug_mode = False
             
     def setModel(self,model):
         self.model = model
@@ -79,12 +80,8 @@ class PCDNNV1ExperimentExecutor:
         
         errs = []
         
-                
-        #TODO:uncomment
-        for itr in range(1,11):
-		
-		#TODO:comment
-        #for itr in range(1,2):
+        n = 2 if self.debug_mode else 11      
+        for itr in range(1,n):
 
             print(f'training model: {itr}') 
             
@@ -116,13 +113,12 @@ class PCDNNV1ExperimentExecutor:
             if Y_scaler is not None:
                 Y_pred = Y_scaler.inverse_transform(Y_pred)
                 
-                
             #sns.residplot(Y_pred.flatten(), getResiduals(Y_test,Y_pred))
 
             curr_errs = self.errManager.computeError (Y_pred, Y_test)
                 
-            if (len(errs) == 0) or ((len(errs) > 0) and (curr_errs[2] < self.min_mae)) :
-                self.min_mae = curr_errs[2]#MAE
+            if (len(errs) == 0) or ((len(errs) > 0) and (curr_errs['MAE'] < self.min_mae)) :
+                self.min_mae = curr_errs['MAE']#MAE
                 self.modelFactory.saveCurrModelAsBestModel()
                     
             errs.append(curr_errs)
@@ -143,14 +139,15 @@ class PCDNNV1ExperimentExecutor:
         self.df_experimentTracker = df_experimentTracker
         
         #Experiments  
-        
-        #TODO:uncomment
-        dataTypes = ["frameworkincludedtrainexcludedtest", "randomequalflamesplit"]#, "randomequaltraintestsplit"]
-        inputTypes = ["AllSpeciesZmixCpv","AllSpeciesZmixPCA","AllSpeciesPurePCA","AllSpeciesSparsePCA","AllSpeciesZmixAndPurePCA","AllSpeciesZmixAndSparsePCA"]
-        
-        #TODO:comment
-        #dataTypes = ["frameworkincludedtrainexcludedtest"]
-        #inputTypes = ["AllSpeciesZmixAndPurePCA"]
+       
+        if self.debug_mode:
+           #TODO:comment
+           dataTypes = ["frameworkincludedtrainexcludedtest"]
+           inputTypes = ["AllSpeciesZmixAndPurePCA"]
+        else: 
+           #TODO:uncomment
+           dataTypes = ["frameworkincludedtrainexcludedtest", "randomequalflamesplit"]#, "randomequaltraintestsplit"]
+           inputTypes = ["AllSpeciesZmixCpv","AllSpeciesZmixPCA","AllSpeciesPurePCA","AllSpeciesSparsePCA","AllSpeciesZmixAndPurePCA","AllSpeciesZmixAndSparsePCA"]
         
         concatenateZmix = 'N'
         
@@ -181,23 +178,17 @@ class PCDNNV1ExperimentExecutor:
                     
                 
                 if inputType.find('PCA') != -1:
-                    #TODO:uncomment                    
-                    noOfCpvs = [item for item in range(1, 6)]
-                    
-                    #TODO:comment                    
-                    #noOfCpvs = [item for item in range(2, 3)]
-                    
+
+                    m = 3 if self.debug_mode else 6
+                    noOfCpvs = [item for item in range(2, m)]
+
                     for noOfCpv in noOfCpvs:
-                        
                         self.executeSingleExperiment(noOfNeurons,dataSetMethod,dataType,inputType,ZmixPresent,noOfCpv,concatenateZmix)
                 else:
-
                     if inputType.find('ZmixCpv') != -1:
                         noOfCpv = 1
-                 
                     else:
                         noOfCpv = 53
-                 
                     print('------------------ ' + str(noOfNeurons) + ' ------------------')
                     self.executeSingleExperiment(noOfNeurons,dataSetMethod,dataType,inputType,ZmixPresent,noOfCpv,concatenateZmix)
         
