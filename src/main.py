@@ -21,31 +21,38 @@ from models.pcdnnv1_model_factory import PCDNNV1ModelFactory
 from models.pcdnnv2_model_factory import PCDNNV2ModelFactory
 import pandas as pd
 
-def run_gp_experiments(dm):
+
+def run_gp_experiments(dm, debug_mode = False):
     '''
     TODO: search for '#TODO:uncomment' in the 'experiment_executor/gp_experiment_executor.py' uncomment & comment out the necessary lines
     '''
+    assert debug_mode
     gp = GPModel()
     experimentTrackingFields = ['Model','Dataset','Cpv Type','#Cpv',"ZmixExists",'MAE','TAE','MSE','TSE','#Pts','FitTime','PredTime']
     df_experimentTracker = pd.DataFrame(columns=experimentTrackingFields)
     
     expExectr = GPExperimentExecutor()
+    expExectr.debug_mode = debug_mode
     expExectr.setModel(gp.getModel("Matern"))
     expExectr.executeExperiments(dm, "GP_Matern", df_experimentTracker)
     
     expExectr = GPExperimentExecutor()
+    expExectr.debug_mode = debug_mode
     expExectr.setModel(gp.getModel("RationalQuadratic"))
     expExectr.executeExperiments(dm, "GP_RationalQuadratic", df_experimentTracker)
     
     expExectr = GPExperimentExecutor()
+    expExectr.debug_mode = debug_mode
     expExectr.setModel(gp.getModel("Matern_RationalQuadratic"))
     expExectr.executeExperiments(dm, "GP_Matern_RationalQuadratic", df_experimentTracker)
 
     df_experimentTracker.to_csv('GP_Experiment_Results.csv', sep='\t',encoding='utf-8', index=False)
     
     print(df_experimentTracker.describe())
+    
+    return expExectr
 
-def run_simple_dnn_experiments(dm):
+def run_simple_dnn_experiments(dm, debug_mode = False):
     '''
     TODO: search for '#TODO:uncomment' in the 'experiment_executor/simple_dnn_experiment_executor.py' uncomment & comment out the necessary lines
     '''
@@ -54,6 +61,7 @@ def run_simple_dnn_experiments(dm):
     df_dnnexperimentTracker = pd.DataFrame(columns=dnnexperimentTrackingFields)
 
     expExectr = DNNExperimentExecutor()
+    expExectr.debug_mode = debug_mode
 
     expExectr.setModelFactory(SimpleDNNModelFactory())
 
@@ -62,16 +70,20 @@ def run_simple_dnn_experiments(dm):
     df_dnnexperimentTracker.to_csv('SimpleDNN_Experiment_Results.csv', sep='\t',encoding='utf-8', index=False)
     
     print(df_dnnexperimentTracker.describe())
+    
+    return expExectr
  
-def run_pcdnn_v1_experiments(dm):
+def run_pcdnn_v1_experiments(dm, debug_mode = False):
     '''
     TODO: search for '#TODO:uncomment' in the 'experiment_executor/pcdnn_v1_experiment_executor.py' uncomment & comment out the necessary lines
     '''
+    
     dnnexperimentTrackingFields = ['Model','Dataset','Cpv Type','#Cpv',"ZmixExists",'MAE','TAE','MSE','TSE','#Pts','FitTime','PredTime','MAX-MAE','MAX-TAE','MAX-MSE','MAX-TSE','MIN-MAE','MIN-TAE','MIN-MSE','MIN-TSE']
 
     df_pcdnnexperimentTracker = pd.DataFrame(columns=dnnexperimentTrackingFields)
 
     expExectr = PCDNNV1ExperimentExecutor()
+    expExectr.debug_mode = debug_mode
     
     expExectr.setModelFactory(PCDNNV1ModelFactory())
     
@@ -80,17 +92,19 @@ def run_pcdnn_v1_experiments(dm):
     df_pcdnnexperimentTracker.to_csv('PCDNNV1_Experiment_Results.csv', sep='\t',encoding='utf-8', index=False)
     
     print(df_pcdnnexperimentTracker.describe())
+    
+    return expExectr
  
-def run_pcdnn_v2_experiments(dm):
+def run_pcdnn_v2_experiments(dm, debug_mode = False):
     '''
     TODO: search for '#TODO:uncomment' in the 'experiment_executor/pcdnn_v2_experiment_executor.py' uncomment & comment out the necessary lines
     '''
-    
     dnnexperimentTrackingFields = ['Model','Dataset','Cpv Type','#Cpv',"ZmixExists",'KernelConstraintExists','KernelRegularizerExists','ActivityRegularizerExists','MAE','TAE','MSE','TSE','#Pts','FitTime','PredTime','MAX-MAE','MAX-TAE','MAX-MSE','MAX-TSE','MIN-MAE','MIN-TAE','MIN-MSE','MIN-TSE']
     
     df_pcdnnexperimentTracker = pd.DataFrame(columns=dnnexperimentTrackingFields)
 
     expExectr = PCDNNV2ExperimentExecutor()
+    expExectr.debug_mode = debug_mode
     
     expExectr.setModelFactory(PCDNNV2ModelFactory())
     
@@ -133,7 +147,10 @@ def run_pcdnn_v2_experiments(dm):
     
     bestModel.summary()
     '''
-def main():
+
+    return expExectr
+
+def main(debug_mode=False):
     #Prepare the DataFrame that will be used downstream
     dp = DataPreparer()
     dp.createPCAs()
@@ -142,7 +159,7 @@ def main():
     df = dp.getDataframe()
 
     df.to_csv('PCA_data.csv', index=False)
-   
+  
     '''
     print(df[dp.pure_pca_dim_cols].describe().transpose())
     print(df[dp.sparse_pca_dim_cols].describe().transpose())
@@ -155,22 +172,22 @@ def main():
     1. Run the GP Experiments
      
     '''
-    run_gp_experiments(dm)
+    run_gp_experiments(dm, debug_mode=debug_mode)
     
     '''
     2. Run the Simple DNN Experiments
     '''
-    run_simple_dnn_experiments(dm)
+    run_simple_dnn_experiments(dm, debug_mode=debug_mode)
         
     '''
     3. Run the PCDNN_v1 Experiments
     '''
-    run_pcdnn_v1_experiments(dm)
+    run_pcdnn_v1_experiments(dm, debug_mode=debug_mode)
     
     '''
     4. Run the PCDNN_v2 Experiments
     '''
-    run_pcdnn_v2_experiments(dm)
+    run_pcdnn_v2_experiments(dm, debug_mode=debug_mode)
     
     
 if __name__ == "__main__":
