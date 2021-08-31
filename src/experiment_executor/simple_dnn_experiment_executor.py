@@ -63,15 +63,15 @@ class DNNExperimentExecutor:
         experiment_num = 0
         #Experiments  
         
-        if not self.debug_mode:
-		    #TODO:uncomment
+        if self.debug_mode:
+            #TODO:comment
+            dataTypes = ["randomequalflamesplit"]
+            inputTypes = ["ZmixCpv"]
+        else:
+            #TODO:uncomment
             dataTypes = ["frameworkincludedtrainexcludedtest", "randomequalflamesplit"]#, "randomequaltraintestsplit"] #for production -- uncomment this
             inputTypes = ["ZmixCpv","ZmixPCA","SparsePCA","PurePCA","ZmixAndPurePCA","ZmixAndSparsePCA","ZmixAllSpecies","AllSpecies"]
-        else:
-            #TODO:comment
-            dataTypes = ["frameworkincludedtrainexcludedtest"]
-            inputTypes = ["ZmixCpv"]
-        
+
         for dataType in dataTypes:
             print('=================== ' + dataType + ' ===================')
             

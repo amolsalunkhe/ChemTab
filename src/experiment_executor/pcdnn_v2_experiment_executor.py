@@ -86,7 +86,7 @@ class PCDNNV2ExperimentExecutor:
             t = time.process_time()
 
             if concatenateZmix == 'Y':
-                history = self.model.fit({"species_input":X_train, "Zmix":zmix_train}, {"prediction":Y_train},validation_split=0.2,verbose=0,epochs=100)
+                history = self.model.fit({"species_input":X_train, "zmix":zmix_train}, {"prediction":Y_train},validation_split=0.2,verbose=0,epochs=100)
             else:
                 history = self.model.fit({"species_input":X_train}, {"prediction":Y_train},validation_split=0.2,verbose=0,epochs=100)
             
@@ -97,7 +97,7 @@ class PCDNNV2ExperimentExecutor:
             t = time.process_time()
 
             if concatenateZmix == 'Y':
-                predictions = self.model.predict({"species_input":X_test, "Zmix":zmix_test})
+                predictions = self.model.predict({"species_input":X_test, "zmix":zmix_test})
             else:
                 predictions = self.model.predict({"species_input":X_test})
                 
@@ -116,8 +116,8 @@ class PCDNNV2ExperimentExecutor:
 
             curr_errs = self.errManager.computeError (Y_pred, Y_test)
                 
-            if (len(errs) == 0) or ((len(errs) > 0) and (curr_errs[2] < self.min_mae)) :
-                self.min_mae = curr_errs[2]#MAE
+            if (len(errs) == 0) or ((len(errs) > 0) and (curr_errs['MAE'] < self.min_mae)) :
+                self.min_mae = curr_errs['MAE']#MAE
                 self.modelFactory.saveCurrModelAsBestModel()
                     
             errs.append(curr_errs)
@@ -143,7 +143,7 @@ class PCDNNV2ExperimentExecutor:
         #Experiments  
         if self.debug_mode:
             #TODO:comment
-            dataTypes = ["randomequaltraintestsplit"]
+            dataTypes = ["randomequalflamesplit"]
             inputTypes = ["AllSpeciesAndZmix"]    
         else:
             #TODO:uncomment

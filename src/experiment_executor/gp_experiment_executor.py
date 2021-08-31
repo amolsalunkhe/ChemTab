@@ -54,7 +54,7 @@ class GPExperimentExecutor:
         
         if self.debug_mode:
             #TODO:comment 
-            dataTypes = ["frameworkincludedtrainexcludedtest"] #for testing -- comment this 
+            dataTypes = ["randomequalflamesplit"] #for testing -- comment this 
             inputTypes = ["ZmixCpv"] #for testing -- comment this
         else:
             #TODO:uncomment
@@ -75,8 +75,8 @@ class GPExperimentExecutor:
                     ZmixPresent = 'N'
                     
                 if inputType.find('PCA') != -1:
-                    
-                    noOfCpvs = [item for item in range(1, 6)]
+                    m = 3 if self.debug_mode else 6 
+                    noOfCpvs = [item for item in range(2, m)]
                     
                     for noOfCpv in noOfCpvs:
                         #                           dataSetMethod,noOfCpvs, ipscaler, opscaler

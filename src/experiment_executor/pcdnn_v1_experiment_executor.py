@@ -142,7 +142,7 @@ class PCDNNV1ExperimentExecutor:
        
         if self.debug_mode:
            #TODO:comment
-           dataTypes = ["frameworkincludedtrainexcludedtest"]
+           dataTypes = ["randomequalflamesplit"]
            inputTypes = ["AllSpeciesZmixAndPurePCA"]
         else: 
            #TODO:uncomment
