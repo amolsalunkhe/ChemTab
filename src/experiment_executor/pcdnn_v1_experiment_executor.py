@@ -59,8 +59,15 @@ class PCDNNV1ExperimentExecutor:
 
         #['Model','Dataset','Cpv Type','#Cpv',"ZmixExists",'MAE','TAE','MSE','TSE','#Pts','FitTime','PredTime','MAX-MAE','MAX-TAE','MAX-MSE','MAX-TSE','MIN-MAE','MIN-TAE','MIN-MSE','MIN-TSE']
 
-        experimentResults = [self.modelType, dataType,inputType,str(noOfCpv), ZmixPresent,str(self.df_err['MAE'].mean()),str(self.df_err['TAE'].mean()),str(self.df_err['MSE'].mean()),str(self.df_err['TSE'].mean()),str(self.df_err['#Pts'].mean()),str(self.fit_time),str(self.pred_time),str(self.df_err['MAE'].max()),str(self.df_err['TAE'].max()),str(self.df_err['MSE'].max()),str(self.df_err['TSE'].max()),str(self.df_err['MAE'].min()),str(self.df_err['TAE'].min()),str(self.df_err['MSE'].min()),str(self.df_err['TSE'].min())]
-
+        # log experiment results
+        distribution_summary_stats = lambda error_df, target_key: {target_key + '-MIN': error_df[target_key].min(),
+                                                                   target_key: error_df[target_key].mean(),
+                                                                   target_key + '-MAX': error_df[target_key].max()}
+        
+        experimentResults = {'Model': self.modelType, 'Dataset':dataType, 'Cpv Type':inputType, '#Cpv': noOfCpv, "ZmixExists": ZmixPresent, 'FitTime': self.fit_time, 'PredTime': self.pred_time}
+        err_names = ['MAE', 'TAE', 'MSE', 'TSE', 'MRE', 'TRE']
+        for name in err_names:
+            experimentResults.update(distribution_summary_stats(self.df_err, name))
         self.df_experimentTracker.loc[len(self.df_experimentTracker)] = experimentResults        
 
         printStr = "self.modelType: "+ self.modelType+ " dataType: "  + dataType+ " inputType:"+inputType+ " noOfCpv:"+str(noOfCpv)+ " ZmixPresent:" + ZmixPresent + " MAE:" +str(self.df_err['MAE'].min())
