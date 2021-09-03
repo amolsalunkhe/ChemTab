@@ -1,0 +1,176 @@
+# main.py imports
+from data.pre_processing import DataPreparer
+from data.train_test_manager import DataManager
+from experiment_executor.gp_experiment_executor import GPExperimentExecutor
+from experiment_executor.simple_dnn_experiment_executor import DNNExperimentExecutor
+from experiment_executor.pcdnn_v1_experiment_executor import PCDNNV1ExperimentExecutor
+from experiment_executor.pcdnn_v2_experiment_executor import PCDNNV2ExperimentExecutor
+from models.gpmodel import GPModel
+from models.gpmodel import CustomGPR
+from models.simplednn_model_factory import SimpleDNNModelFactory
+from models.pcdnnv1_model_factory import PCDNNV1ModelFactory
+from models.pcdnnv2_model_factory import PCDNNV2ModelFactory
+from models.dnnmodel_model_factory import DNNModelFactory
+import pandas as pd
+
+
+# baseline imports
+import matplotlib.pyplot as plt
+import tensorflow as tf
+from tensorflow import keras
+from sklearn.inspection import plot_partial_dependence
+from sklearn.base import BaseEstimator, RegressorMixin
+import scipy.stats as stats
+import pandas as pd
+import numpy as np
+import os
+
+
+def do_perm_feature_importance(model, X_data=None, Y_data=None,
+                               data_manager=None, n_repeats=30, random_state=0):
+    assert not (X_data is None and Y_data is None and data_manager is None)
+    if data_manager is not None:
+        X_data = pd.DataFrame(data_manager.X_test, columns=data_manager.input_data_cols)
+        Y_data = pd.DataFrame(data_manager.Y_test, columns=data_manager.output_data_cols)
+    
+    from sklearn.inspection import permutation_importance
+    r = permutation_importance(model, X_data, Y_data,
+                               n_repeats=n_repeats,
+                               random_state=random_state,
+                               scoring='neg_mean_squared_error')
+
+    argsort = r.importances_mean.argsort()[::-1]
+    
+    for i in argsort:
+         if r.importances_mean[i] - 2 * r.importances_std[i] > 0:
+            print(f"{list(X_data.columns)[i]}; {r.importances_mean[i]:.3f} +/- {r.importances_std[i]:.3f}")
+    a = list(X_data.columns[argsort])
+    b = r.importances_mean[argsort]
+    c = r.importances_std[argsort]
+    bar = plt.bar(a, b, label='mean')
+    err = plt.errorbar(a, b, yerr=c, fmt="o", color="r", label='std')
+    plt.yscale('log')
+    plt.title('Model\'s (Permutation) Feature Importance')
+    plt.xticks(rotation = 90)
+    plt.legend(handles=[bar, err])
+    plt.show()
+
+
+class NNWrapper(BaseEstimator, RegressorMixin):
+    """Wraps Amol's NN classes to comform to the interface expected by SciPy"""
+    def __init__(self, model, concatenate_zmix=None):
+        # QUESTION: what are the things that concatenate_zmix does currently?
+        super().__init__()
+        self._model = model
+        self._input_names = [i.name for i in model.inputs]
+        print(f'input names: {self._input_names}')
+        if concatenate_zmix is None:
+            self._concatenate_zmix = 'zmix' in self._input_names
+        else:
+            self._concatenate_zmix = concatenate_zmix
+
+        # this tells sklearn that the model is fitted apparently... (as of version 1.6.2)
+        # https://github.com/scikit-learn/scikit-learn/blob/main/sklearn/utils/validation.py
+        self._I_am_fitted_ = 'nonsense_value'
+
+    def get_XY_data(self, dm):
+        """
+        Extracts appropriate X & Y data from data-manager for evaluation of our model.
+        (assumes that datamanager was already called to create relevant dataset)
+        """
+        X_data = np.concatenate((dm.X_test, dm.zmix_test.reshape([-1, 1])), axis=1) if self._concatenate_zmix else dm.X_test
+        extra_input_cols = ['zmix'] if self._concatenate_zmix else []
+        Y_data = dm.Y_test
+        
+        X_data = pd.DataFrame(X_data.astype('f8'), columns=extra_input_cols+list(dm.input_data_cols))
+        Y_data = pd.DataFrame(Y_data.astype('f8'), columns=dm.output_data_cols)
+        return X_data, Y_data
+
+    #### DEPRECATED... ####
+    def _get_input_dict(self, X_data: pd.DataFrame):
+        # TODO: make this not drop zmix if it is 'present' but not 'concatenated'
+        zmix = X_data['zmix']
+        X_data = X_data.drop(columns='zmix')
+        X_data = np.asarray(X_data)
+
+        # self._input_names[0] == 'species_input' or 'inputs' depending on NN version
+        if self._concatenate_zmix:
+            input_dict = {self._input_names[0]: X_data}
+            input_dict['zmix'] = zmix
+        else:
+            assert len(self._input_names)==1
+            input_dict= {self._input_names[0]: np.asarray(X_data)}
+            # QUESTION: are we sure the order is right here?
+        return input_dict
+
+    def predict(self, X_data):
+        return self._model.predict(X_data)
+        #return self._model.predict(self._get_input_dict(X_data))
+
+    def get_params(self, deep=True):
+        return self._model.get_weights()
+
+    def fit(self, X_data, Y_data):
+        self._model.fit(X_data, Y_data, batch_size=32)
+        #self._model.fit(self._get_input_dict(X_data), Y_data, batch_size=32)
+
+# original CustomGPR class is already compatible with scipy so we just need to add get_XY_data method...
+class GPWrapper(CustomGPR):
+    def __init__(self, gp_model):
+        # integrate gp_model into this class (i.e. this class 'becomes' gp model)
+        vars(self).update(vars(gp_model))
+        
+    def get_XY_data(self, dm):
+        """
+        Extracts appropriate X & Y data from data-manager for evaluation of our model
+        (assumes that datamanager was already called to create relevant dataset)
+        """
+        X_data = pd.DataFrame(dm.X_test, columns=dm.input_data_cols)
+        Y_data = pd.DataFrame(dm.Y_test, columns=dm.output_data_cols)
+        return X_data, Y_data
+
+
+
+class ModelInspector:
+    """ Abstract model inspector (e.g. error analysis) """
+    def __init__(self, model_factory, dm):
+        experiment_settings = model_factory.experimentSettings
+        dm.createTrainTestData(dataSetMethod=experiment_settings['dataSetMethod'], numCpvComponents=experiment_settings['noOfCpv'],
+                               ipscaler=experiment_settings['ipscaler'], opscaler=experiment_settings['opscaler'])
+
+        # wrap model for use with scipy
+        if isinstance(model_factory, DNNModelFactory):
+            model_wrapper = NNWrapper(model_factory.getRegressor(), concatenate_zmix=experiment_settings['concatenateZmix']=='Y')
+        else:
+            assert type(model_factory.model) is CustomGPR
+            model_wrapper = GPWrapper(model_factory.model)
+
+        self._model_factory = model_factory
+        self._model = model_wrapper
+        self._dm = dm
+        self._X_data, self._Y_data = self._model.get_XY_data(self._dm)
+        
+        if isinstance(model_factory, DNNModelFactory):
+            linearAutoEncoder = model_factory.getLinearEncoder()
+            zmix = self._X_data['zmix']
+            self._X_data = self._X_data.drop('zmix', axis=1)
+            self._X_data = np.concatenate((np.asarray(zmix).reshape([-1, 1]),
+                                           linearAutoEncoder.predict(self._X_data)), axis=1)
+                                            # Zmix is on the left
+            
+            X_column_names = ['zmix'] + [f'cpv{i+1}' for i in range(experiment_settings['noOfCpv'])]
+            print(X_column_names)
+            self._X_data = pd.DataFrame(columns=X_column_names, data=self._X_data)
+            
+    def plot_partial_dependence(self, features: list = None):
+        features=list(range(min(self._X_data.shape[1], 25)))
+
+        # this gives us the same dataframe but with only quartiles for each variable
+        # thereby covering the relevant ranges but much faster
+        X_chunky=self._X_data.describe().iloc[3:]
+        print(X_chunky)
+
+        plot_partial_dependence(self._model, X_chunky, features=features)
+
+    def plot_permutation_feature_importance(self, n_repeats=5):
+        do_perm_feature_importance(self._model, self._X_data, self._Y_data, n_repeats=n_repeats)
