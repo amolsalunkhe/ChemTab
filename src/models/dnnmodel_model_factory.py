@@ -99,11 +99,11 @@ class DNNModelFactory:
         input_ = layers.Input(x.shape[1:])
     
         # for debugging only
-        #output = add_regularized_dense_module(input_, [16,32,16])
+        output = add_regularized_dense_module(input_, [16,32,16])
         
-        output = add_regularized_dense_module(input_, [32,64,128])
-        output = add_regularized_dense_module(output, [256,512,256])
-        output = add_regularized_dense_module(output, [128,64,32])
+        #output = add_regularized_dense_module(input_, [32,64,128])
+        #output = add_regularized_dense_module(output, [256,512,256])
+        #output = add_regularized_dense_module(output, [128,64,32])
 
         # used to be named 'prediction' (now model is named 'prediction', since it is last layer)
         souener_pred = layers.Dense(1)(output)

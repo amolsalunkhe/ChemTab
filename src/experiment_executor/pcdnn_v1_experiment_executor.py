@@ -87,7 +87,7 @@ class PCDNNV1ExperimentExecutor:
         
         errs = []
         
-        n = 2 if self.debug_mode else 11      
+        n = 3 if self.debug_mode else 11      
         for itr in range(1,n):
 
             print(f'training model: {itr}') 
