@@ -26,10 +26,9 @@ def run_gp_experiments(dm, debug_mode = False):
     '''
     TODO: search for '#TODO:uncomment' in the 'experiment_executor/gp_experiment_executor.py' uncomment & comment out the necessary lines
     '''
-    assert debug_mode
     gp = GPModel()
-    experimentTrackingFields = ['Model','Dataset','Cpv Type','#Cpv',"ZmixExists",'MAE','TAE','MSE','TSE','#Pts','FitTime','PredTime']
-    df_experimentTracker = pd.DataFrame(columns=experimentTrackingFields)
+    #experimentTrackingFields = ['Model','Dataset','Cpv Type','#Cpv',"ZmixExists",'MAE','TAE','MSE','TSE','#Pts','FitTime','PredTime']
+    df_experimentTracker = pd.DataFrame()#columns=experimentTrackingFields)
     
     expExectr = GPExperimentExecutor()
     expExectr.debug_mode = debug_mode
@@ -56,9 +55,9 @@ def run_simple_dnn_experiments(dm, debug_mode = False):
     '''
     TODO: search for '#TODO:uncomment' in the 'experiment_executor/simple_dnn_experiment_executor.py' uncomment & comment out the necessary lines
     '''
-    dnnexperimentTrackingFields = ['Model','Dataset','Cpv Type','#Cpv',"ZmixExists",'MAE','TAE','MSE','TSE','#Pts','FitTime','PredTime','MAX-MAE','MAX-TAE','MAX-MSE','MAX-TSE','MIN-MAE','MIN-TAE','MIN-MSE','MIN-TSE']
+    #dnnexperimentTrackingFields = ['Model','Dataset','Cpv Type','#Cpv',"ZmixExists",'MAE','TAE','MSE','TSE','#Pts','FitTime','PredTime','MAX-MAE','MAX-TAE','MAX-MSE','MAX-TSE','MIN-MAE','MIN-TAE','MIN-MSE','MIN-TSE']
 
-    df_dnnexperimentTracker = pd.DataFrame(columns=dnnexperimentTrackingFields)
+    df_dnnexperimentTracker = pd.DataFrame()#columns=dnnexperimentTrackingFields)
 
     expExectr = DNNExperimentExecutor()
     expExectr.debug_mode = debug_mode
@@ -78,9 +77,9 @@ def run_pcdnn_v1_experiments(dm, debug_mode = False):
     TODO: search for '#TODO:uncomment' in the 'experiment_executor/pcdnn_v1_experiment_executor.py' uncomment & comment out the necessary lines
     '''
     
-    dnnexperimentTrackingFields = ['Model','Dataset','Cpv Type','#Cpv',"ZmixExists",'MAE','TAE','MSE','TSE','#Pts','FitTime','PredTime','MAX-MAE','MAX-TAE','MAX-MSE','MAX-TSE','MIN-MAE','MIN-TAE','MIN-MSE','MIN-TSE']
+    #dnnexperimentTrackingFields = ['Model','Dataset','Cpv Type','#Cpv',"ZmixExists",'MAE','TAE','MSE','TSE','#Pts','FitTime','PredTime','MAX-MAE','MAX-TAE','MAX-MSE','MAX-TSE','MIN-MAE','MIN-TAE','MIN-MSE','MIN-TSE']
 
-    df_pcdnnexperimentTracker = pd.DataFrame(columns=dnnexperimentTrackingFields)
+    df_pcdnnexperimentTracker = pd.DataFrame()#columns=dnnexperimentTrackingFields)
 
     expExectr = PCDNNV1ExperimentExecutor()
     expExectr.debug_mode = debug_mode
@@ -99,9 +98,9 @@ def run_pcdnn_v2_experiments(dm, debug_mode = False):
     '''
     TODO: search for '#TODO:uncomment' in the 'experiment_executor/pcdnn_v2_experiment_executor.py' uncomment & comment out the necessary lines
     '''
-    dnnexperimentTrackingFields = ['Model','Dataset','Cpv Type','#Cpv',"ZmixExists",'KernelConstraintExists','KernelRegularizerExists','ActivityRegularizerExists','MAE','TAE','MSE','TSE','#Pts','FitTime','PredTime','MAX-MAE','MAX-TAE','MAX-MSE','MAX-TSE','MIN-MAE','MIN-TAE','MIN-MSE','MIN-TSE']
+    #dnnexperimentTrackingFields = ['Model','Dataset','Cpv Type','#Cpv',"ZmixExists",'KernelConstraintExists','KernelRegularizerExists','ActivityRegularizerExists','MAE','TAE','MSE','TSE','#Pts','FitTime','PredTime','MAX-MAE','MAX-TAE','MAX-MSE','MAX-TSE','MIN-MAE','MIN-TAE','MIN-MSE','MIN-TSE']
     
-    df_pcdnnexperimentTracker = pd.DataFrame(columns=dnnexperimentTrackingFields)
+    df_pcdnnexperimentTracker = pd.DataFrame()#columns=dnnexperimentTrackingFields)
 
     expExectr = PCDNNV2ExperimentExecutor()
     expExectr.debug_mode = debug_mode
