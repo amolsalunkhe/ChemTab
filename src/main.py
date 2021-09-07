@@ -46,7 +46,6 @@ def run_gp_experiments(dm, debug_mode = False):
     expExectr.executeExperiments(dm, "GP_Matern_RationalQuadratic", df_experimentTracker)
 
     df_experimentTracker.to_csv('GP_Experiment_Results.csv', sep='\t',encoding='utf-8', index=False)
-    
     print(df_experimentTracker.describe())
     
     return expExectr
@@ -57,18 +56,16 @@ def run_simple_dnn_experiments(dm, debug_mode = False):
     '''
     #dnnexperimentTrackingFields = ['Model','Dataset','Cpv Type','#Cpv',"ZmixExists",'MAE','TAE','MSE','TSE','#Pts','FitTime','PredTime','MAX-MAE','MAX-TAE','MAX-MSE','MAX-TSE','MIN-MAE','MIN-TAE','MIN-MSE','MIN-TSE']
 
-    df_dnnexperimentTracker = pd.DataFrame()#columns=dnnexperimentTrackingFields)
 
     expExectr = DNNExperimentExecutor()
     expExectr.debug_mode = debug_mode
 
     expExectr.setModelFactory(SimpleDNNModelFactory())
+    expExectr.executeExperiments(dm, "Simple_DNN", pd.DataFrame())
 
-    expExectr.executeExperiments(dm, "Simple_DNN", df_dnnexperimentTracker)
-
-    df_dnnexperimentTracker.to_csv('SimpleDNN_Experiment_Results.csv', sep='\t',encoding='utf-8', index=False)
-    
-    print(df_dnnexperimentTracker.describe())
+    df_experimentTracker = expExectr.df_experimentTracker
+    df_experimentTracker.to_csv('SimpleDNN_Experiment_Results.csv', sep='\t',encoding='utf-8', index=False)
+    print(df_experimentTracker.describe())
     
     return expExectr
  
@@ -79,18 +76,15 @@ def run_pcdnn_v1_experiments(dm, debug_mode = False):
     
     #dnnexperimentTrackingFields = ['Model','Dataset','Cpv Type','#Cpv',"ZmixExists",'MAE','TAE','MSE','TSE','#Pts','FitTime','PredTime','MAX-MAE','MAX-TAE','MAX-MSE','MAX-TSE','MIN-MAE','MIN-TAE','MIN-MSE','MIN-TSE']
 
-    df_pcdnnexperimentTracker = pd.DataFrame()#columns=dnnexperimentTrackingFields)
-
     expExectr = PCDNNV1ExperimentExecutor()
     expExectr.debug_mode = debug_mode
     
     expExectr.setModelFactory(PCDNNV1ModelFactory())
-    
-    expExectr.executeExperiments(dm, "PCDNNV1", df_pcdnnexperimentTracker)
+    expExectr.executeExperiments(dm, "PCDNNV1",  pd.DataFrame())
 
-    df_pcdnnexperimentTracker.to_csv('PCDNNV1_Experiment_Results.csv', sep='\t',encoding='utf-8', index=False)
-    
-    print(df_pcdnnexperimentTracker.describe())
+    df_experimentTracker = expExectr.df_experimentTracker
+    df_experimentTracker.to_csv('PCDNNV1_Experiment_Results.csv', sep='\t',encoding='utf-8', index=False)
+    print(df_experimentTracker.describe())
     
     return expExectr
  
@@ -100,52 +94,15 @@ def run_pcdnn_v2_experiments(dm, debug_mode = False):
     '''
     #dnnexperimentTrackingFields = ['Model','Dataset','Cpv Type','#Cpv',"ZmixExists",'KernelConstraintExists','KernelRegularizerExists','ActivityRegularizerExists','MAE','TAE','MSE','TSE','#Pts','FitTime','PredTime','MAX-MAE','MAX-TAE','MAX-MSE','MAX-TSE','MIN-MAE','MIN-TAE','MIN-MSE','MIN-TSE']
     
-    df_pcdnnexperimentTracker = pd.DataFrame()#columns=dnnexperimentTrackingFields)
-
     expExectr = PCDNNV2ExperimentExecutor()
     expExectr.debug_mode = debug_mode
     
     expExectr.setModelFactory(PCDNNV2ModelFactory())
+    expExectr.executeExperiments(dm, "PCDNNV2", pd.DataFrame())
     
-    expExectr.executeExperiments(dm, "PCDNNV2", df_pcdnnexperimentTracker)
-
-    df_pcdnnexperimentTracker.to_csv('PCDNNV2_Experiment_Results.csv', sep='\t',encoding='utf-8', index=False)
-
-    bestModel, experimentSettings = expExectr.modelFactory.openBestModel()
-
-    linearAutoEncoder = expExectr.modelFactory.getLinearEncoder()     
-    
-    
-    dm.createTrainTestData(experimentSettings.get('dataSetMethod'), experimentSettings.get('noOfCpv'), experimentSettings.get('inputScaler'), experimentSettings.get('outputScaler'))
-    
-    #X_train, X_test, Y_train, Y_test, rom_train, rom_test, zmix_train, zmix_test = dm.getTrainTestData() 
-    
-    X,Y,rom,zmix = dm.getAllData()
-    
-    pcdnnv2LinearEmbedding = linearAutoEncoder.predict(X)
-    
-    print (pcdnnv2LinearEmbedding)
-
-    #Get the Regressor
-    regressor = expExectr.modelFactory.getRegressor()
-        
-    #df_pcdnnv2LinearEmbedding.to_csv('PCDNNV2_Linear_Embeddings.csv', sep='\t',encoding='utf-8', index=False)
-
-    '''
-    TODO: Add the ErrorAnalysis
-          Add the Explainability
-          
-    '''
-    
-    print(df_pcdnnexperimentTracker.describe())
- 
-    '''
-    print(dataSetMethod)
-    
-    print("-----------------------------------------------")
-    
-    bestModel.summary()
-    '''
+    df_experimentTracker = expExectr.df_experimentTracker 
+    df_experimentTracker.to_csv('PCDNNV2_Experiment_Results.csv', sep='\t',encoding='utf-8', index=False)
+    print(df_experimentTracker.describe())
 
     return expExectr
 
@@ -171,7 +128,7 @@ def main(debug_mode=False):
     1. Run the GP Experiments
      
     '''
-    run_gp_experiments(dm, debug_mode=debug_mode)
+#    run_gp_experiments(dm, debug_mode=debug_mode)
     
     '''
     2. Run the Simple DNN Experiments
