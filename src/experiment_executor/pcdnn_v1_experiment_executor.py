@@ -97,17 +97,23 @@ class PCDNNV1ExperimentExecutor:
                 Y_test = Y_test.reshape(-1,1)
             Y_test = Y_scaler.inverse_transform(Y_test)
 
+
+        if rom_train is not None: rom_train = rom_train.squeeze()
+
         for itr in range(1,n):
 
             print(f'training model: {itr}') 
             
             t = time.process_time()
-            
+          
+            inputs = {"species_input":X_train}
+            outputs = {"prediction":Y_train}
             if concatenateZmix == 'Y':
-                history = self.model.fit({"species_input":X_train, "zmix":zmix_train}, {"physics":rom_train,"prediction":Y_train},validation_split=0.2,verbose=0,epochs=epochs)
-            else:
-                history = self.model.fit({"species_input":X_train}, {"physics":rom_train,"prediction":Y_train},validation_split=0.2,verbose=0,epochs=epochs)
-            
+                inputs["zmix"] = zmix_train
+            if rom_train is not None:
+                outputs["physics"] = rom_train
+            history = self.model.fit(inputs, outputs, validation_split=0.2, verbose=0, epochs=epochs)
+         
             #self.plot_loss_physics_and_regression(history)
 
             fit_times.append(time.process_time() - t)

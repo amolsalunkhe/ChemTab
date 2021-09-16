@@ -41,7 +41,8 @@ class DNNExperimentExecutor:
         
         self.model.summary()
 
-        self.fitModelAndCalcErr(self.dm.X_train, self.dm.Y_train, self.dm.X_test, self.dm.Y_test, Y_scaler=self.dm.outputScaler)
+        X_train, X_test, Y_train, Y_test, rom_train, rom_test, zmix_train, zmix_test = self.dm.getTrainTestData()
+        self.fitModelAndCalcErr(X_train, Y_train, X_test, Y_test, Y_scaler=self.dm.outputScaler)
 
         #['Model','Dataset','Cpv Type','#Cpv',"ZmixExists",'MAE','TAE','MSE','TSE','#Pts','FitTime','PredTime','MAX-MAE','MAX-TAE','MAX-MSE','MAX-TSE','MIN-MAE','MIN-TAE','MIN-MSE','MIN-TSE']
 
@@ -55,14 +56,9 @@ class DNNExperimentExecutor:
                              '#Pts': self.df_err['#Pts'].mean(), 'FitTime': self.fit_time, 'PredTime': self.pred_time, 'OPScaler': opscaler }
         err_names = ['MAE', 'TAE', 'MSE', 'TSE', 'MRE', 'TRE']
         for name in err_names:
-            try:
-                experimentResults.update(distribution_summary_stats(self.df_err, name))
-            except KeyError as e:
-                import pdb; pdb.set_trace()
-                raise e
+            experimentResults.update(distribution_summary_stats(self.df_err, name))
+        
         self.df_experimentTracker = self.df_experimentTracker.append(experimentResults, ignore_index=True)
-            
-        #experimentResults = [self.modelType, dataType,inputType,str(noOfCpv), ZmixPresent,str(self.df_err['MAE'].mean()),str(self.df_err['TAE'].mean()),str(self.df_err['MSE'].mean()),str(self.df_err['TSE'].mean()),str(self.df_err['#Pts'].mean()),str(self.fit_time),str(self.pred_time),str(self.df_err['MAE'].max()),str(self.df_err['TAE'].max()),str(self.df_err['MSE'].max()),str(self.df_err['TSE'].max()),str(self.df_err['MAE'].min()),str(self.df_err['TAE'].min()),str(self.df_err['MSE'].min()),str(self.df_err['TSE'].min())]
 
         printStr = "self.modelType: "+ self.modelType+ " dataType: "  + dataType+ " inputType:"+inputType+ " noOfCpv:"+str(noOfCpv)+ " ZmixPresent:" + ZmixPresent + " MAE:" +str(self.df_err['MAE'].min())
 
@@ -79,16 +75,16 @@ class DNNExperimentExecutor:
         experiment_num = 0
         #Experiments  
 
-        if self.debug_mode:
-            #TODO:comment
-            dataTypes = ["randomequalflamesplit"]
-            inputTypes = ["ZmixCpv"]
-            opscalers = ['PositiveLogNormal', 'MinMaxScaler']
-        else:
-            #TODO:uncomment
-            dataTypes = ["frameworkincludedtrainexcludedtest", "randomequalflamesplit"]#, "randomequaltraintestsplit"] #for production -- uncomment this
-            inputTypes = ["ZmixCpv","ZmixPCA","SparsePCA","PurePCA","ZmixAndPurePCA","ZmixAndSparsePCA","ZmixAllSpecies","AllSpecies"]
-            opscalers = ['MinMaxScaler', 'QuantileTransformer', 'PositiveLogNormal', None]
+        #if self.debug_mode:
+        #    #TODO:comment
+        #    dataTypes = ["randomequalflamesplit"]
+        #    inputTypes = ["ZmixCpv"]
+        #    opscalers = ['PositiveLogNormal', 'MinMaxScaler']
+        #else:
+        #TODO:uncomment
+        dataTypes = ["frameworkincludedtrainexcludedtest", "randomequalflamesplit"]#, "randomequaltraintestsplit"] #for production -- uncomment this
+        inputTypes = ["ZmixCpv","ZmixPCA","SparsePCA","PurePCA","ZmixAndPurePCA","ZmixAndSparsePCA","ZmixAllSpecies","AllSpecies"]
+        opscalers = ['MinMaxScaler', 'QuantileTransformer', 'PositiveLogNormal', None]
 
         for dataType in dataTypes:
             print('=================== ' + dataType + ' ===================')
