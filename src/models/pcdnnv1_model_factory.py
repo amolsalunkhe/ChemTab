@@ -17,6 +17,7 @@ class PCDNNV1ModelFactory(DNNModelFactory):
     def __init__(self):
         self.setModelName("PCDNNV1Model")
         self.setConcreteClassCustomObject({"PCDNNV1ModelFactory": PCDNNV1ModelFactory})
+        self.debug_mode = False
         return
 
     def build_and_compile_model(self,noOfInputNeurons,noOfCpv,concatenateZmix):
@@ -30,7 +31,7 @@ class PCDNNV1ModelFactory(DNNModelFactory):
             inputs = [species_inputs]
 
         linear_reduced_dims = self.addLinearModel(inputs, noOfInputNeurons, noOfCpv,
-                                concatenateZmix=concatenateZmix)
+                                                  concatenateZmix=concatenateZmix)
  
         souener_pred = self.addRegressorModel(linear_reduced_dims)
 
