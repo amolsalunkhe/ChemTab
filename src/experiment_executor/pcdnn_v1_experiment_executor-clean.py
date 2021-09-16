@@ -36,16 +36,17 @@ class PCDNNV1ExperimentExecutor:
     def getPredicitons(self):
         return self.predicitions
         
-    def executeSingleExperiment(self,noOfInputNeurons,dataSetMethod,dataType,inputType,ZmixPresent,noOfCpv,concatenateZmix,
-                                ipscaler=None, opscaler="MinMaxScaler"):
+    def executeSingleExperiment(self,noOfInputNeurons,dataSetMethod,dataType,inputType,ZmixPresent,noOfCpv,concatenateZmix):
 
         print("--------------------self.build_and_compile_pcdnn_v1_model----------------------")
-        self.modelFactory.debug_mode = self.debug_mode
         self.model = self.modelFactory.build_and_compile_model(noOfInputNeurons,noOfCpv,concatenateZmix)
             
         self.model.summary()
 
         X_train, X_test, Y_train, Y_test, rom_train, rom_test, zmix_train, zmix_test = self.dm.getTrainTestData() 
+        
+        ipscaler = None
+        opscaler = "MinMaxScaler"
         
         #                           dataSetMethod,noOfCpvs, ipscaler, opscaler
         self.dm.createTrainTestData(dataSetMethod,noOfCpv, ipscaler, opscaler)
@@ -64,7 +65,7 @@ class PCDNNV1ExperimentExecutor:
                                                                    'MAX-' + target_key: error_df[target_key].max()}       
  
         experimentResults = {'Model': self.modelType, 'Dataset':dataType, 'Cpv Type':inputType, '#Cpv':noOfCpv, 'ZmixExists': ZmixPresent, 
-                             '#Pts': self.df_err['#Pts'].mean(), 'FitTime': self.fit_time, 'PredTime': self.pred_time, 'OPScaler': opscaler}
+                             '#Pts': self.df_err['#Pts'].mean(), 'FitTime': self.fit_time, 'PredTime': self.pred_time}
 
 
         err_names = ['MAE', 'TAE', 'MSE', 'TSE', 'MRE', 'TRE']
@@ -89,14 +90,7 @@ class PCDNNV1ExperimentExecutor:
         
         errs = []
         
-        n = 2 if self.debug_mode else 11
-        epochs = 1 if self.debug_mode else 100      
-
-        if Y_scaler is not None:
-            if len(Y_test.shape)==1:
-                Y_test = Y_test.reshape(-1,1)
-            Y_test = Y_scaler.inverse_transform(Y_test)
-
+        n = 3 if self.debug_mode else 11      
         for itr in range(1,n):
 
             print(f'training model: {itr}') 
@@ -104,27 +98,28 @@ class PCDNNV1ExperimentExecutor:
             t = time.process_time()
             
             if concatenateZmix == 'Y':
-                history = self.model.fit({"species_input":X_train, "zmix":zmix_train}, {"physics":rom_train,"prediction":Y_train},validation_split=0.2,verbose=0,epochs=epochs)
+                history = self.model.fit({"species_input":X_train, "zmix":zmix_train}, {"physics":rom_train,"prediction":Y_train},validation_split=0.2,verbose=0,epochs=100)
             else:
-                history = self.model.fit({"species_input":X_train}, {"physics":rom_train,"prediction":Y_train},validation_split=0.2,verbose=0,epochs=epochs)
+                history = self.model.fit({"species_input":X_train}, {"physics":rom_train,"prediction":Y_train},validation_split=0.2,verbose=0,epochs=100)
             
             #self.plot_loss_physics_and_regression(history)
-
+            
             fit_times.append(time.process_time() - t)
-
+        
             t = time.process_time()
 
             if concatenateZmix == 'Y':
                 predictions = self.model.predict({"species_input":X_test, "zmix":zmix_test})
             else:
                 predictions = self.model.predict({"species_input":X_test})
-
+                
             pred_times.append(time.process_time() - t)
-
+            
             self.predicitions = predictions
             
             Y_pred = predictions[0]
             
+
             if Y_scaler is not None:
                 Y_pred = Y_scaler.inverse_transform(Y_pred)
                 
@@ -155,57 +150,57 @@ class PCDNNV1ExperimentExecutor:
         
         #Experiments  
        
-        #if self.debug_mode:
-        #   dataTypes = ["randomequalflamesplit"]
-        #   inputTypes = ["AllSpeciesZmixAndPurePCA"]
-        #   opscalers = ['PositiveLogNormal', 'MinMaxScaler']
-        #else: 
-        dataTypes = ["frameworkincludedtrainexcludedtest", "randomequalflamesplit"]#, "randomequaltraintestsplit"]
-        inputTypes = ["AllSpeciesZmixCpv","AllSpeciesZmixPCA","AllSpeciesPurePCA","AllSpeciesSparsePCA","AllSpeciesZmixAndPurePCA","AllSpeciesZmixAndSparsePCA"]
-        opscalers = ['MinMaxScaler', 'QuantileTransformer', 'PositiveLogNormal', None]
+        if self.debug_mode:
+           #TODO:comment
+           dataTypes = ["randomequalflamesplit"]
+           inputTypes = ["AllSpeciesZmixAndPurePCA"]
+        else: 
+           #TODO:uncomment
+           dataTypes = ["frameworkincludedtrainexcludedtest", "randomequalflamesplit"]#, "randomequaltraintestsplit"]
+           inputTypes = ["AllSpeciesZmixCpv","AllSpeciesZmixPCA","AllSpeciesPurePCA","AllSpeciesSparsePCA","AllSpeciesZmixAndPurePCA","AllSpeciesZmixAndSparsePCA"]
         
         concatenateZmix = 'N'
-       
+        
         for dataType in dataTypes:
             print('=================== ' + dataType + ' ===================')
             
-            for opscaler in opscalers: 
-                for inputType in inputTypes:
-                    print('------------------ ' + inputType + ' ------------------')
-                        
-                    #ZmixCpv_randomequaltraintestsplit
-                    dataSetMethod = inputType + '_' + dataType
+            for inputType in inputTypes:
                 
-                    self.modelFactory.setDataSetMethod(dataSetMethod)
+                print('------------------ ' + inputType + ' ------------------')
                     
-                    noOfNeurons = 53
+                #ZmixCpv_randomequaltraintestsplit
+                dataSetMethod = inputType + '_' + dataType
+            
+                self.modelFactory.setDataSetMethod(dataSetMethod)
+                
+                noOfNeurons = 53
 
-                    #ZmixAnd & ZmixAll
-                    if inputType.find('ZmixA') != -1:
-                        concatenateZmix = 'Y'
-                    else:
-                        concatenateZmix = 'N'
+                #ZmixAnd & ZmixAll
+                if inputType.find('ZmixA') != -1:
+                    concatenateZmix = 'Y'
+                else:
+                    concatenateZmix = 'N'
 
-                    if inputType.find('Zmix') != -1:
-                        ZmixPresent = 'Y'
-                    else:
-                        ZmixPresent = 'N'
-                        
+                if inputType.find('Zmix') != -1:
+                    ZmixPresent = 'Y'
+                else:
+                    ZmixPresent = 'N'
                     
-                    if inputType.find('PCA') != -1:
+                
+                if inputType.find('PCA') != -1:
 
-                        m = 3 if self.debug_mode else 6
-                        noOfCpvs = [item for item in range(2, m)]
+                    m = 3 if self.debug_mode else 6
+                    noOfCpvs = [item for item in range(2, m)]
 
-                        for noOfCpv in noOfCpvs:
-                            self.executeSingleExperiment(noOfNeurons,dataSetMethod,dataType,inputType,ZmixPresent,noOfCpv,concatenateZmix,opscaler=opscaler)
-                    else:
-                        if inputType.find('ZmixCpv') != -1:
-                            noOfCpv = 1
-                        else:
-                            noOfCpv = 53
-                        print('------------------ ' + str(noOfNeurons) + ' ------------------')
+                    for noOfCpv in noOfCpvs:
                         self.executeSingleExperiment(noOfNeurons,dataSetMethod,dataType,inputType,ZmixPresent,noOfCpv,concatenateZmix)
+                else:
+                    if inputType.find('ZmixCpv') != -1:
+                        noOfCpv = 1
+                    else:
+                        noOfCpv = 53
+                    print('------------------ ' + str(noOfNeurons) + ' ------------------')
+                    self.executeSingleExperiment(noOfNeurons,dataSetMethod,dataType,inputType,ZmixPresent,noOfCpv,concatenateZmix)
         
     
     def plot_loss_physics_and_regression(self,history):
