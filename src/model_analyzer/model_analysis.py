@@ -5,8 +5,7 @@ from experiment_executor.gp_experiment_executor import GPExperimentExecutor
 from experiment_executor.simple_dnn_experiment_executor import DNNExperimentExecutor
 from experiment_executor.pcdnn_v1_experiment_executor import PCDNNV1ExperimentExecutor
 from experiment_executor.pcdnn_v2_experiment_executor import PCDNNV2ExperimentExecutor
-from models.gpmodel import GPModel
-from models.gpmodel import CustomGPR
+from models.gp_model_factory import GPModel, CustomGPR
 from models.simplednn_model_factory import SimpleDNNModelFactory
 from models.pcdnnv1_model_factory import PCDNNV1ModelFactory
 from models.pcdnnv2_model_factory import PCDNNV2ModelFactory

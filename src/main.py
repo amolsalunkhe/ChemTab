@@ -15,7 +15,7 @@ from experiment_executor.simple_dnn_experiment_executor import DNNExperimentExec
 from experiment_executor.pcdnn_v1_experiment_executor import PCDNNV1ExperimentExecutor
 from experiment_executor.pcdnn_v2_experiment_executor import PCDNNV2ExperimentExecutor
 
-from models.gpmodel import GPModel
+from models.gp_model_factory import GPModel
 from models.simplednn_model_factory import SimpleDNNModelFactory
 from models.pcdnnv1_model_factory import PCDNNV1ModelFactory
 from models.pcdnnv2_model_factory import PCDNNV2ModelFactory
@@ -125,26 +125,25 @@ def main(debug_mode=False):
     dm = DataManager(df, dp)
     
     '''
-    1. Run the GP Experiments
-     
+    Run the PCDNN_v2 Experiments
     '''
-#    run_gp_experiments(dm, debug_mode=debug_mode)
-    
+    run_pcdnn_v2_experiments(dm, debug_mode=debug_mode)
+
     '''
-    2. Run the Simple DNN Experiments
+    Run the PCDNN_v1 Experiments
+    '''
+    run_pcdnn_v1_experiments(dm, debug_mode=debug_mode)
+
+    '''
+    Run the Simple DNN Experiments
     '''
     run_simple_dnn_experiments(dm, debug_mode=debug_mode)
         
     '''
-    3. Run the PCDNN_v1 Experiments
+    Run the GP Experiments 
     '''
-    run_pcdnn_v1_experiments(dm, debug_mode=debug_mode)
-    
-    '''
-    4. Run the PCDNN_v2 Experiments
-    '''
-    run_pcdnn_v2_experiments(dm, debug_mode=debug_mode)
-    
-    
+#    run_gp_experiments(dm, debug_mode=debug_mode)
+
+
 if __name__ == "__main__":
     main()    
