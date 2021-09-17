@@ -89,7 +89,7 @@ class PCDNNV1ExperimentExecutor:
         
         errs = []
         
-        n = 2 if self.debug_mode else 11
+        n = 3 if self.debug_mode else 11
         epochs = 1 if self.debug_mode else 100      
 
         if Y_scaler is not None:
@@ -166,7 +166,7 @@ class PCDNNV1ExperimentExecutor:
         #   inputTypes = ["AllSpeciesZmixAndPurePCA"]
         #   opscalers = ['PositiveLogNormal', 'MinMaxScaler']
         #else: 
-        dataTypes = ["frameworkincludedtrainexcludedtest", "randomequalflamesplit"]#, "randomequaltraintestsplit"]
+        dataTypes = ["frameworkincludedtrainexcludedtest", "randomequalflamesplit", "randomequaltraintestsplit"]
         inputTypes = ["AllSpeciesZmixCpv","AllSpeciesZmixPCA","AllSpeciesPurePCA","AllSpeciesSparsePCA","AllSpeciesZmixAndPurePCA","AllSpeciesZmixAndSparsePCA"]
         opscalers = ['MinMaxScaler', 'QuantileTransformer', 'PositiveLogNormal', None]
         

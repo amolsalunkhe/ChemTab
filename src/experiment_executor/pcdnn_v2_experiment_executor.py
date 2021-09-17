@@ -155,22 +155,15 @@ class PCDNNV2ExperimentExecutor:
         #    inputTypes = ["AllSpeciesAndZmix"]    
         #    opscalers = ['PositiveLogNormal', 'MinMaxScaler']
         #else:
-        dataTypes = ["frameworkincludedtrainexcludedtest", "randomequalflamesplit"]#, "randomequaltraintestsplit"]
+        dataTypes = ["frameworkincludedtrainexcludedtest", "randomequalflamesplit", "randomequaltraintestsplit"]
         inputTypes = ["AllSpecies","AllSpeciesAndZmix"]
         opscalers = ['MinMaxScaler', 'QuantileTransformer', 'PositiveLogNormal', None]
         
         concatenateZmix = 'N'
         
-        if not self.debug_mode:
-            #TODO:uncomment
-            kernel_constraints = ['Y','N']
-            kernel_regularizers = ['Y','N']
-            activity_regularizers = ['Y','N']        
-        else:
-            #TODO:comment
-            kernel_constraints = ['Y']
-            kernel_regularizers = ['Y']
-            activity_regularizers = ['Y']        
+        kernel_constraints = ['Y','N']
+        kernel_regularizers = ['Y','N']
+        activity_regularizers = ['Y','N']        
        
         for dataType in dataTypes:
             print('=================== ' + dataType + ' ===================')

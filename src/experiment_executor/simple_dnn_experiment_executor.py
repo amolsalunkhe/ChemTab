@@ -82,7 +82,7 @@ class DNNExperimentExecutor:
         #    opscalers = ['PositiveLogNormal', 'MinMaxScaler']
         #else:
         #TODO:uncomment
-        dataTypes = ["frameworkincludedtrainexcludedtest", "randomequalflamesplit"]#, "randomequaltraintestsplit"] #for production -- uncomment this
+        dataTypes = ["frameworkincludedtrainexcludedtest", "randomequalflamesplit", "randomequaltraintestsplit"] #for production -- uncomment this
         inputTypes = ["ZmixCpv","ZmixPCA","SparsePCA","PurePCA","ZmixAndPurePCA","ZmixAndSparsePCA","ZmixAllSpecies","AllSpecies"]
         opscalers = ['MinMaxScaler', 'QuantileTransformer', 'PositiveLogNormal', None]
 
