@@ -9,6 +9,7 @@ from sklearn.preprocessing import MinMaxScaler, QuantileTransformer
 import numpy as np
 import pandas as pd
 import random
+import warnings
 
 class PositiveLogNormalCol:
     def __init__(self):
@@ -31,7 +32,10 @@ class PositiveLogNormalCol:
         temp = pd.DataFrame(data=transformeddata, columns=["target"])
         temp['inverse'] = temp.apply(lambda row:  np.expm1((row.target)) + self.min_value, axis=1)
         data = temp['inverse'].values
-        assert (data != float('inf')).all() and (data != -float('inf')).all()
+        try:
+            assert (data != float('inf')).all() and (data != -float('inf')).all()
+        except AssertionError:
+            import pdb; pdb.set_trace()
         data = data.reshape(data.shape[0], 1)
         return data
 
@@ -53,6 +57,8 @@ class PositiveLogNormal:
         return cols_data
 
     def inverse_transform(self, data):
+        data = np.clip(data, -88.72, 88.72)
+        warnings.warn('clipping data to avoid np.exp overflow, this will cause an imperfect inversion of the transformation')
         if len(data.shape) == 1:
             data = data.reshape(-1, 1)
         cols_data = []
