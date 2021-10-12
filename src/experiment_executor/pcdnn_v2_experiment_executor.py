@@ -7,6 +7,7 @@ Created on Thu Aug  5 09:25:55 2021
 import time
 import pandas as pd
 import matplotlib.pyplot as plt
+import numpy as np
 
 from .error_manager import ErrorManager
 
@@ -24,6 +25,10 @@ class PCDNNV2ExperimentExecutor:
         self.errManager = ErrorManager()
         self.modelFactory = None
         self.min_mae = 0
+        
+        # override the default number of epochs used
+        self.epochs_override = None
+        self.n_models_override = None
         
     def setModel(self,model):
         self.model = model
@@ -87,24 +92,39 @@ class PCDNNV2ExperimentExecutor:
         pred_times = []
         
         errs = []
-       
-        if Y_scaler is not None:
-            if len(Y_test.shape)==1:
-                Y_test = Y_test.reshape(-1,1)
-            Y_test = Y_scaler.inverse_transform(Y_test) 
+      
+        #if len(Y_train.shape)==1: Y_train = Y_train.reshape(-1,1)
+
+        # doesn't this skew the evaluation on the test data later? (e.g. outside of keras?)        
+        raise RunTimeException("This is probably a bug")
+        X_train = np.concatenate((X_train, X_test),axis=0)
+        zmix_train = np.concatenate((zmix_train, zmix_test),axis=0)
+        Y_train = np.concatenate((Y_train, Y_test),axis=0)
+
  
-        n = 3 if self.debug_mode else 11
-        epochs = 1 if self.debug_mode else 100
-        for itr in range(1,n):    
+        if Y_scaler is not None:
+            if len(Y_test.shape)==1: Y_test = Y_test.reshape(-1,1)
+            Y_test_raw = Y_scaler.inverse_transform(Y_test).flatten() 
+ 
+        n = 3 if self.debug_mode else 6
+        epochs = 5 if self.debug_mode else 100
+        if self.epochs_override: epochs = self.epochs_override
+        if self.n_models_override: n = self.n_models_override+1      
+
+        for itr in range(1,n): 
         
             print(f'training model: {itr}')
             t = time.process_time()
 
             if concatenateZmix == 'Y':
-                history = self.model.fit({"species_input":X_train, "zmix":zmix_train}, {"prediction":Y_train},validation_split=0.2,verbose=0,epochs=epochs)
+                input_dict_train = {"species_input":X_train, "zmix":zmix_train}
+                input_dict_test = {"species_input":X_test, "zmix":zmix_test}
             else:
-                history = self.model.fit({"species_input":X_train}, {"prediction":Y_train},validation_split=0.2,verbose=0,epochs=epochs)
+                input_dict_train = {"species_input":X_train}
+                input_dict_test = {"species_input":X_test}
             
+            history = self.model.fit(input_dict_train, {"prediction":Y_train}, verbose=1, epochs=epochs, batch_size=64, validation_split=0.2, shuffle=True)
+            #,validation_data=(input_dict_test, {'prediction': Y_test_scaled}), verbose=1, epochs=epochs)
             #self.plot_loss_physics_and_regression(history)
             
             fit_times.append(time.process_time() - t)
@@ -123,10 +143,10 @@ class PCDNNV2ExperimentExecutor:
             Y_pred = predictions
 
             if Y_scaler is not None:
-                Y_pred = Y_scaler.inverse_transform(Y_pred)
+                Y_pred_raw = Y_scaler.inverse_transform(Y_pred)
             #sns.residplot(Y_pred.flatten(), getResiduals(Y_test,Y_pred))
 
-            curr_errs = self.errManager.computeError (Y_pred, Y_test)
+            curr_errs = self.errManager.computeError (Y_pred_raw, Y_test_raw)
                 
             if (len(errs) == 0) or ((len(errs) > 0) and (curr_errs['MAE'] < self.min_mae)) :
                 self.min_mae = curr_errs['MAE']#MAE
