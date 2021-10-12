@@ -20,6 +20,7 @@ from .dnnmodel_model_factory import DNNModelFactory
 
 class SimpleDNNModelFactory(DNNModelFactory):    
     def __init__(self):
+        super().__init__()
         #print("SimpleDNNModel Instantiated")
         self.setModelName("SimpleDNNModel")
         self.setConcreteClassCustomObject({"SimpleDNNModelFactory": SimpleDNNModelFactory})

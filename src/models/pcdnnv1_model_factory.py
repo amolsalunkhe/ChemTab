@@ -15,6 +15,7 @@ from .dnnmodel_model_factory import DNNModelFactory
 
 class PCDNNV1ModelFactory(DNNModelFactory):
     def __init__(self):
+        super().__init__()
         self.setModelName("PCDNNV1Model")
         self.setConcreteClassCustomObject({"PCDNNV1ModelFactory": PCDNNV1ModelFactory})
         self.debug_mode = False
