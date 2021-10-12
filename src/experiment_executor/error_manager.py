@@ -17,7 +17,7 @@ class ErrorManager:
 
         evaluation_df_1['souener_pred'] = Y_pred.flatten()
 
-        evaluation_df_1['souener_pred_L1'] = evaluation_df_1['souener'] - evaluation_df_1['souener_pred'] 
+        evaluation_df_1['souener_pred_L1'] = (evaluation_df_1['souener'] - evaluation_df_1['souener_pred']).abs() 
 
         evaluation_df_1['souener_pred_L2'] = evaluation_df_1['souener_pred_L1'] * evaluation_df_1['souener_pred_L1']
 

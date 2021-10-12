@@ -17,10 +17,11 @@ class PositiveLogNormalCol:
         return
         
     def fit_transform(self,data):
-        temp = pd.DataFrame(data=data, columns=["target"])
+        temp = pd.DataFrame(data=data.astype('float64'), columns=["target"])
         if self.min_value is None:
             self.min_value = temp["target"].min()
             assert self.min_value is not None 
+
         #2*self.set_max_value --> to account for max that may be out of this dataset
         temp['transfomed'] = temp.apply(lambda row: np.log1p((row.target - self.min_value)), axis=1)
         transfomed_data = temp['transfomed'].values
@@ -29,7 +30,7 @@ class PositiveLogNormalCol:
     
     def inverse_transform(self,transformeddata):
         #todo: complete this
-        temp = pd.DataFrame(data=transformeddata, columns=["target"])
+        temp = pd.DataFrame(data=transformeddata.astype('float64'), columns=["target"])
         temp['inverse'] = temp.apply(lambda row:  np.expm1((row.target)) + self.min_value, axis=1)
         data = temp['inverse'].values
         try:
@@ -44,27 +45,34 @@ class PositiveLogNormal:
         self.log_col_transformers = None
 
     def fit_transform(self, data):
+        data = np.asarray(data)
         if len(data.shape) == 1:
             data = data.reshape(-1, 1)
-
+        
         self.log_col_transformers = []
         cols_data = []
         for i in range(data.shape[1]):
-            self.log_col_transformers.append(PositiveLogNormalCol())
-            cols_data.append(self.log_col_transformers[i].fit_transform(data[:,i]))
+            try:
+                self.log_col_transformers.append(PositiveLogNormalCol())
+                cols_data.append(self.log_col_transformers[i].fit_transform(data[:,i]))
+            except TypeError as e:
+                import pdb; pdb.set_trace()
+                raise e 
 
         cols_data = np.concatenate(cols_data, axis=1)
         return cols_data
 
     def inverse_transform(self, data):
-        data = np.clip(data, -88.72, 88.72)
-        warnings.warn('clipping data to avoid np.exp overflow, this will cause an imperfect inversion of the transformation')
+        cliped = np.clip(data, -708, 708)
+        if np.any(data!=cliped):
+            warnings.warn('clipping data to avoid np.exp overflow, this will cause an imperfect inversion of the transformation')
+        data = cliped 
         if len(data.shape) == 1:
             data = data.reshape(-1, 1)
         cols_data = []
         for i in range(data.shape[1]):
             cols_data.append(self.log_col_transformers[i].inverse_transform(data[:,i]))
-        return np.concatenate(cols_data, axis=1)
+        return np.concatenate(cols_data, axis=1)#.squeeze()
 
 class DataManager:
     def __init__(self, df_totalData, constants):

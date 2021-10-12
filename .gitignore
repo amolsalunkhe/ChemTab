@@ -2,3 +2,7 @@
 .*
 *best_models*
 *.h5
+*.csv
+*.png
+*.pickle
+*.zip
