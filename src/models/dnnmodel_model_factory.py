@@ -17,7 +17,9 @@ es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=45)
 class DNNModelFactory:
     def __init__(self):
         self.width = 512
-        self.halfwidth = 128
+        self.dropout_rate = 0.5
+        self.activation_func='relu'
+        #self.halfwidth = 128
         self.model = None
         self.experimentSettings = None
         self.modelName = None
@@ -42,7 +44,7 @@ class DNNModelFactory:
         
         #opt = keras.optimizers.Adam(learning_rate=0.001)
         
-        opt = keras.optimizers.Adam(learning_rate=learning_rate_fn)
+        opt = keras.optimizers.Adam(learning_rate=learning_rate_fn, clipnorm=5)
                 
         return opt
 
@@ -81,31 +83,37 @@ class DNNModelFactory:
 
     def addRegressorModel(self, x):
         """Gets layers for regression module of model (renamed from get intermediate layers)"""
-        def add_regularized_dense_layer(x, layer_size, activation_func='relu', dropout_rate=0.25):
-            x = layers.Dense(layer_size, activation=activation_func)(x)
+        def add_regularized_dense_layer(x, layer_size):
+            x = layers.Dense(layer_size, activation=self.activation_func)(x)
             x = layers.BatchNormalization()(x)
-            x = layers.Dropout(dropout_rate)(x)
+            x = layers.Dropout(self.dropout_rate)(x)
             return x
 
-        def add_regularized_dense_module(x, layer_sizes, activation_func='relu', dropout_rate=0.25):
+        def add_regularized_dense_module(x, layer_sizes):
             assert len(layer_sizes)==3
-            skip_input = x = add_regularized_dense_layer(x, layer_sizes[0], activation_func=activation_func, dropout_rate=dropout_rate)
-            x = add_regularized_dense_layer(x, layer_sizes[1], activation_func=activation_func, dropout_rate=dropout_rate)
-            x = add_regularized_dense_layer(x, layer_sizes[2], activation_func=activation_func, dropout_rate=dropout_rate)
+            skip_input = x = add_regularized_dense_layer(x, layer_sizes[0])
+            x = add_regularized_dense_layer(x, layer_sizes[1])
+            x = add_regularized_dense_layer(x, layer_sizes[2])
             x = layers.Concatenate()([x, skip_input])
             return x
 
         # the [1:] is really important because that removes the extra (batch)
         # dimension that keras adds implicitly
         input_ = layers.Input(x.shape[1:])
-   
+
+#        output = layers.Dense(16, activation='relu')(input_)
+#        output = layers.Dense(32, activation='relu')(output)
+#        output = layers.Dense(64, activation='relu')(output)
+#        output = layers.Dense(64, activation='relu')(output)
+#        output = layers.Dense(32, activation='relu')(output)
+#        output = layers.Dense(16, activation='relu')(output)
         if self.debug_mode: 
             # for debugging only
             output = add_regularized_dense_module(input_, [16,32,16])
         else:
-            output = add_regularized_dense_module(input_, [32,64,128])
-            output = add_regularized_dense_module(output, [256,512,256])
-            output = add_regularized_dense_module(output, [128,64,32])
+            output = add_regularized_dense_module(input_, [self.width//16,self.width//8,self.width//4])
+            output = add_regularized_dense_module(output, [self.width//2,self.width,self.width//2])
+            output = add_regularized_dense_module(output, [self.width//4,self.width//8,self.width//16])
 
         # used to be named 'prediction' (now model is named 'prediction', since it is last layer)
         souener_pred = layers.Dense(1)(output)
@@ -121,6 +129,7 @@ class DNNModelFactory:
             os.mkdir('./models/best_models/')
         except FileExistsError:
             pass
+
         # open a file, where you ant to store the data
         file = open("./models/best_models/"+self.modelName+"_experimentSettings", "wb")
         

@@ -20,6 +20,7 @@ from .dnnmodel_model_factory import DNNModelFactory
 
 class WeightsOrthogonalityConstraint (Constraint):
     def __init__(self, encoding_dim, weightage = 1.0, axis = 0):
+    
         self.encoding_dim = encoding_dim
         self.weightage = weightage
         self.axis = axis
@@ -81,8 +82,10 @@ class UncorrelatedFeaturesConstraint (Constraint):
 
 class PCDNNV2ModelFactory(DNNModelFactory):
     def __init__(self):
+        super().__init__()
         self.setModelName("PCDNNV2Model")
         self.setConcreteClassCustomObject({"PCDNNV2ModelFactory": PCDNNV2ModelFactory,"UncorrelatedFeaturesConstraint":UncorrelatedFeaturesConstraint,"WeightsOrthogonalityConstraint":WeightsOrthogonalityConstraint}) 
+        self.loss = 'mean_absolute_error'
         return
 
     def getLinearLayer(self,noOfInputNeurons,noOfCpv,kernel_constraint='Y',kernel_regularizer='Y',activity_regularizer='Y'):
@@ -138,7 +141,9 @@ class PCDNNV2ModelFactory(DNNModelFactory):
 
         opt = self.getOptimizer()
         
-        model.compile(loss='mean_absolute_error',optimizer=opt)
+        def log_mse(x,y): return tf.math.log(tf.math.reduce_mean((x-y)**2))
+        def log_mae(x,y): return tf.math.log(tf.math.reduce_mean(tf.math.abs(x-y)))
+        model.compile(loss=self.loss,optimizer=opt, metrics=['mae', 'mse', log_mse, log_mae])
         
         self.model = model
         tf.keras.utils.plot_model(self.model,to_file="model.png",show_shapes=True,show_layer_names=True,rankdir="TB",expand_nested=False,dpi=96)
