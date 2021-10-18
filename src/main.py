@@ -138,12 +138,10 @@ def main(debug_mode=False):
     Run the Simple DNN Experiments
     '''
     run_simple_dnn_experiments(dm, debug_mode=debug_mode)
-        
     '''
     Run the GP Experiments 
     '''
 #    run_gp_experiments(dm, debug_mode=debug_mode)
-
 
 if __name__ == "__main__":
     main()    

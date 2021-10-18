@@ -117,8 +117,10 @@ class PCDNNV2ModelFactory(DNNModelFactory):
 
         print (noOfInputNeurons,noOfCpv,kernel_constraint,kernel_regularizer,activity_regularizer)
         
+        #The following 2 lines make up the Auto-encoder
         species_inputs = keras.Input(shape=(noOfInputNeurons,), name="species_input")
         
+        #Build the regressor
         if concatenateZmix == 'Y':
             zmix = keras.Input(shape=(1,), name="zmix")
             inputs = [species_inputs,zmix]
@@ -139,6 +141,7 @@ class PCDNNV2ModelFactory(DNNModelFactory):
         model.compile(loss='mean_absolute_error',optimizer=opt)
         
         self.model = model
-
+        tf.keras.utils.plot_model(self.model,to_file="model.png",show_shapes=True,show_layer_names=True,rankdir="TB",expand_nested=False,dpi=96)
+    
         return model
 

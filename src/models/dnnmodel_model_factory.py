@@ -112,7 +112,7 @@ class DNNModelFactory:
         regressor_model=keras.models.Model(inputs=input_, outputs=souener_pred, name='prediction')
 
         return regressor_model(x)
- 
+      
     def saveCurrModelAsBestModel(self):
         #print("current directory " + os.getcwd())
 
