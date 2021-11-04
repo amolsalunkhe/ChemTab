@@ -29,6 +29,7 @@ class PCDNNV2ExperimentExecutor:
         # override the default number of epochs used
         self.epochs_override = None
         self.n_models_override = None
+        self.batch_size = 64
         
     def setModel(self,model):
         self.model = model
@@ -38,11 +39,9 @@ class PCDNNV2ExperimentExecutor:
     
     def getPredicitons(self):
         return self.predicitions
-
     
     def executeSingleExperiment(self,noOfInputNeurons,dataSetMethod,dataType,inputType,ZmixPresent,noOfCpv,concatenateZmix,kernel_constraint,kernel_regularizer,activity_regularizer,
                                 ipscaler = "MinMaxScaler", opscaler = "MinMaxScaler"):
-
         
         print("--------------------self.build_and_compile_pcdnn_v2_model----------------------")
 
@@ -57,9 +56,7 @@ class PCDNNV2ExperimentExecutor:
 
         X_train, X_test, Y_train, Y_test, rom_train, rom_test, zmix_train, zmix_test = self.dm.getTrainTestData() 
         
-        self.fitModelAndCalcErr(X_train, Y_train, X_test, Y_test,None, None, zmix_train, zmix_test, self.dm.outputScaler, concatenateZmix,kernel_constraint,kernel_regularizer,activity_regularizer)
-
-
+        history = self.fitModelAndCalcErr(X_train, Y_train, X_test, Y_test,None, None, zmix_train, zmix_test, self.dm.outputScaler, concatenateZmix,kernel_constraint,kernel_regularizer,activity_regularizer)
         #['Model','Dataset','Cpv Type','#Cpv',"ZmixExists",'MAE','TAE','MSE','TSE','#Pts','FitTime','PredTime','MAX-MAE','MAX-TAE','MAX-MSE','MAX-TSE','MIN-MAE','MIN-TAE','MIN-MSE','MIN-TSE']
 
         distribution_summary_stats = lambda error_df, target_key: {'MIN-' + target_key: error_df[target_key].min(), 
@@ -82,7 +79,7 @@ class PCDNNV2ExperimentExecutor:
         printStr = "\t"
 
         printStr = printStr.join(experimentResults)
-
+        return history
 
 
     def fitModelAndCalcErr(self,X_train, Y_train, X_test, Y_test, rom_train = None, rom_test = None, zmix_train = None, zmix_test = None, Y_scaler = None, concatenateZmix = 'N',kernel_constraint = 'Y',kernel_regularizer = 'Y',activity_regularizer = 'Y'):
@@ -95,13 +92,14 @@ class PCDNNV2ExperimentExecutor:
       
         #if len(Y_train.shape)==1: Y_train = Y_train.reshape(-1,1)
 
-        # doesn't this skew the evaluation on the test data later? (e.g. outside of keras?)        
-        raise RunTimeException("This is probably a bug")
-        X_train = np.concatenate((X_train, X_test),axis=0)
-        zmix_train = np.concatenate((zmix_train, zmix_test),axis=0)
-        Y_train = np.concatenate((Y_train, Y_test),axis=0)
+        ## doesn't this skew the evaluation on the test data later? (e.g. outside of keras?)        
+        ## TODO: remove this!
+        #import warnings; warnings.warn("This is probably a bug")
+        #X_train = np.concatenate((X_train, X_test),axis=0)
+        #zmix_train = np.concatenate((zmix_train, zmix_test),axis=0)
+        #Y_train = np.concatenate((Y_train, Y_test),axis=0)
 
- 
+        Y_test_raw = Y_test # default 
         if Y_scaler is not None:
             if len(Y_test.shape)==1: Y_test = Y_test.reshape(-1,1)
             Y_test_raw = Y_scaler.inverse_transform(Y_test).flatten() 
@@ -123,8 +121,9 @@ class PCDNNV2ExperimentExecutor:
                 input_dict_train = {"species_input":X_train}
                 input_dict_test = {"species_input":X_test}
             
-            history = self.model.fit(input_dict_train, {"prediction":Y_train}, verbose=1, epochs=epochs, batch_size=64, validation_split=0.2, shuffle=True)
-            #,validation_data=(input_dict_test, {'prediction': Y_test_scaled}), verbose=1, epochs=epochs)
+            history = self.model.fit(input_dict_train, {"prediction":Y_train}, verbose=1,
+                                     batch_size=self.batch_size, epochs=epochs, shuffle=True, 
+                                     validation_data=(input_dict_test, {'prediction': Y_test}))
             #self.plot_loss_physics_and_regression(history)
             
             fit_times.append(time.process_time() - t)
@@ -140,7 +139,7 @@ class PCDNNV2ExperimentExecutor:
             
             self.predicitions = predictions
             
-            Y_pred = predictions
+            Y_pred_raw = Y_pred = predictions
 
             if Y_scaler is not None:
                 Y_pred_raw = Y_scaler.inverse_transform(Y_pred)
@@ -151,6 +150,7 @@ class PCDNNV2ExperimentExecutor:
             if (len(errs) == 0) or ((len(errs) > 0) and (curr_errs['MAE'] < self.min_mae)) :
                 self.min_mae = curr_errs['MAE']#MAE
                 self.modelFactory.saveCurrModelAsBestModel()
+                self.dm.include_PCDNNV2_PCA_data(self.modelFactory, concatenateZmix=concatenateZmix)
                     
             errs.append(curr_errs)
         
@@ -162,7 +162,7 @@ class PCDNNV2ExperimentExecutor:
 
         self.df_err = pd.DataFrame(errs)
         
-        return  
+        return history 
 
     def executeExperiments(self,dataManager, modelType, df_experimentTracker):
         self.dm = dataManager

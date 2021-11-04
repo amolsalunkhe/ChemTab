@@ -141,7 +141,13 @@ class PCDNNV2ModelFactory(DNNModelFactory):
         
         def log_mse(x,y): return tf.math.log(tf.math.reduce_mean((x-y)**2))
         def log_mae(x,y): return tf.math.log(tf.math.reduce_mean(tf.math.abs(x-y)))
-        model.compile(loss=self.loss,optimizer=opt, metrics=['mae', 'mse', log_mse, log_mae])
+        def exp_mse_mag(x,y): return tf.math.log(tf.math.reduce_mean((tf.math.exp(x)-tf.math.exp(y))**2))/tf.math.log(10.0)
+        def exp_mae_mag(x,y): return tf.math.log(tf.math.reduce_mean(tf.math.abs(tf.math.exp(x)-tf.math.exp(y))))/tf.math.log(10.0)
+        def R2(yt,yp): return 1-tf.math.reduce_mean((yp-yt)**2)/(tf.math.reduce_std(yt)**2)
+        def exp_R2(yt,yp): # these are actual names above is for convenience
+            return R2(tf.math.exp(yt), tf.math.exp(yp))
+        
+        model.compile(loss=self.loss,optimizer=opt, metrics=['mae', 'mse',  exp_mse_mag, exp_mae_mag, exp_R2, R2])
         
         self.model = model
 

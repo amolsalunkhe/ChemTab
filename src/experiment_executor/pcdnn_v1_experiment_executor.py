@@ -141,7 +141,7 @@ class PCDNNV1ExperimentExecutor:
             if (len(errs) == 0) or ((len(errs) > 0) and (curr_errs['MAE'] < self.min_mae)) :
                 self.min_mae = curr_errs['MAE']#MAE
                 self.modelFactory.saveCurrModelAsBestModel()
-                    
+                self.dm.include_PCDNNV2_PCA_data(self.modelFactory, concatenateZmix=concatenateZmix)        
             errs.append(curr_errs)
         
         self.fit_time = sum(fit_times)/len(fit_times)

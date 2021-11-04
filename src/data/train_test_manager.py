@@ -76,6 +76,8 @@ class PositiveLogNormal:
 
 class DataManager:
     def __init__(self, df_totalData, constants):
+        # Dwyer: I assume this is the case if its not update: includePCDNNV2_PCA_data
+        assert constants.getDataframe() is df_totalData
         self.constants = constants
         self.df = df_totalData
         self.outputScaler = None
@@ -106,6 +108,10 @@ class DataManager:
         self.dataSetMethod = None      
  
         return
+
+    def include_PCDNNV2_PCA_data(self, PCDNNV2_model_factory, concatenateZmix: str):
+        self.constants.include_PCDNNV2_PCA_data(self, PCDNNV2_model_factory, concatenateZmix)
+        self.df = self.constants.getDataframe() # maybe not necessary...?
 
     @staticmethod
     def train_test_split_on_flamekey(df, train_portion=0.5, seed=0):
