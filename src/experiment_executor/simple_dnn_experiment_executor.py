@@ -35,7 +35,8 @@ class DNNExperimentExecutor:
         self.dm.createTrainTestData(dataSetMethod,noOfCpv, ipscaler,  opscaler)
 
         # we are always concatenating Zmix to inputs of predictor model (versus input to PCA embedding model which doesn't exist)
-        self.modelFactory.experimentSettings = {"dataSetMethod": dataSetMethod,"ipscaler":ipscaler, "opscaler":opscaler, "noOfCpv": noOfCpv, "ZmixPresent": ZmixPresent, "concatenateZmix": 'N'}
+        self.modelFactory.experimentSettings = {"dataSetMethod": dataSetMethod,"ipscaler":ipscaler, "opscaler":opscaler, "noOfCpv": noOfCpv,
+                                                "ZmixPresent": ZmixPresent, "concatenateZmix": 'N', "input_data_cols": self.dm.input_data_cols}
 
         self.model = self.modelFactory.build_and_compile_model(noOfInputNeurons)
         
