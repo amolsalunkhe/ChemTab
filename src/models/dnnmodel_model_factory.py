@@ -99,7 +99,7 @@ class DNNModelFactory:
 
         # the [1:] is really important because that removes the extra (batch)
         # dimension that keras adds implicitly
-        input_ = layers.Input(x.shape[1:])
+        input_ = layers.Input(x.shape[1:], name='input_1')
 
 #        output = layers.Dense(16, activation='relu')(input_)
 #        output = layers.Dense(32, activation='relu')(output)
@@ -125,13 +125,10 @@ class DNNModelFactory:
         #print("current directory " + os.getcwd())
 
         import os
-        try:
-            os.mkdir('./models/best_models/')
-        except FileExistsError:
-            pass
+        os.system('mkdir -p ./models/best_models/'+self.modelName)
 
         # open a file, where you ant to store the data
-        file = open("./models/best_models/"+self.modelName+"_experimentSettings", "wb")
+        file = open("./models/best_models/"+self.modelName+"/experimentSettings", "wb")
         
         # dump information to that file
         pickle.dump(self.experimentSettings, file)
@@ -140,17 +137,17 @@ class DNNModelFactory:
         file.close()
         
         #self.model.save("models\\best_models\\"+self.modelName)
-        filePath = "./models/best_models/"+self.modelName+".h5"
+        filePath = "./models/best_models/"+self.modelName+"/model.h5"
         tf.keras.models.save_model(self.model, filePath, overwrite=True, include_optimizer=False, save_format='h5')
         
         
     def openBestModel(self):
         #print("current directory" + os.getcwd())
-        filePath = "./models/best_models/"+self.modelName+".h5"
+        filePath = "./models/best_models/"+self.modelName+"/model.h5"
         self.model = tf.keras.models.load_model(filePath, custom_objects=self.concreteClassCustomObject)
         
         # open a file, where you stored the pickled data
-        file = open("./models/best_models/"+self.modelName+"_experimentSettings", "rb")
+        file = open("./models/best_models/"+self.modelName+"/experimentSettings", "rb")
         
         # dump information to that file
         self.experimentSettings = pickle.load(file)
