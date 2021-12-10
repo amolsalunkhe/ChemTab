@@ -5,39 +5,74 @@ Created on Wed Aug  4 19:42:05 2021
 @author: amol
 """
 from sklearn.utils import shuffle
-from sklearn.preprocessing import MinMaxScaler
+from sklearn.preprocessing import MinMaxScaler, QuantileTransformer
 import numpy as np
 import pandas as pd
+import random
+import warnings
 
-class PositiveLogNormal:
+class PositiveLogNormalCol:
     def __init__(self):
-        self.max_value = 0
+        self.min_value = None
         return
-    
-    def set_max_value(self,max_value):
-        self.max_value = max_value
-        return 
-    
-    def get_max_value(self):
-        return self.max_value
         
     def fit_transform(self,data):
-        temp = pd.DataFrame(data=data, columns=["target"])
-        max_value = temp["target"].max()
-        self.set_max_value(max_value)
+        temp = pd.DataFrame(data=data.astype('float64'), columns=["target"])
+        if self.min_value is None:
+            self.min_value = temp["target"].min()
+            assert self.min_value is not None 
+
         #2*self.set_max_value --> to account for max that may be out of this dataset
-        temp['transfomed'] = temp.apply(lambda row: np.log1p((row.target + 2*self.max_value)), axis=1)
+        temp['transfomed'] = temp.apply(lambda row: np.log1p((row.target - self.min_value)), axis=1)
         transfomed_data = temp['transfomed'].values
         transfomed_data = transfomed_data.reshape(transfomed_data.shape[0], 1)
         return transfomed_data
     
     def inverse_transform(self,transformeddata):
         #todo: complete this
-        temp = pd.DataFrame(data=transformeddata, columns=["target"])
-        temp['inverse'] = temp.apply(lambda row:  np.expm1((row.target)) - 2*self.max_value, axis=1)
+        temp = pd.DataFrame(data=transformeddata.astype('float64'), columns=["target"])
+        temp['inverse'] = temp.apply(lambda row:  np.expm1((row.target)) + self.min_value, axis=1)
         data = temp['inverse'].values
+        try:
+            assert (data != float('inf')).all() and (data != -float('inf')).all()
+        except AssertionError:
+            import pdb; pdb.set_trace()
         data = data.reshape(data.shape[0], 1)
         return data
+
+class PositiveLogNormal:
+    def __init__(self):
+        self.log_col_transformers = None
+
+    def fit_transform(self, data):
+        data = np.asarray(data)
+        if len(data.shape) == 1:
+            data = data.reshape(-1, 1)
+        
+        self.log_col_transformers = []
+        cols_data = []
+        for i in range(data.shape[1]):
+            try:
+                self.log_col_transformers.append(PositiveLogNormalCol())
+                cols_data.append(self.log_col_transformers[i].fit_transform(data[:,i]))
+            except TypeError as e:
+                import pdb; pdb.set_trace()
+                raise e 
+
+        cols_data = np.concatenate(cols_data, axis=1)
+        return cols_data
+
+    def inverse_transform(self, data):
+        cliped = np.clip(data, -708, 708)
+        if np.any(data!=cliped):
+            warnings.warn('clipping data to avoid np.exp overflow, this will cause an imperfect inversion of the transformation')
+        data = cliped 
+        if len(data.shape) == 1:
+            data = data.reshape(-1, 1)
+        cols_data = []
+        for i in range(data.shape[1]):
+            cols_data.append(self.log_col_transformers[i].inverse_transform(data[:,i]))
+        return np.concatenate(cols_data, axis=1)#.squeeze()
 
 class DataManager:
     def __init__(self, df_totalData, constants):
@@ -68,16 +103,35 @@ class DataManager:
         self.output_data_cols = None 
         self.other_tracking_cols_train = None
         self.other_tracking_cols_test = None
-        
+        self.dataSetMethod = None      
+ 
         return
+
+    @staticmethod
+    def train_test_split_on_flamekey(df, train_portion=0.5, seed=0):
+        random.seed(seed)
+        flame_keys = list(set(df['flame_key_int']))
+        random.shuffle(flame_keys)
+        train_set_keys = flame_keys[:int(len(flame_keys)*train_portion)]
+        test_set_keys = flame_keys[int(len(flame_keys)*train_portion):]
+        print('train_set_keys: ', train_set_keys)
+        print('test_set_keys: ', test_set_keys)
+
+        train_set = df[np.isin(df['flame_key_int'], train_set_keys)]
+        test_set = df[np.isin(df['flame_key_int'], test_set_keys)]
+        print('train: ', train_set['flame_key_int'].unique()[:5])
+        print('test: ', test_set['flame_key_int'].unique()[:5])
+        return train_set, test_set    
 
     def _createTrainTestDfs(self,method):
 
-        if(method == "randomequaltraintestsplit"):
+        if method=='randomequalflamesplit':
+            df_shuffled= shuffle(self.df, random_state=0)
+            self.df_training, self.df_testing = self.train_test_split_on_flamekey(df_shuffled)
+        elif(method == "randomequaltraintestsplit"):
             df_shuffled= shuffle(self.df, random_state=0)
             self.df_training = df_shuffled[::2]
             self.df_testing = df_shuffled[1::2]
-
         else:
             training_flames_int = []
 
@@ -174,6 +228,7 @@ class DataManager:
         else:
             input_data_cols = self.constants.icovariates
 
+
         self.X_train = self.df_training [input_data_cols].values
         self.X_test = self.df_testing [input_data_cols].values
         self.rom_train = self.df_training [rom_cols].values
@@ -220,6 +275,7 @@ class DataManager:
             self.romScaler = None
             
     def createTrainTestData(self,dataSetMethod,numCpvComponents, ipscaler, opscaler):
+        self.dataSetMethod = dataSetMethod
         self._createTrainTestData(dataSetMethod,numCpvComponents)
         
         self._setInputOutputScalers(ipscaler, opscaler)

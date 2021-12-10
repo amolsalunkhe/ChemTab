@@ -5,21 +5,21 @@ Created on Wed Aug  4 17:52:13 2021
 @author: amol
 """
 
-import pandas as pd
-import matplotlib.pyplot as plt
+import time
 import numpy as np
-from sklearn.linear_model import Ridge, LinearRegression
-from sklearn import gaussian_process
-from sklearn.gaussian_process import GaussianProcessRegressor
+import pandas as pd
+import seaborn as sns
 import scipy.optimize
+import matplotlib.pyplot as plt
+from sklearn.utils import shuffle
+from sklearn import gaussian_process
+from sklearn.linear_model import Ridge, LinearRegression
+from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.utils.optimize import _check_optimize_result
 from sklearn.gaussian_process.kernels import Matern, RBF, WhiteKernel, RationalQuadratic, ExpSineSquared
-import time
 from sklearn.decomposition import PCA, SparsePCA
-import seaborn as sns
-from sklearn.utils import shuffle
-# demonstrate data normalization with sklearn
 from sklearn.preprocessing import MinMaxScaler
+# demonstrate data normalization with sklearn
 
 class DataPreparer:
     def __init__(self):

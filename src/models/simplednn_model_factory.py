@@ -27,8 +27,7 @@ class SimpleDNNModelFactory(DNNModelFactory):
     
     def build_and_compile_model(self,noOfInputNeurons):
         inputs = keras.Input(shape=(noOfInputNeurons,), name="inputs")
-        x = self.getIntermediateLayers(inputs)
-        souener_pred = layers.Dense(1, name="prediction")(x)
+        souener_pred = self.addRegressorModel(inputs)
 
         model = keras.Model(
             inputs=[inputs],

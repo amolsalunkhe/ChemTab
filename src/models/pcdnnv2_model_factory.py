@@ -80,7 +80,6 @@ class UncorrelatedFeaturesConstraint (Constraint):
         return {'weightage': self.weightage, 'encoding_dim':self.encoding_dim}
 
 class PCDNNV2ModelFactory(DNNModelFactory):
-
     def __init__(self):
         self.setModelName("PCDNNV2Model")
         self.setConcreteClassCustomObject({"PCDNNV2ModelFactory": PCDNNV2ModelFactory,"UncorrelatedFeaturesConstraint":UncorrelatedFeaturesConstraint,"WeightsOrthogonalityConstraint":WeightsOrthogonalityConstraint}) 
@@ -121,34 +120,28 @@ class PCDNNV2ModelFactory(DNNModelFactory):
         #The following 2 lines make up the Auto-encoder
         species_inputs = keras.Input(shape=(noOfInputNeurons,), name="species_input")
         
-        x = self.getLinearLayer(noOfInputNeurons,noOfCpv,kernel_constraint,kernel_regularizer,activity_regularizer)(species_inputs)
-
         #Build the regressor
         if concatenateZmix == 'Y':
             zmix = keras.Input(shape=(1,), name="zmix")
-    
-            #Concatenate the Linear Embedding and Zmix together
-            x = layers.Concatenate(name="concatenated_zmix_linear_embedding")([zmix, x])
-
             inputs = [species_inputs,zmix]
-            
         else:
             inputs = [species_inputs]
-        
-        x = self.getIntermediateLayers(x)
-        
-        #Predict the source energy
-        souener_pred = layers.Dense(1, name="prediction")(x)
-
-        model = keras.Model(inputs=inputs,outputs=[souener_pred],)
+       
+        x = self.addLinearModel(inputs, noOfInputNeurons, noOfCpv,
+                                concatenateZmix=concatenateZmix,
+                                kernel_constraint=kernel_constraint,
+                                kernel_regularizer=kernel_regularizer,
+                                activity_regularizer=activity_regularizer)
+ 
+        souener_pred = self.addRegressorModel(x)
+        model = keras.Model(inputs=inputs,outputs=souener_pred)
 
         opt = self.getOptimizer()
         
         model.compile(loss='mean_absolute_error',optimizer=opt)
         
         self.model = model
-        
         tf.keras.utils.plot_model(self.model,to_file="model.png",show_shapes=True,show_layer_names=True,rankdir="TB",expand_nested=False,dpi=96)
-        
+    
         return model
 

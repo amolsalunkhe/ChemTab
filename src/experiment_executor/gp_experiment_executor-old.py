@@ -105,9 +105,6 @@ class GPExperimentExecutor:
 
                     self.fitModelAndCalcErr(self.dm.X_train, self.dm.Y_train, self.dm.X_test, self.dm.Y_test)    
 
-                    #import pdb
-                    #pdb.set_trace()
-
                     experimentResults = deepcopy(self.err)
                     experimentResults.update({'Model': self.modelType, 'Dataset': dataType, 'Cpv Type': inputType, '#Cpv': str(noOfCpv),
                                               'ZmixExists': ZmixPresent, 'FitTime': self.fit_time, 'PredTime': self.pred_time})

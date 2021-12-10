@@ -25,6 +25,7 @@ class PCDNNV1ExperimentExecutor:
         self.errManager = ErrorManager()
         self.modelFactory = None
         self.min_mae = 0
+        self.debug_mode = False
             
     def setModel(self,model):
         self.model = model
@@ -35,22 +36,21 @@ class PCDNNV1ExperimentExecutor:
     def getPredicitons(self):
         return self.predicitions
         
-    def executeSingleExperiment(self,noOfInputNeurons,dataSetMethod,dataType,inputType,ZmixPresent,noOfCpv,concatenateZmix):
+    def executeSingleExperiment(self,noOfInputNeurons,dataSetMethod,dataType,inputType,ZmixPresent,noOfCpv,concatenateZmix,
+                                ipscaler=None, opscaler="MinMaxScaler"):
 
         print("--------------------self.build_and_compile_pcdnn_v1_model----------------------")
+        self.modelFactory.debug_mode = self.debug_mode
         self.model = self.modelFactory.build_and_compile_model(noOfInputNeurons,noOfCpv,concatenateZmix)
             
         self.model.summary()
 
         X_train, X_test, Y_train, Y_test, rom_train, rom_test, zmix_train, zmix_test = self.dm.getTrainTestData() 
         
-        ipscaler = None
-        opscaler = "MinMaxScaler"
-        
-        #                           dataSetMethod,noOfCpvs, ipscaler, opscaler
         self.dm.createTrainTestData(dataSetMethod,noOfCpv, ipscaler, opscaler)
         
-        self.modelFactory.experimentSettings = {"dataSetMethod": dataSetMethod,"ipscaler":ipscaler, "opscaler":opscaler, "noOfCpv": noOfCpv, "ZmixPresent": ZmixPresent, "concatenateZmix": concatenateZmix}
+        self.modelFactory.experimentSettings = {"dataSetMethod": dataSetMethod,"ipscaler":ipscaler, "opscaler":opscaler, "noOfCpv": noOfCpv, 
+                                                "ZmixPresent": ZmixPresent, "concatenateZmix": concatenateZmix, "input_data_cols": self.dm.input_data_cols}
         
         X_train, X_test, Y_train, Y_test, rom_train, rom_test, zmix_train, zmix_test = self.dm.getTrainTestData() 
         
@@ -58,10 +58,20 @@ class PCDNNV1ExperimentExecutor:
 
         #['Model','Dataset','Cpv Type','#Cpv',"ZmixExists",'MAE','TAE','MSE','TSE','#Pts','FitTime','PredTime','MAX-MAE','MAX-TAE','MAX-MSE','MAX-TSE','MIN-MAE','MIN-TAE','MIN-MSE','MIN-TSE']
 
-        experimentResults = [self.modelType, dataType,inputType,str(noOfCpv), ZmixPresent,str(self.df_err['MAE'].mean()),str(self.df_err['TAE'].mean()),str(self.df_err['MSE'].mean()),str(self.df_err['TSE'].mean()),str(self.df_err['#Pts'].mean()),str(self.fit_time),str(self.pred_time),str(self.df_err['MAE'].max()),str(self.df_err['TAE'].max()),str(self.df_err['MSE'].max()),str(self.df_err['TSE'].max()),str(self.df_err['MAE'].min()),str(self.df_err['TAE'].min()),str(self.df_err['MSE'].min()),str(self.df_err['TSE'].min())]
+        # log experiment results
+        distribution_summary_stats = lambda error_df, target_key: {'MIN-' + target_key: error_df[target_key].min(),
+                                                                   target_key: error_df[target_key].mean(),
+                                                                   'MAX-' + target_key: error_df[target_key].max()}       
+ 
+        experimentResults = {'Model': self.modelType, 'Dataset':dataType, 'Cpv Type':inputType, '#Cpv':noOfCpv, 'ZmixExists': ZmixPresent, 
+                             '#Pts': self.df_err['#Pts'].mean(), 'FitTime': self.fit_time, 'PredTime': self.pred_time, 'OPScaler': opscaler}
 
-        self.df_experimentTracker.loc[len(self.df_experimentTracker)] = experimentResults        
 
+        err_names = ['MAE', 'TAE', 'MSE', 'TSE', 'MRE', 'TRE']
+        for name in err_names:
+            experimentResults.update(distribution_summary_stats(self.df_err, name))
+        self.df_experimentTracker = self.df_experimentTracker.append(experimentResults, ignore_index=True)
+    
         printStr = "self.modelType: "+ self.modelType+ " dataType: "  + dataType+ " inputType:"+inputType+ " noOfCpv:"+str(noOfCpv)+ " ZmixPresent:" + ZmixPresent + " MAE:" +str(self.df_err['MAE'].min())
 
         print(printStr)
@@ -79,48 +89,57 @@ class PCDNNV1ExperimentExecutor:
         
         errs = []
         
-                
-        #TODO:uncomment
-        #for itr in range(1,11):
-		
-		#TODO:comment
-        for itr in range(1,2):
+        n = 3 if self.debug_mode else 11
+        epochs = 1 if self.debug_mode else 100      
+
+        if Y_scaler is not None:
+            if len(Y_test.shape)==1:
+                Y_test = Y_test.reshape(-1,1)
+            Y_test = Y_scaler.inverse_transform(Y_test)
+
+
+        if rom_train is not None: rom_train = rom_train.squeeze()
+
+        for itr in range(1,n):
+
+            print(f'training model: {itr}') 
             
             t = time.process_time()
-            
+          
+            inputs = {"species_input":X_train}
+            outputs = {"prediction":Y_train}
             if concatenateZmix == 'Y':
-                history = self.model.fit({"species_input":X_train, "zmix":zmix_train}, {"physics":rom_train,"prediction":Y_train},validation_split=0.2,verbose=0,epochs=100)
-            else:
-                history = self.model.fit({"species_input":X_train}, {"physics":rom_train,"prediction":Y_train},validation_split=0.2,verbose=0,epochs=100)
-            
+                inputs["zmix"] = zmix_train
+            if rom_train is not None:
+                outputs["physics"] = rom_train
+            history = self.model.fit(inputs, outputs, validation_split=0.2, verbose=0, epochs=epochs)
+         
             #self.plot_loss_physics_and_regression(history)
-            
+
             fit_times.append(time.process_time() - t)
-        
+
             t = time.process_time()
 
             if concatenateZmix == 'Y':
                 predictions = self.model.predict({"species_input":X_test, "zmix":zmix_test})
             else:
                 predictions = self.model.predict({"species_input":X_test})
-                
+
             pred_times.append(time.process_time() - t)
-            
+
             self.predicitions = predictions
             
             Y_pred = predictions[0]
             
-
             if Y_scaler is not None:
                 Y_pred = Y_scaler.inverse_transform(Y_pred)
-                
                 
             #sns.residplot(Y_pred.flatten(), getResiduals(Y_test,Y_pred))
 
             curr_errs = self.errManager.computeError (Y_pred, Y_test)
                 
-            if (len(errs) == 0) or ((len(errs) > 0) and (curr_errs[2] < self.min_mae)) :
-                self.min_mae = curr_errs[2]#MAE
+            if (len(errs) == 0) or ((len(errs) > 0) and (curr_errs['MAE'] < self.min_mae)) :
+                self.min_mae = curr_errs['MAE']#MAE
                 self.modelFactory.saveCurrModelAsBestModel()
                     
             errs.append(curr_errs)
@@ -131,7 +150,7 @@ class PCDNNV1ExperimentExecutor:
         
         #computeAndPrintError(Y_pred, Y_test)
 
-        self.df_err = pd.DataFrame(errs, columns = ['TAE', 'TSE', 'MAE', 'MSE', 'MAPE', '#Pts'])
+        self.df_err = pd.DataFrame(errs)
         
         return  
 
@@ -141,63 +160,58 @@ class PCDNNV1ExperimentExecutor:
         self.df_experimentTracker = df_experimentTracker
         
         #Experiments  
-        
-        #TODO:uncomment
-        #dataTypes = ["randomequaltraintestsplit","frameworkincludedtrainexcludedtest"]
-        #inputTypes = ["AllSpeciesZmixCpv","AllSpeciesZmixPCA","AllSpeciesPurePCA","AllSpeciesSparsePCA","AllSpeciesZmixAndPurePCA","AllSpeciesZmixAndSparsePCA"]
-        
-        #TODO:comment
-        dataTypes = ["frameworkincludedtrainexcludedtest"]
-        inputTypes = ["AllSpeciesZmixAndPurePCA"]
+       
+        #if self.debug_mode:
+        #   dataTypes = ["randomequalflamesplit"]
+        #   inputTypes = ["AllSpeciesZmixAndPurePCA"]
+        #   opscalers = ['PositiveLogNormal', 'MinMaxScaler']
+        #else: 
+        dataTypes = ["frameworkincludedtrainexcludedtest", "randomequalflamesplit", "randomequaltraintestsplit"]
+        inputTypes = ["AllSpeciesZmixCpv","AllSpeciesZmixPCA","AllSpeciesPurePCA","AllSpeciesSparsePCA","AllSpeciesZmixAndPurePCA","AllSpeciesZmixAndSparsePCA"]
+        opscalers = ['MinMaxScaler', 'QuantileTransformer', 'PositiveLogNormal', None]
         
         concatenateZmix = 'N'
-        
+       
         for dataType in dataTypes:
             print('=================== ' + dataType + ' ===================')
             
-            for inputType in inputTypes:
-                
-                print('------------------ ' + inputType + ' ------------------')
-                    
-                #ZmixCpv_randomequaltraintestsplit
-                dataSetMethod = inputType + '_' + dataType
-            
-                self.modelFactory.setDataSetMethod(dataSetMethod)
-                
-                noOfNeurons = 53
-
-                #ZmixAnd & ZmixAll
-                if inputType.find('ZmixA') != -1:
-                    concatenateZmix = 'Y'
-                else:
-                    concatenateZmix = 'N'
-
-                if inputType.find('Zmix') != -1:
-                    ZmixPresent = 'Y'
-                else:
-                    ZmixPresent = 'N'
-                    
-                
-                if inputType.find('PCA') != -1:
-                    #TODO:uncomment                    
-                    #noOfCpvs = [item for item in range(1, 6)]
-                    
-                    #TODO:comment                    
-                    noOfCpvs = [item for item in range(2, 3)]
-                    
-                    for noOfCpv in noOfCpvs:
+            for opscaler in opscalers: 
+                for inputType in inputTypes:
+                    print('------------------ ' + inputType + ' ------------------')
                         
-                        self.executeSingleExperiment(noOfNeurons,dataSetMethod,dataType,inputType,ZmixPresent,noOfCpv,concatenateZmix)
-                else:
+                    #ZmixCpv_randomequaltraintestsplit
+                    dataSetMethod = inputType + '_' + dataType
+                
+                    self.modelFactory.setDataSetMethod(dataSetMethod)
+                    
+                    noOfNeurons = 53
 
-                    if inputType.find('ZmixCpv') != -1:
-                        noOfCpv = 1
-                 
+                    #ZmixAnd & ZmixAll
+                    if inputType.find('ZmixA') != -1:
+                        concatenateZmix = 'Y'
                     else:
-                        noOfCpv = 53
-                 
-                    print('------------------ ' + str(noOfNeurons) + ' ------------------')
-                    self.executeSingleExperiment(noOfNeurons,dataSetMethod,dataType,inputType,ZmixPresent,noOfCpv,concatenateZmix)
+                        concatenateZmix = 'N'
+
+                    if inputType.find('Zmix') != -1:
+                        ZmixPresent = 'Y'
+                    else:
+                        ZmixPresent = 'N'
+                        
+                    
+                    if inputType.find('PCA') != -1:
+
+                        m = 3 if self.debug_mode else 6
+                        noOfCpvs = [item for item in range(2, m)]
+
+                        for noOfCpv in noOfCpvs:
+                            self.executeSingleExperiment(noOfNeurons,dataSetMethod,dataType,inputType,ZmixPresent,noOfCpv,concatenateZmix,opscaler=opscaler)
+                    else:
+                        if inputType.find('ZmixCpv') != -1:
+                            noOfCpv = 1
+                        else:
+                            noOfCpv = 53
+                        print('------------------ ' + str(noOfNeurons) + ' ------------------')
+                        self.executeSingleExperiment(noOfNeurons,dataSetMethod,dataType,inputType,ZmixPresent,noOfCpv,concatenateZmix)
         
     
     def plot_loss_physics_and_regression(self,history):

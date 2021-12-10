@@ -35,31 +35,40 @@ class PCDNNV2ExperimentExecutor:
         return self.predicitions
 
     
-    def executeSingleExperiment(self,noOfInputNeurons,dataSetMethod,dataType,inputType,ZmixPresent,noOfCpv,concatenateZmix,kernel_constraint,kernel_regularizer,activity_regularizer):
+    def executeSingleExperiment(self,noOfInputNeurons,dataSetMethod,dataType,inputType,ZmixPresent,noOfCpv,concatenateZmix,kernel_constraint,kernel_regularizer,activity_regularizer,
+                                ipscaler = "MinMaxScaler", opscaler = "MinMaxScaler"):
 
         
         print("--------------------self.build_and_compile_pcdnn_v2_model----------------------")
-        
+
+        self.modelFactory.debug_mode = self.debug_mode        
         self.model = self.modelFactory.build_and_compile_model(noOfInputNeurons,noOfCpv,concatenateZmix,kernel_constraint,kernel_regularizer,activity_regularizer)
             
         self.model.summary()
 
-        #                           dataSetMethod,noOfCpvs, ipscaler, opscaler
-        ipscaler = "MinMaxScaler"
-        opscaler = "MinMaxScaler"
         self.dm.createTrainTestData(dataSetMethod,noOfCpv, ipscaler,  opscaler)
 
-        self.modelFactory.experimentSettings = {"dataSetMethod": dataSetMethod,"ipscaler":ipscaler, "opscaler":opscaler, "noOfCpv": noOfCpv, "ZmixPresent": ZmixPresent, "concatenateZmix": concatenateZmix,"kernel_constraint":kernel_constraint,"kernel_regularizer":kernel_regularizer,"activity_regularizer":activity_regularizer }
+        self.modelFactory.experimentSettings = {"dataSetMethod": dataSetMethod,"ipscaler":ipscaler, "opscaler":opscaler, "noOfCpv": noOfCpv, "ZmixPresent": ZmixPresent, "concatenateZmix": concatenateZmix,"kernel_constraint":kernel_constraint,"kernel_regularizer":kernel_regularizer,"activity_regularizer":activity_regularizer, 'input_data_cols': self.dm.input_data_cols}
 
         X_train, X_test, Y_train, Y_test, rom_train, rom_test, zmix_train, zmix_test = self.dm.getTrainTestData() 
         
         self.fitModelAndCalcErr(X_train, Y_train, X_test, Y_test,None, None, zmix_train, zmix_test, self.dm.outputScaler, concatenateZmix,kernel_constraint,kernel_regularizer,activity_regularizer)
 
+
         #['Model','Dataset','Cpv Type','#Cpv',"ZmixExists",'MAE','TAE','MSE','TSE','#Pts','FitTime','PredTime','MAX-MAE','MAX-TAE','MAX-MSE','MAX-TSE','MIN-MAE','MIN-TAE','MIN-MSE','MIN-TSE']
 
-        experimentResults = [self.modelType, dataType,inputType,str(noOfCpv), ZmixPresent,kernel_constraint,kernel_regularizer,activity_regularizer,str(self.df_err['MAE'].mean()),str(self.df_err['TAE'].mean()),str(self.df_err['MSE'].mean()),str(self.df_err['TSE'].mean()),str(self.df_err['#Pts'].mean()),str(self.fit_time),str(self.pred_time),str(self.df_err['MAE'].max()),str(self.df_err['TAE'].max()),str(self.df_err['MSE'].max()),str(self.df_err['TSE'].max()),str(self.df_err['MAE'].min()),str(self.df_err['TAE'].min()),str(self.df_err['MSE'].min()),str(self.df_err['TSE'].min())]
+        distribution_summary_stats = lambda error_df, target_key: {'MIN-' + target_key: error_df[target_key].min(), 
+                                                                   target_key: error_df[target_key].mean(), 
+                                                                   'MAX-' + target_key: error_df[target_key].max()}
 
-        self.df_experimentTracker.loc[len(self.df_experimentTracker)] = experimentResults        
+        experimentResults = {'Model': self.modelType, 'Dataset':dataType, 'Cpv Type':inputType, '#Cpv':noOfCpv, 
+                             'ZmixExists': ZmixPresent, '#Pts': self.df_err['#Pts'].mean(), 'FitTime': self.fit_time, 'PredTime': self.pred_time,      
+                             'KernelConstraintExists': kernel_constraint, 'KernelRegularizerExists': kernel_regularizer,'ActivityRegularizerExists': activity_regularizer,
+                             'OPScaler': opscaler}
+        err_names = ['MAE', 'TAE', 'MSE', 'TSE', 'MRE', 'TRE']
+        for name in err_names:
+            experimentResults.update(distribution_summary_stats(self.df_err, name))
+        self.df_experimentTracker = self.df_experimentTracker.append(experimentResults, ignore_index=True)
 
         printStr = "self.modelType: "+ self.modelType+ " dataType: "  + dataType+ " inputType:"+inputType+ " noOfCpv:"+str(noOfCpv)+ " ZmixPresent:" + ZmixPresent + " MAE:" +str(self.df_err['MAE'].min())
 
@@ -78,21 +87,23 @@ class PCDNNV2ExperimentExecutor:
         pred_times = []
         
         errs = []
+       
+        if Y_scaler is not None:
+            if len(Y_test.shape)==1:
+                Y_test = Y_test.reshape(-1,1)
+            Y_test = Y_scaler.inverse_transform(Y_test) 
+ 
+        n = 3 if self.debug_mode else 11
+        epochs = 1 if self.debug_mode else 100
+        for itr in range(1,n):    
         
-        
-        #TODO:uncomment    
-        #for itr in range(1,11):
-        
-        #TODO:comment    
-        for itr in range(1,2):    
-            
+            print(f'training model: {itr}')
             t = time.process_time()
 
             if concatenateZmix == 'Y':
-                history = self.model.fit({"species_input":X_train, "zmix":zmix_train}, {"prediction":Y_train},validation_split=0.2,verbose=0,epochs=100)
-                #history = self.model.fit([X_train, zmix_train], Y_train,validation_split=0.2,verbose=0,epochs=100)
+                history = self.model.fit({"species_input":X_train, "zmix":zmix_train}, {"prediction":Y_train},validation_split=0.2,verbose=0,epochs=epochs)
             else:
-                history = self.model.fit({"species_input":X_train}, {"prediction":Y_train},validation_split=0.2,verbose=0,epochs=100)
+                history = self.model.fit({"species_input":X_train}, {"prediction":Y_train},validation_split=0.2,verbose=0,epochs=epochs)
             
             #self.plot_loss_physics_and_regression(history)
             
@@ -110,24 +121,18 @@ class PCDNNV2ExperimentExecutor:
             self.predicitions = predictions
             
             Y_pred = predictions
-            
 
             if Y_scaler is not None:
                 Y_pred = Y_scaler.inverse_transform(Y_pred)
-                
-                
             #sns.residplot(Y_pred.flatten(), getResiduals(Y_test,Y_pred))
 
             curr_errs = self.errManager.computeError (Y_pred, Y_test)
                 
-            if (len(errs) == 0) or ((len(errs) > 0) and (curr_errs[2] < self.min_mae)) :
-                self.min_mae = curr_errs[2]#MAE
+            if (len(errs) == 0) or ((len(errs) > 0) and (curr_errs['MAE'] < self.min_mae)) :
+                self.min_mae = curr_errs['MAE']#MAE
                 self.modelFactory.saveCurrModelAsBestModel()
                     
             errs.append(curr_errs)
-        
-        
-        
         
         self.fit_time = sum(fit_times)/len(fit_times)
         
@@ -135,7 +140,7 @@ class PCDNNV2ExperimentExecutor:
         
         #computeAndPrintError(Y_pred, Y_test)
 
-        self.df_err = pd.DataFrame(errs, columns = ['TAE', 'TSE', 'MAE', 'MSE', 'MAPE', '#Pts'])
+        self.df_err = pd.DataFrame(errs)
         
         return  
 
@@ -144,30 +149,21 @@ class PCDNNV2ExperimentExecutor:
         self.modelType = modelType
         self.df_experimentTracker = df_experimentTracker
         
-        #Experiments  
-        
-        #TODO:uncomment
-        #dataTypes = ["randomequaltraintestsplit","frameworkincludedtrainexcludedtest"]
-        #inputTypes = ["AllSpecies","AllSpeciesAndZmix"]
-        
-
-        #TODO:comment
-        dataTypes = ["randomequaltraintestsplit"]
-        inputTypes = ["AllSpeciesAndZmix"]
-        
-        
+        # #Experiments  
+        #if self.debug_mode:
+        #    dataTypes = ["randomequalflamesplit"]
+        #    inputTypes = ["AllSpeciesAndZmix"]    
+        #    opscalers = ['PositiveLogNormal', 'MinMaxScaler']
+        #else:
+        dataTypes = ["frameworkincludedtrainexcludedtest", "randomequalflamesplit", "randomequaltraintestsplit"]
+        inputTypes = ["AllSpecies","AllSpeciesAndZmix"]
+        opscalers = ['MinMaxScaler', 'QuantileTransformer', 'PositiveLogNormal', None]
         
         concatenateZmix = 'N'
         
-        #TODO:uncomment
-        #kernel_constraints = ['Y','N']
-        #kernel_regularizers = ['Y','N']
-        #activity_regularizers = ['Y','N']        
-       
-        #TODO:comment
-        kernel_constraints = ['Y']
-        kernel_regularizers = ['Y']
-        activity_regularizers = ['Y']        
+        kernel_constraints = ['Y','N']
+        kernel_regularizers = ['Y','N']
+        activity_regularizers = ['Y','N']        
        
         for dataType in dataTypes:
             print('=================== ' + dataType + ' ===================')
@@ -189,19 +185,17 @@ class PCDNNV2ExperimentExecutor:
                 else:
                     ZmixPresent = 'N'
                     concatenateZmix = 'N'
-                
-                #TODO:uncomment    
-                #noOfCpvs = [item for item in range(2, 6)]
-
-                #TODO:comment    
-                noOfCpvs = [item for item in range(2, 3)]
+           
+                m = 3 if self.debug_mode else 6
+                noOfCpvs = [item for item in range(2, m)]
 
                 for noOfCpv in noOfCpvs:
                     for kernel_constraint in kernel_constraints:
                         for kernel_regularizer in kernel_regularizers:
                             for activity_regularizer in activity_regularizers:
-                                 
-                                self.executeSingleExperiment(noOfNeurons,dataSetMethod,dataType,inputType,ZmixPresent,noOfCpv,concatenateZmix,kernel_constraint,kernel_regularizer,activity_regularizer)
+                                for opscaler in opscalers:
+                                    self.executeSingleExperiment(noOfNeurons,dataSetMethod,dataType,inputType,ZmixPresent,noOfCpv,concatenateZmix,kernel_constraint,
+                                                                 kernel_regularizer,activity_regularizer,opscaler=opscaler)
                        
         
     def plot_loss_physics_and_regression(self,history):
