@@ -22,6 +22,16 @@ from models.pcdnnv2_model_factory import PCDNNV2ModelFactory
 import pandas as pd
 
 
+def compile_results(out_folder='data_results'):
+    print('Organizing results...')
+    os.system(f'rm -r {out_folder} {out_folder}.zip')
+    os.system(f'mkdir {out_folder}')
+    os.system(f'mv PCA_data.csv ./{out_folder}/.')
+    os.system(f'mv *_Experiment_Results.csv ./{out_folder}/.')
+    os.system(f'cp -r ./models/best_models ./{out_folder}/.')
+    os.system(f'zip -r {out_folder}.zip {out_folder}; rm -r {out_folder}')
+    print('Done!')
+
 def run_gp_experiments(dm, debug_mode = False):
     '''
     TODO: search for '#TODO:uncomment' in the 'experiment_executor/gp_experiment_executor.py' uncomment & comment out the necessary lines
@@ -104,10 +114,23 @@ def run_pcdnn_v2_experiments(dm, debug_mode = False):
     df_experimentTracker.to_csv('PCDNNV2_Experiment_Results.csv', sep='\t',encoding='utf-8', index=False)
     print(df_experimentTracker.describe())
 
-    # save updated PCA data
-    dm.save_PCA_data(fn='PCA_data.csv')
-
     return expExectr
+
+def run_model_experiments(dm, models=['PCDNN_V2'], debug_mode=False):
+    # liberal inputs accepted!
+    if type(models) is str: models = [models] # also accepts just 1 string
+    supported_models = {'PCDNN_V2': run_pcdnn_v2_experiments, 'PCDNN_V1': run_pcdnn_v1_experiments, 'GP': run_gp_experiments, 'SIMPLE_DNN': run_simple_dnn_experiments}
+    supported_models = {k.replace('_',''): v for k,v in supported_models.items()}
+   
+    expExectrs = []
+    for model in models:
+        model = model.upper().replace('_','')
+        assert model in supported_models
+        expExectrs.append(supported_models[model](dm, debug_mode=debug_mode))
+    
+    dm.save_PCA_data(fn='PCA_data.csv') # save updated PCA data
+    compile_results()
+    return expExectrs if len(expExectrs)>1 else expExectrs[0] 
 
 def main(debug_mode=False):
     #Prepare the DataFrame that will be used downstream
@@ -124,26 +147,24 @@ def main(debug_mode=False):
     '''
     # currently passing dp eventually we want to abstract all the constants into 1 class
     dm = DataManager(df, dp)
-    dm.save_PCA_data(fn='PCA_data.csv')   
  
     '''
     Run the PCDNN_v2 Experiments
     '''
-    run_pcdnn_v2_experiments(dm, debug_mode=debug_mode)
-
+    run_model_experiments(dm, model='PCDNN_V2', debug_mode=debug_mode)
     '''
     Run the PCDNN_v1 Experiments
     '''
-    run_pcdnn_v1_experiments(dm, debug_mode=debug_mode)
-
+    #run_model_experiments(dm, model='PCDNN_V1', debug_mode=debug_mode)
     '''
     Run the Simple DNN Experiments
     '''
-    run_simple_dnn_experiments(dm, debug_mode=debug_mode)
+    #run_model_experiments(dm, model='SIMPLE_DNN', debug_mode=debug_mode)
     '''
     Run the GP Experiments 
     '''
-#    run_gp_experiments(dm, debug_mode=debug_mode)
+    #run_model_experiments(dm, model='GP', debug_mode=debug_mode)
+
 
 if __name__ == "__main__":
     main()    
