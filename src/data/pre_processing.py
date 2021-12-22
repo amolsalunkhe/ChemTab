@@ -91,7 +91,7 @@ class DataPreparer:
             Y = dm.outputScaler.inverse_transform(Y.reshape(-1,1)).squeeze()
 
         #error_df = pd.DataFrame(np.stack((predictions-Y)**2, np.abs(predictions-Y)), columns=['L2_ERR', 'L1_ERR'])
-        PCDNNV2_PCA_df = pd.DataFrame(PCAs, columns=[f'PCDNNV2_PC_{i+1}' for i in range(PCAs.shape[1])])
+        PCDNNV2_PCA_df = pd.DataFrame(PCAs, columns=[f'PCDNNV2_PCA_{i+1}' for i in range(PCAs.shape[1])])
         self.df[PCDNNV2_PCA_df.columns] = PCDNNV2_PCA_df
         self.df['L1_ERR'] = np.abs(predictions-Y)
         self.df['L2_ERR'] = (predictions-Y)**2
