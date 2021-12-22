@@ -112,6 +112,9 @@ class DataManager:
     def include_PCDNNV2_PCA_data(self, PCDNNV2_model_factory, concatenateZmix: str):
         self.constants.include_PCDNNV2_PCA_data(self, PCDNNV2_model_factory, concatenateZmix)
         self.df = self.constants.getDataframe() # maybe not necessary...?
+    
+    def save_PCA_data(fn='PCA_data.csv'):
+        self.df.to_csv(fn, index=False)
 
     @staticmethod
     def train_test_split_on_flamekey(df, train_portion=0.5, seed=0):

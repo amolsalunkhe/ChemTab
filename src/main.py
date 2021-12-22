@@ -104,6 +104,9 @@ def run_pcdnn_v2_experiments(dm, debug_mode = False):
     df_experimentTracker.to_csv('PCDNNV2_Experiment_Results.csv', sep='\t',encoding='utf-8', index=False)
     print(df_experimentTracker.describe())
 
+    # save updated PCA data
+    dm.save_PCA_data(fn='PCA_data.csv')
+
     return expExectr
 
 def main(debug_mode=False):
@@ -114,8 +117,6 @@ def main(debug_mode=False):
     dp.zmixOrthogonalPCAs()
     df = dp.getDataframe()
 
-    df.to_csv('PCA_data.csv', index=False)
-  
     '''
     print(df[dp.pure_pca_dim_cols].describe().transpose())
     print(df[dp.sparse_pca_dim_cols].describe().transpose())
@@ -123,7 +124,8 @@ def main(debug_mode=False):
     '''
     # currently passing dp eventually we want to abstract all the constants into 1 class
     dm = DataManager(df, dp)
-    
+    dm.save_PCA_data(fn='PCA_data.csv')   
+ 
     '''
     Run the PCDNN_v2 Experiments
     '''
