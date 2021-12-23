@@ -7,6 +7,9 @@ Created on Wed Aug  4 17:50:06 2021
 
 import os # this enables XLA optimized computations
 os.environ['TF_XLA_FLAGS'] = '--tf_xla_enable_xla_devices'
+import tensorflow as tf
+physical_devices = tf.config.list_physical_devices('GPU')
+tf.config.experimental.set_memory_growth(physical_devices[0], True)
 
 from data.pre_processing import DataPreparer 
 from data.train_test_manager import DataManager 
@@ -155,15 +158,15 @@ def main(debug_mode=False):
     '''
     Run the PCDNN_v1 Experiments
     '''
-    #run_model_experiments(dm, model='PCDNN_V1', debug_mode=debug_mode)
+    #run_model_experiments(dm, models='PCDNN_V1', debug_mode=debug_mode)
     '''
     Run the Simple DNN Experiments
     '''
-    #run_model_experiments(dm, model='SIMPLE_DNN', debug_mode=debug_mode)
+    #run_model_experiments(dm, models='SIMPLE_DNN', debug_mode=debug_mode)
     '''
     Run the GP Experiments 
     '''
-    #run_model_experiments(dm, model='GP', debug_mode=debug_mode)
+    #run_model_experiments(dm, models='GP', debug_mode=debug_mode)
 
 
 if __name__ == "__main__":
