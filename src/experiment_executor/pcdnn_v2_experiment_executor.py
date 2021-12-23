@@ -159,7 +159,8 @@ class PCDNNV2ExperimentExecutor:
         #computeAndPrintError(Y_pred, Y_test)
 
         self.df_err = pd.DataFrame(errs)
-        
+
+        print(self.df_err.describe())
         return history 
 
     def executeExperiments(self,dataManager, modelType, df_experimentTracker):

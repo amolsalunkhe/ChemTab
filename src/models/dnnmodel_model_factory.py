@@ -41,10 +41,11 @@ class DNNModelFactory:
         end_learning_rate = 0.01
         decay_steps = 10000
         learning_rate_fn = tf.keras.optimizers.schedules.PolynomialDecay(starter_learning_rate, decay_steps, end_learning_rate, power=0.5)
+       
+        # NOTE: we are testing this again for compatibility with benchmark notebook 
+        opt = keras.optimizers.Adam(learning_rate=0.001)
         
-        #opt = keras.optimizers.Adam(learning_rate=0.001)
-        
-        opt = keras.optimizers.Adam(learning_rate=learning_rate_fn, clipnorm=5)
+        #opt = keras.optimizers.Adam(learning_rate=learning_rate_fn, clipnorm=5)
                 
         return opt
 
@@ -117,7 +118,7 @@ class DNNModelFactory:
         #layer_sizes = [16, 32, 64, 64, 32, 16]
         output = input_
         for size in layer_sizes:
-            output = layers.Dense(size, activation='relu')(output)
+            output = layers.Dense(size, activation=self.activation_func)(output)
         
         #if self.debug_mode: 
         #    # for debugging only
@@ -172,13 +173,13 @@ class DNNModelFactory:
     def getLinearEncoder(self):
         model_layers = {layer.name: layer for layer in self.model.layers}
         model = model_layers['linear_embedding'] # this 'layer' is actually a bonafied model
-        model.summary()
+        model.summary(expand_nested=True)
 
         return model
     
     def getRegressor(self):
         model_layers = {layer.name: layer for layer in self.model.layers}
         model = model_layers['prediction'] # unfortunately regressor is named this for compatibility with older code
-        model.summary()
+        model.summary(expand_nested=True)
 
         return model
