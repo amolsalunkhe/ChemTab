@@ -58,20 +58,16 @@ class PCDNNV2ExperimentExecutor:
 
         X_train, X_test, Y_train, Y_test, rom_train, rom_test, zmix_train, zmix_test = self.dm.getTrainTestData() 
         
-        history = self.fitModelAndCalcErr(X_train, Y_train, X_test, Y_test,None, None, zmix_train, zmix_test, self.dm.outputScaler, concatenateZmix,kernel_constraint,kernel_regularizer,activity_regularizer)
+        history = self.fitModelAndCalcErr(X_train, Y_train, X_test, Y_test,None, None,
+                                          zmix_train, zmix_test, self.dm.outputScaler, concatenateZmix,
+                                          kernel_constraint,kernel_regularizer,activity_regularizer)
+        
         #['Model','Dataset','Cpv Type','#Cpv',"ZmixExists",'MAE','TAE','MSE','TSE','#Pts','FitTime','PredTime','MAX-MAE','MAX-TAE','MAX-MSE','MAX-TSE','MIN-MAE','MIN-TAE','MIN-MSE','MIN-TSE']
-
-        distribution_summary_stats = lambda error_df, target_key: {'MIN-' + target_key: error_df[target_key].min(), 
-                                                                   target_key: error_df[target_key].mean(), 
-                                                                   'MAX-' + target_key: error_df[target_key].max()}
-
         experimentResults = {'Model': self.modelType, 'Dataset':dataType, 'Cpv Type':inputType, '#Cpv':noOfCpv, 
                              'ZmixExists': ZmixPresent, '#Pts': self.df_err['#Pts'].mean(), 'FitTime': self.fit_time, 'PredTime': self.pred_time,      
                              'KernelConstraintExists': kernel_constraint, 'KernelRegularizerExists': kernel_regularizer,'ActivityRegularizerExists': activity_regularizer,
                              'OPScaler': opscaler}
-        err_names = ['MAE', 'TAE', 'MSE', 'TSE', 'MRE', 'TRE']
-        for name in err_names:
-            experimentResults.update(distribution_summary_stats(self.df_err, name))
+        experimentResults.update(self.errManager.getExperimentErrorResults(self.df_err))
         self.df_experimentTracker = self.df_experimentTracker.append(experimentResults, ignore_index=True)
 
         printStr = "self.modelType: "+ self.modelType+ " dataType: "  + dataType+ " inputType:"+inputType+ " noOfCpv:"+str(noOfCpv)+ " ZmixPresent:" + ZmixPresent + " MAE:" +str(self.df_err['MAE'].min())
@@ -98,6 +94,8 @@ class PCDNNV2ExperimentExecutor:
         #X_train = np.concatenate((X_train, X_test),axis=0)
         #zmix_train = np.concatenate((zmix_train, zmix_test),axis=0)
         #Y_train = np.concatenate((Y_train, Y_test),axis=0)
+
+        self.model.summary(expand_nested=True)
 
         Y_test_raw = Y_test # default 
         if Y_scaler is not None:

@@ -59,17 +59,10 @@ class PCDNNV1ExperimentExecutor:
         #['Model','Dataset','Cpv Type','#Cpv',"ZmixExists",'MAE','TAE','MSE','TSE','#Pts','FitTime','PredTime','MAX-MAE','MAX-TAE','MAX-MSE','MAX-TSE','MIN-MAE','MIN-TAE','MIN-MSE','MIN-TSE']
 
         # log experiment results
-        distribution_summary_stats = lambda error_df, target_key: {'MIN-' + target_key: error_df[target_key].min(),
-                                                                   target_key: error_df[target_key].mean(),
-                                                                   'MAX-' + target_key: error_df[target_key].max()}       
- 
         experimentResults = {'Model': self.modelType, 'Dataset':dataType, 'Cpv Type':inputType, '#Cpv':noOfCpv, 'ZmixExists': ZmixPresent, 
                              '#Pts': self.df_err['#Pts'].mean(), 'FitTime': self.fit_time, 'PredTime': self.pred_time, 'OPScaler': opscaler}
 
-
-        err_names = ['MAE', 'TAE', 'MSE', 'TSE', 'MRE', 'TRE']
-        for name in err_names:
-            experimentResults.update(distribution_summary_stats(self.df_err, name))
+        experimentResults.update(self.errManager.getExperimentErrorResults(self.df_err))
         self.df_experimentTracker = self.df_experimentTracker.append(experimentResults, ignore_index=True)
     
         printStr = "self.modelType: "+ self.modelType+ " dataType: "  + dataType+ " inputType:"+inputType+ " noOfCpv:"+str(noOfCpv)+ " ZmixPresent:" + ZmixPresent + " MAE:" +str(self.df_err['MAE'].min())
