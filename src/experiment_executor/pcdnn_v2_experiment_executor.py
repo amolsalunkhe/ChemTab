@@ -28,9 +28,7 @@ class PCDNNV2ExperimentExecutor:
         
         # override the default number of epochs used
         self.epochs_override = None
-        self.n_models_override = 1
-        import warnings
-        warnings.warn('manually overriding n models to 1! change this!')
+        self.n_models_override = None
         self.batch_size = 64
         
     def setModel(self,model):
@@ -83,7 +81,9 @@ class PCDNNV2ExperimentExecutor:
     def fitModelAndCalcErr(self,X_train, Y_train, X_test, Y_test, rom_train = None, rom_test = None, zmix_train = None, zmix_test = None, Y_scaler = None, concatenateZmix = 'N',kernel_constraint = 'Y',kernel_regularizer = 'Y',activity_regularizer = 'Y'):
 
         fit_times = []
+        
         pred_times = []
+        
         errs = []
       
         #if len(Y_train.shape)==1: Y_train = Y_train.reshape(-1,1)
@@ -174,12 +174,11 @@ class PCDNNV2ExperimentExecutor:
         #    inputTypes = ["AllSpeciesAndZmix"]    
         #    opscalers = ['PositiveLogNormal', 'MinMaxScaler']
         #else:
-        dataTypes = ["randomequaltraintestsplit"]#, "frameworkincludedtrainexcludedtest", "randomequalflamesplit"]
-        inputTypes = ["AllSpeciesAndZmix"]#, "AllSpecies"]
-        opscalers = ['MinMaxScaler']#, 'QuantileTransformer', 'PositiveLogNormal', None]
-        ipscaler = 'MinMaxScaler'        
-
-        #concatenateZmix = 'Y'
+        dataTypes = ["frameworkincludedtrainexcludedtest", "randomequalflamesplit", "randomequaltraintestsplit"]
+        inputTypes = ["AllSpecies","AllSpeciesAndZmix"]
+        opscalers = ['MinMaxScaler', 'QuantileTransformer', 'PositiveLogNormal', None]
+        
+        #concatenateZmix = 'N'
         
         kernel_constraints = ['Y','N']
         kernel_regularizers = ['Y','N']
@@ -207,7 +206,7 @@ class PCDNNV2ExperimentExecutor:
                     concatenateZmix = 'N'
            
                 m = 3 if self.debug_mode else 6
-                noOfCpvs = [4]#[item for item in range(2, m)]
+                noOfCpvs = [item for item in range(2, m)]
 
                 for noOfCpv in noOfCpvs:
                     for kernel_constraint in kernel_constraints:
@@ -215,7 +214,7 @@ class PCDNNV2ExperimentExecutor:
                             for activity_regularizer in activity_regularizers:
                                 for opscaler in opscalers:
                                     self.executeSingleExperiment(noOfNeurons,dataSetMethod,dataType,inputType,ZmixPresent,noOfCpv,concatenateZmix,kernel_constraint,
-                                                                 kernel_regularizer,activity_regularizer,opscaler=opscaler, ipscaler=ipscaler)
+                                                                 kernel_regularizer,activity_regularizer,opscaler=opscaler)
                        
         
     def plot_loss_physics_and_regression(self,history):

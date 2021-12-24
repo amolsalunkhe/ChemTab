@@ -102,31 +102,20 @@ class DNNModelFactory:
         # dimension that keras adds implicitly
         input_ = layers.Input(x.shape[1:], name='input_1')
 
-        # Amol's original arch, doesn't work because we need x to be preserved
-        #x = layers.Dense(32, activation="relu")(input_)
-        #x = layers.Dense(64, activation="relu")(x)
-        #x = layers.Dense(128, activation="relu")(x)
-        #x = layers.Dense(256, activation="relu")(x)
-        #x = layers.Dense(512, activation="relu")(x)
-        #x = layers.Dense(256, activation="relu")(x)
-        #x = layers.Dense(128, activation="relu")(x)
-        #x = layers.Dense(64, activation="relu")(x)
-        #x = layers.Dense(32, activation="relu")(x)
-        #output = x
-
-        layer_sizes = [32,64,128,256,512,256,128,64,32]
-        #layer_sizes = [16, 32, 64, 64, 32, 16]
-        output = input_
-        for size in layer_sizes:
-            output = layers.Dense(size, activation=self.activation_func)(output)
+        # # This is the simple baseline model architecture:
+        #layer_sizes = [32,64,128,256,512,256,128,64,32]
+        ##layer_sizes = [16, 32, 64, 64, 32, 16]
+        #output = input_
+        #for size in layer_sizes:
+        #    output = layers.Dense(size, activation=self.activation_func)(output)
         
-        #if self.debug_mode: 
-        #    # for debugging only
-        #    output = add_regularized_dense_module(input_, [16,32,16])
-        #else:
-        #    output = add_regularized_dense_module(input_, [self.width//16,self.width//8,self.width//4])
-        #    output = add_regularized_dense_module(output, [self.width//2,self.width,self.width//2])
-        #    output = add_regularized_dense_module(output, [self.width//4,self.width//8,self.width//16])
+        if self.debug_mode: 
+            # for debugging only
+            output = add_regularized_dense_module(input_, [16,32,16])
+        else:
+            output = add_regularized_dense_module(input_, [self.width//16,self.width//8,self.width//4])
+            output = add_regularized_dense_module(output, [self.width//2,self.width,self.width//2])
+            output = add_regularized_dense_module(output, [self.width//4,self.width//8,self.width//16])
 
         # used to be named 'prediction' (now model is named 'prediction', since it is last layer)
         souener_pred = layers.Dense(1)(output)
