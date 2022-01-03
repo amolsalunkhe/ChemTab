@@ -115,10 +115,13 @@ class PCDNNV2ModelFactory(DNNModelFactory):
             layer = layers.Dense(noOfCpv, name="linear_embedding", activation="linear",kernel_constraint=UnitNorm(axis=0),kernel_regularizer=WeightsOrthogonalityConstraint(noOfCpv, weightage=1., axis=0),activity_regularizer=UncorrelatedFeaturesConstraint(noOfCpv, weightage=1.))
         return layer
 
-    
+ 
+    def rebuild_model(self):
+        return self.build_and_compile_model(*self._prev_model_cfg)
+ 
     def build_and_compile_model(self,noOfInputNeurons,noOfCpv,concatenateZmix,kernel_constraint='Y',kernel_regularizer='Y',activity_regularizer='Y'):
-
-        print (noOfInputNeurons,noOfCpv,kernel_constraint,kernel_regularizer,activity_regularizer)
+        self._prev_model_cfg = (noOfInputNeurons,noOfCpv,concatenateZmix,kernel_constraint,kernel_regularizer,activity_regularizer)
+        print(noOfInputNeurons,noOfCpv,concatenateZmix,kernel_constraint,kernel_regularizer,activity_regularizer)
         
         #The following 2 lines make up the Auto-encoder
         species_inputs = keras.Input(shape=(noOfInputNeurons,), name="species_input")

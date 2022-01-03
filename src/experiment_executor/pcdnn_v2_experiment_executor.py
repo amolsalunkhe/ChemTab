@@ -108,7 +108,7 @@ class PCDNNV2ExperimentExecutor:
         if self.n_models_override: n = self.n_models_override+1      
 
         for itr in range(1,n): 
-        
+            self.modelFactory.rebuild_model() 
             print(f'training model: {itr}')
             t = time.process_time()
 
