@@ -115,10 +115,16 @@ class PCDNNV2ModelFactory(DNNModelFactory):
             layer = layers.Dense(noOfCpv, name="linear_embedding", activation="linear",kernel_constraint=UnitNorm(axis=0),kernel_regularizer=WeightsOrthogonalityConstraint(noOfCpv, weightage=1., axis=0),activity_regularizer=UncorrelatedFeaturesConstraint(noOfCpv, weightage=1.))
         return layer
 
-    
-    def build_and_compile_model(self,noOfInputNeurons,noOfCpv,concatenateZmix,kernel_constraint='Y',kernel_regularizer='Y',activity_regularizer='Y'):
+ 
+    #def rebuild_model(self):
+    #    return self.build_and_compile_model(*self._prev_model_cfg[0], **self._prev_model_cfg[1])
 
-        print (noOfInputNeurons,noOfCpv,kernel_constraint,kernel_regularizer,activity_regularizer)
+    #def build_and_compile_model(self, *args, **kwd_args):
+    #    self._prev_model_cfg = [args, kwd_args]
+    #    return self._build_and_compile_model(*args, **kwd_args)
+ 
+    def build_and_compile_model(self,noOfInputNeurons,noOfCpv,concatenateZmix,kernel_constraint='Y',kernel_regularizer='Y',activity_regularizer='Y'):
+        print(noOfInputNeurons,noOfCpv,concatenateZmix,kernel_constraint,kernel_regularizer,activity_regularizer)
         
         #The following 2 lines make up the Auto-encoder
         species_inputs = keras.Input(shape=(noOfInputNeurons,), name="species_input")
@@ -141,15 +147,23 @@ class PCDNNV2ModelFactory(DNNModelFactory):
 
         opt = self.getOptimizer()
         
-        def log_mse(x,y): return tf.math.log(tf.math.reduce_mean((x-y)**2))
-        def log_mae(x,y): return tf.math.log(tf.math.reduce_mean(tf.math.abs(x-y)))
-        def exp_mse_mag(x,y): return tf.math.log(tf.math.reduce_mean((tf.math.exp(x)-tf.math.exp(y))**2))/tf.math.log(10.0)
-        def exp_mae_mag(x,y): return tf.math.log(tf.math.reduce_mean(tf.math.abs(tf.math.exp(x)-tf.math.exp(y))))/tf.math.log(10.0)
-        def R2(yt,yp): return 1-tf.math.reduce_mean((yp-yt)**2)/(tf.math.reduce_std(yt)**2)
-        def exp_R2(yt,yp): # these are actual names above is for convenience
-            return R2(tf.math.exp(yt), tf.math.exp(yp))
+        def get_metrics():
+            def log_mse(x,y): return tf.math.log(tf.math.reduce_mean((x-y)**2))
+            def log_mae(x,y): return tf.math.log(tf.math.reduce_mean(tf.math.abs(x-y)))
+            def exp_mse_mag(x,y): return tf.math.log(tf.math.reduce_mean((tf.math.exp(x)-tf.math.exp(y))**2))/tf.math.log(10.0)
+            def exp_mae_mag(x,y): return tf.math.log(tf.math.reduce_mean(tf.math.abs(tf.math.exp(x)-tf.math.exp(y))))/tf.math.log(10.0)
+            def R2(yt,yp): return 1-tf.math.reduce_mean((yp-yt)**2)/(tf.math.reduce_std(yt)**2)
+            def exp_R2(yt,yp): # these are actual names above is for convenience
+                return R2(tf.math.exp(yt), tf.math.exp(yp))
+            return locals()        
+        metrics = get_metrics()
         
-        model.compile(loss=self.loss,optimizer=opt, metrics=['mae', 'mse',  exp_mse_mag, exp_mae_mag, exp_R2, R2])
+        # TODO: fix this!
+        #self.concreteClassCustomObject.update(metrics)
+
+        metric_list = list(metrics.values())
+
+        model.compile(loss=self.loss,optimizer=opt, metrics=['mae', 'mse'] + metric_list)#,  exp_mse_mag, exp_mae_mag, exp_R2, R2])
         
         self.model = model
         tf.keras.utils.plot_model(self.model,to_file="model.png",show_shapes=True,show_layer_names=True,rankdir="TB",expand_nested=False,dpi=96)

@@ -8,8 +8,23 @@ import time
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
+from tensorflow import keras
 
 from .error_manager import ErrorManager
+
+# returns a wrapped model factory that supports rebuilding using previous config
+# it does this using dynamic inheritance, this functionality was unit tested in a notebook
+def dynamic_rebuild_wrap(parent):
+    class RebuildWrapper(type(parent)):
+        def __init__(self, other):
+            super().__init__()
+            vars(self).update(vars(other))
+        def build_and_compile_model(self, *args, **kwd_args):
+            self._prev_config = [args, kwd_args]
+            return super().build_and_compile_model(*args, **kwd_args)
+        def rebuild_model(self):
+            return super().build_and_compile_model(*self._prev_config[0], **self._prev_config[1])
+    return RebuildWrapper(parent)
 
 class PCDNNV2ExperimentExecutor:
     def __init__(self):
@@ -23,7 +38,7 @@ class PCDNNV2ExperimentExecutor:
         self.df_err = None 
         self.predicitions = None
         self.errManager = ErrorManager()
-        self.modelFactory = None
+        self._modelFactory = None
         self.min_mae = 0
         
         # override the default number of epochs used
@@ -32,7 +47,15 @@ class PCDNNV2ExperimentExecutor:
         import warnings
         warnings.warn('manually overriding n models to 1! change this!')
         self.batch_size = 64
-        
+    
+    @property
+    def modelFactory(self):
+        return self._modelFactory
+
+    @modelFactory.setter
+    def modelFactory(self, modelFactory):
+        self._modelFactory = dynamic_rebuild_wrap(modelFactory)
+ 
     def setModel(self,model):
         self.model = model
     
@@ -77,7 +100,7 @@ class PCDNNV2ExperimentExecutor:
         printStr = "\t"
 
         printStr = printStr.join(experimentResults)
-        return history
+        return self.df_err
 
 
     def fitModelAndCalcErr(self,X_train, Y_train, X_test, Y_test, rom_train = None, rom_test = None, zmix_train = None, zmix_test = None, Y_scaler = None, concatenateZmix = 'N',kernel_constraint = 'Y',kernel_regularizer = 'Y',activity_regularizer = 'Y'):
@@ -107,8 +130,15 @@ class PCDNNV2ExperimentExecutor:
         if self.epochs_override: epochs = self.epochs_override
         if self.n_models_override: n = self.n_models_override+1      
 
-        for itr in range(1,n): 
-        
+        for itr in range(1,n):
+            if not self.control:
+                print('not control!')
+                import warnings
+                warnings.warn("loading benchmark notebook in experiment executor don't do this!") 
+                self.model = keras.models.load_model(f'benchmark_models/benchmark_model{itr-1}.h5', custom_objects=self.modelFactory.concreteClassCustomObject)
+            else:
+                print('control!') 
+                self.model = self.modelFactory.rebuild_model() 
             print(f'training model: {itr}')
             t = time.process_time()
 
@@ -144,6 +174,7 @@ class PCDNNV2ExperimentExecutor:
             #sns.residplot(Y_pred.flatten(), getResiduals(Y_test,Y_pred))
 
             curr_errs = self.errManager.computeError (Y_pred_raw, Y_test_raw)
+            #self.errManager.printError(curr_errors)
                 
             if (len(errs) == 0) or ((len(errs) > 0) and (curr_errs['MAE'] < self.min_mae)) :
                 self.min_mae = curr_errs['MAE']#MAE
@@ -160,7 +191,7 @@ class PCDNNV2ExperimentExecutor:
 
         self.df_err = pd.DataFrame(errs)
 
-        print(self.df_err.describe())
+        print(self.df_err[['MAE', 'MSE', 'MAPE']].describe())
         return history 
 
     def executeExperiments(self,dataManager, modelType, df_experimentTracker):

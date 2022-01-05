@@ -117,7 +117,12 @@ def computeError (Y_pred, Y_test):
     
     return [TotalAbsoluteError,TotalSquaredError,MeanAbsoluteError,MeanSquaredError,MeanPercentageError,NumPoints]
 
+def print_scientific_notation(number):
+    power = int(np.log(number)/np.log(10))
+    return f"{(number/10**power)}*10^{power}"
+
 def printError (err):
+    err = list(map(print_scientific_notation, err))
     TotalAbsoluteError = err[0]
 
     TotalSquaredError = err[1]
@@ -148,3 +153,4 @@ def plot_loss(history):
     plt.ylabel('Error [Souener]')
     plt.legend()
     plt.grid(True)
+    plt.show()
