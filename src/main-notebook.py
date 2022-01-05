@@ -81,13 +81,16 @@ exprExec.n_models_override = 100
 exprExec.dm = dm
 exprExec.df_experimentTracker = pd.DataFrame()
 exprExec.modelType = 'PCDNNV2'
-exprExec.control = int(sys.argv[1])
+exprExec.control = 0#int(sys.argv[1])
+exprExec.pretrained = 1
 
 df_err = exprExec.executeSingleExperiment(noOfNeurons,dataSetMethod,dataType,inputType,ZmixPresent=ZmixPresent,
                                  noOfCpv=noOfCpv,concatenateZmix=concatenateZmix,kernel_constraint=kernel_constraint,
                                  kernel_regularizer=kernel_regularizer,activity_regularizer=activity_regularizer,
                                  opscaler=opscaler, ipscaler='MinMaxScaler')
-df_err.to_csv(f'chemtab_control={exprExec.control}.csv')
+
+#df_err.to_csv(f'chemtab_control={exprExec.control}.csv')
+df_err.to_csv(f'chemtab_pretrained.csv')
 
 import pdb; pdb.set_trace()
 

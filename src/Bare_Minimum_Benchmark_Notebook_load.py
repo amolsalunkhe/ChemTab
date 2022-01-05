@@ -116,16 +116,17 @@ normalized_species_train = halfData["normalized_species_train"]
 Zmix_train = halfData["Zmix_train"] 
 normalized_souener_train = halfData["normalized_souener_train"]
     
-def train_model(model):
+def train_model(model, pretrained=False):
     global error_df
-    history = model.fit([normalized_species_train,Zmix_train], 
-                         normalized_souener_train,
-                         validation_split=0.2,
-                         verbose=1, 
-                         epochs=100,
-                         batch_size=32,
-                         callbacks=[es])
-    plot_loss(history)
+    if not pretrained:
+        history = model.fit([normalized_species_train,Zmix_train], 
+                             normalized_souener_train,
+                             validation_split=0.2,
+                             verbose=1, 
+                             epochs=100,
+                             batch_size=32,
+                             callbacks=[es])
+        plot_loss(history)
     
     # data prep
     normalized_species_test = halfData["normalized_species_test"]
@@ -144,20 +145,26 @@ def train_model(model):
 
 import os
 os.system('mkdir NB_trained_models')
-#control=0
+control=0
+pretrained=1
 
 for i in range(150):
-    if control: 
-        print('control!')
-        model = build_model()
+    if not pretrained:
+        if control: 
+            print('control!')
+            model = build_model()
+        else:
+            print('not control!') 
+            model = keras.models.load_model(f'base_code_model/base_code_model{i}.h5', custom_objects = custom_objects)
     else:
-        print('not control!') 
-        model = keras.models.load_model(f'base_code_model/base_code_model{i}.h5', custom_objects = custom_objects)
+        print('pretrained!')
+        model = keras.models.load_model(f'trained_base_models/model{i}.h5', custom_objects = custom_objects)
     print(model.summary(expand_nested=True))
-    err = train_model(model)
+    err = train_model(model, pretrained=pretrained)
     #model.save(f'NB_trained_models/model{i}.h5')
     error_df = error_df.append(err, ignore_index=True)
     print(error_df.describe())
 
 #error_df.to_csv(f'BM_train_err.csv')
-error_df.to_csv(f'BM_control={control}.csv')
+#error_df.to_csv(f'BM_control={control}.csv')
+error_df.to_csv(f'BM_pretrained.csv')

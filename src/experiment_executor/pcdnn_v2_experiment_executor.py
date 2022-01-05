@@ -47,6 +47,8 @@ class PCDNNV2ExperimentExecutor:
         import warnings
         warnings.warn('manually overriding n models to 1! change this!')
         self.batch_size = 64
+        self.control=True
+        self.pretrained=False
     
     @property
     def modelFactory(self):
@@ -120,10 +122,18 @@ class PCDNNV2ExperimentExecutor:
 
         self.model.summary(expand_nested=True)
 
+        # Data Prep:
         Y_test_raw = Y_test # default 
         if Y_scaler is not None:
             if len(Y_test.shape)==1: Y_test = Y_test.reshape(-1,1)
             Y_test_raw = Y_scaler.inverse_transform(Y_test).flatten() 
+
+        if concatenateZmix == 'Y':
+            input_dict_train = {"species_input":X_train, "zmix":zmix_train}
+            input_dict_test = {"species_input":X_test, "zmix":zmix_test}
+        else:
+            input_dict_train = {"species_input":X_train}
+            input_dict_test = {"species_input":X_test}
  
         n = 3 if self.debug_mode else 6
         epochs = 5 if self.debug_mode else 100
@@ -131,29 +141,23 @@ class PCDNNV2ExperimentExecutor:
         if self.n_models_override: n = self.n_models_override+1      
 
         for itr in range(1,n):
-            if not self.control:
-                print('not control!')
-                import warnings
-                warnings.warn("loading benchmark notebook in experiment executor don't do this!") 
-                self.model = keras.models.load_model(f'benchmark_models/benchmark_model{itr-1}.h5', custom_objects=self.modelFactory.concreteClassCustomObject)
-            else:
-                print('control!') 
-                self.model = self.modelFactory.rebuild_model() 
-            print(f'training model: {itr}')
-            t = time.process_time()
+            if not self.pretrained:
+                if not self.control:
+                    print('not control!')
+                    self.model = keras.models.load_model(f'benchmark_models/benchmark_model{itr-1}.h5', custom_objects=self.modelFactory.concreteClassCustomObject)
+                else:
+                    print('control!') 
+                    self.model = self.modelFactory.rebuild_model() 
+                print(f'training model: {itr}')
+                t = time.process_time()
 
-            if concatenateZmix == 'Y':
-                input_dict_train = {"species_input":X_train, "zmix":zmix_train}
-                input_dict_test = {"species_input":X_test, "zmix":zmix_test}
+                history = self.model.fit(input_dict_train, {"prediction":Y_train}, verbose=1,
+                                         batch_size=self.batch_size, epochs=epochs, shuffle=True, 
+                                         validation_data=(input_dict_test, {'prediction': Y_test}))
+                #self.plot_loss_physics_and_regression(history)
             else:
-                input_dict_train = {"species_input":X_train}
-                input_dict_test = {"species_input":X_test}
-            
-            history = self.model.fit(input_dict_train, {"prediction":Y_train}, verbose=1,
-                                     batch_size=self.batch_size, epochs=epochs, shuffle=True, 
-                                     validation_data=(input_dict_test, {'prediction': Y_test}))
-            #self.plot_loss_physics_and_regression(history)
-            
+                self.model = keras.models.load_model(f'BM_trained_models/model{itr-1}.h5', custom_objects=self.modelFactory.concreteClassCustomObject)      
+ 
             fit_times.append(time.process_time() - t)
         
             t = time.process_time()
