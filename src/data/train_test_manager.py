@@ -364,5 +364,16 @@ class DataManager:
             rom = np.append(rom_train, rom_test, axis=0)
         if zmix_train is not None:
             zmix = np.append(zmix_train, zmix_test, axis=0)
-        
-        return X,Y,rom,zmix
+       
+        # master index represents original index of self.df reshuffled for training/testing
+        # we can use this to return to original order! (unshuffle)
+        master_index = np.append(self.df_training.index, self.df_testing.index)
+        def reorder(array):
+            if array is not None:
+                new_array = array.copy() # GOTCHA: assignment isn't atomic!
+                new_array[master_index] = array # unshuffle df/array
+                array = new_array
+            return array
+
+        # this should fix PCA logging bug! 
+        return reorder(X),reorder(Y),reorder(rom),reorder(zmix)
