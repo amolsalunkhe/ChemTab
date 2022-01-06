@@ -75,17 +75,16 @@ class DataPreparer:
         return ret_val
     
     def include_PCDNNV2_PCA_data(self, dm, model_factory, concatenateZmix: str):
-        X_train, X_test, Y_train, Y_test, rom_train, rom_test, zmix_train, zmix_test = dm.getTrainTestData()
-        X = np.concatenate((X_train, X_test),axis=0)
-        zmix = np.concatenate((zmix_train, zmix_test),axis=0).squeeze()
-        Y = np.concatenate((Y_train, Y_test),axis=0).squeeze()
+        # this appends (train, test) data in that order
+        X,Y,rom,zmix = dm.getAllData()
         PCA_model = model_factory.getLinearEncoder()
 
         inputs = {"species_input":X, "zmix":zmix} if concatenateZmix == 'Y' else {"species_input":X}
-        
+         
         PCAs = PCA_model.predict({"species_input":X})
         predictions = model_factory.model.predict(inputs).squeeze()
-        
+        Y = Y.squeeze() # you get nasty broadcast errors when you don't squeeze Y & predictions!
+ 
         if dm.outputScaler: # These errors need to be raw 
             predictions = dm.outputScaler.inverse_transform(predictions.reshape(-1, 1)).squeeze()
             Y = dm.outputScaler.inverse_transform(Y.reshape(-1,1)).squeeze()
