@@ -5,10 +5,18 @@ Created on Thu Aug  5 20:41:06 2021
 @author: amol
 """
 import pandas as pd
+
+def print_scientific_notation(number):
+    import numpy as np
+    power = int(np.log(number)/np.log(10))
+    return f"{(number/10**power)}*10^{power}"
+
 class ErrorManager:    
     def __init__(self):
         #print("Error Manager Instantiated")
         return 
+
+
     
     def computeError (self, Y_pred, Y_test):
         evaluation_df_1 = pd.DataFrame()
@@ -75,9 +83,9 @@ class ErrorManager:
 
         NumPoints = err['#Pts']
         
-        print ('Total Absolute Error: ', TotalAbsoluteError)
-        print ('Mean Absolute Error: ', MeanAbsoluteError)
-        print ('Mean Percentage Error: ', MeanPercentageError)
-        print ('Total Squared Error: ', TotalSquaredError)
-        print ('Mean Squared Error: ', MeanSquaredError)
+        print ('Total Absolute Error: ', print_scientific_notation(TotalAbsoluteError))
+        print ('Mean Absolute Error: ', print_scientific_notation(MeanAbsoluteError))
+        print ('Mean Percentage Error: ', print_scientific_notation(MeanPercentageError))
+        print ('Total Squared Error: ', print_scientific_notation(TotalSquaredError))
+        print ('Mean Squared Error: ', print_scientific_notation(MeanSquaredError))
         print ('Number of Points: ', NumPoints)

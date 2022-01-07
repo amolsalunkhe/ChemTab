@@ -19,6 +19,9 @@ class DNNModelFactory:
         self.width = 512
         self.dropout_rate = 0.5
         self.activation_func='relu'
+        self.skip_layers = True
+        self.batch_norm = True
+        self.basic = False
         #self.halfwidth = 128
         self.model = None
         self.experimentSettings = None
@@ -86,8 +89,8 @@ class DNNModelFactory:
         """Gets layers for regression module of model (renamed from get intermediate layers)"""
         def add_regularized_dense_layer(x, layer_size):
             x = layers.Dense(layer_size, activation=self.activation_func)(x)
-            x = layers.BatchNormalization()(x)
-            x = layers.Dropout(self.dropout_rate)(x)
+            if self.batch_norm: x = layers.BatchNormalization()(x)
+            if self.dropout_rate>0: x = layers.Dropout(self.dropout_rate)(x)
             return x
 
         def add_regularized_dense_module(x, layer_sizes):
@@ -95,7 +98,7 @@ class DNNModelFactory:
             skip_input = x = add_regularized_dense_layer(x, layer_sizes[0])
             x = add_regularized_dense_layer(x, layer_sizes[1])
             x = add_regularized_dense_layer(x, layer_sizes[2])
-            x = layers.Concatenate()([x, skip_input])
+            if self.skip_layers: x = layers.Concatenate()([x, skip_input])
             return x
 
         # the [1:] is really important because that removes the extra (batch)
@@ -114,19 +117,20 @@ class DNNModelFactory:
         #x = layers.Dense(32, activation="relu")(x)
         #output = x
 
-        layer_sizes = [32,64,128,256,512,256,128,64,32]
-        #layer_sizes = [16, 32, 64, 64, 32, 16]
-        output = input_
-        for size in layer_sizes:
-            output = layers.Dense(size, activation=self.activation_func)(output)
-        
-        #if self.debug_mode: 
-        #    # for debugging only
-        #    output = add_regularized_dense_module(input_, [16,32,16])
-        #else:
-        #    output = add_regularized_dense_module(input_, [self.width//16,self.width//8,self.width//4])
-        #    output = add_regularized_dense_module(output, [self.width//2,self.width,self.width//2])
-        #    output = add_regularized_dense_module(output, [self.width//4,self.width//8,self.width//16])
+        if self.basic:
+            layer_sizes = [32,64,128,256,512,256,128,64,32]
+            #layer_sizes = [16, 32, 64, 64, 32, 16]
+            output = input_
+            for size in layer_sizes:
+                output = layers.Dense(size, activation=self.activation_func)(output)
+        else:
+            if self.debug_mode: 
+                # for debugging only
+                output = add_regularized_dense_module(input_, [16,32,16])
+            else:
+                output = add_regularized_dense_module(input_, [self.width//16,self.width//8,self.width//4])
+                output = add_regularized_dense_module(output, [self.width//2,self.width,self.width//2])
+                output = add_regularized_dense_module(output, [self.width//4,self.width//8,self.width//16])
 
         # used to be named 'prediction' (now model is named 'prediction', since it is last layer)
         souener_pred = layers.Dense(1)(output)
