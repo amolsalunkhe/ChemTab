@@ -116,11 +116,7 @@ class PCDNNV2ModelFactory(DNNModelFactory):
         return layer
 
  
-    def rebuild_model(self):
-        return self.build_and_compile_model(*self._prev_model_cfg)
- 
     def build_and_compile_model(self,noOfInputNeurons,noOfCpv,concatenateZmix,kernel_constraint='Y',kernel_regularizer='Y',activity_regularizer='Y'):
-        self._prev_model_cfg = (noOfInputNeurons,noOfCpv,concatenateZmix,kernel_constraint,kernel_regularizer,activity_regularizer)
         print(noOfInputNeurons,noOfCpv,concatenateZmix,kernel_constraint,kernel_regularizer,activity_regularizer)
         
         #The following 2 lines make up the Auto-encoder

@@ -11,6 +11,20 @@ import numpy as np
 
 from .error_manager import ErrorManager
 
+# returns a wrapped model factory that supports rebuilding using previous config
+# it does this using dynamic inheritance, this functionality was unit tested in a notebook
+def dynamic_rebuild_wrap(parent):
+    class RebuildWrapper(type(parent)):
+        def __init__(self, other):
+            super().__init__()
+            vars(self).update(vars(other))
+        def build_and_compile_model(self, *args, **kwd_args):
+            self._prev_config = [args, kwd_args]
+            return super().build_and_compile_model(*args, **kwd_args)
+        def rebuild_model(self):
+            return super().build_and_compile_model(*self._prev_config[0], **self._prev_config[1])
+    return RebuildWrapper(parent)
+
 class PCDNNV2ExperimentExecutor:
     def __init__(self):
         self.dm = None
@@ -23,14 +37,22 @@ class PCDNNV2ExperimentExecutor:
         self.df_err = None 
         self.predicitions = None
         self.errManager = ErrorManager()
-        self.modelFactory = None
+        self._modelFactory = None
         self.min_mae = 0
         
         # override the default number of epochs used
         self.epochs_override = None
         self.n_models_override = None
         self.batch_size = 64
-        
+
+    @property
+    def modelFactory(self):
+        return self._modelFactory
+
+    @modelFactory.setter
+    def modelFactory(self, modelFactory):
+        self._modelFactory = dynamic_rebuild_wrap(modelFactory)
+
     def setModel(self,model):
         self.model = model
     
