@@ -74,8 +74,6 @@ class PositiveLogNormal:
             cols_data.append(self.log_col_transformers[i].inverse_transform(data[:,i]))
         return np.concatenate(cols_data, axis=1)#.squeeze()
 
-all_dependants = ["souener","souspecO2", "souspecCO", "souspecCO2", "souspecH2O", "souspecOH", "souspecH2", "souspecCH4"]
-
 class DataManager:
     def __init__(self, df_totalData, constants):
         # Dwyer: I assume this is the case if its not update: includePCDNNV2_PCA_data
@@ -135,6 +133,7 @@ class DataManager:
         return train_set, test_set    
 
     def _createTrainTestDfs(self,method):
+
         if method=='randomequalflamesplit':
             df_shuffled= shuffle(self.df, random_state=0)
             self.df_training, self.df_testing = self.train_test_split_on_flamekey(df_shuffled)
@@ -200,12 +199,8 @@ class DataManager:
         input_data_cols = []
         
         rom_cols = []
-
-        dependants = []
-        if len(method_parts)>2 and method_parts[2]=='AllDependants':
-            dependants = all_dependants
-        # this is only change for depedendents 
-        output_data_cols = ["souener"] + dependants 
+        
+        output_data_cols = ["souener"]        
 
         if method_parts[0] == "ZmixCpv":
             input_data_cols = ["Zmix","Cpv"]
@@ -260,11 +255,8 @@ class DataManager:
         self.input_data_cols = input_data_cols
         self.output_data_cols = output_data_cols
  
-        assert len(self.Y_train.shape)==len(self.Y_test.shape)
-        if len(self.Y_train.shape)==1:
-            self.Y_train = self.Y_train.reshape(-1, 1)
-            self.Y_test = self.Y_test.reshape(-1, 1)
-
+        return
+    
     def _setInputOutputScalers(self, ipscaler, opscaler):
         if ipscaler == "MinMaxScaler":
             self.inputScaler = MinMaxScaler()
@@ -290,30 +282,38 @@ class DataManager:
         else:
             self.outputScaler = None
             self.romScaler = None
-
-    #TODO: MULTIOUTPUTS, add dependents argument 
+            
     def createTrainTestData(self,dataSetMethod,numCpvComponents, ipscaler, opscaler):
         self.dataSetMethod = dataSetMethod
         self._createTrainTestData(dataSetMethod,numCpvComponents)
-
-        # perform scaling 
+        
         self._setInputOutputScalers(ipscaler, opscaler)
- 
+                
         if self.inputScaler is not None:
             self.X_scaled_train = self.inputScaler.fit_transform(self.X_train)
             self.X_scaled_test = self.inputScaler.fit_transform(self.X_test)
             
             self.zmix_scaled_train = self.zmixScaler.fit_transform(self.zmix_train.reshape(self.zmix_train.shape[0], 1))
             self.zmix_scaled_test = self.zmixScaler.fit_transform(self.zmix_test.reshape(self.zmix_test.shape[0], 1))
+            self.zmix_train = self.zmix_train.flatten()
+            self.zmix_scaled_train = self.zmix_scaled_train.flatten()
+            self.zmix_test = self.zmix_test.flatten()
+            self.zmix_scaled_test = self.zmix_scaled_test.flatten()
+            
         else:
             self.X_scaled_train = None
             self.X_scaled_test = None
             self.zmix_scaled_train = None
             self.zmix_scaled_test = None
             
+            
         if self.outputScaler is not None:
-            self.Y_scaled_train = self.outputScaler.fit_transform(self.Y_train)
-            self.Y_scaled_test = self.outputScaler.fit_transform(self.Y_test)
+            self.Y_scaled_train = self.outputScaler.fit_transform(self.Y_train.reshape(self.Y_train.shape[0], 1))
+            self.Y_scaled_test = self.outputScaler.fit_transform(self.Y_test.reshape(self.Y_test.shape[0], 1))
+            self.Y_train = self.Y_train.flatten()
+            self.Y_scaled_train = self.Y_scaled_train.flatten()
+            self.Y_test = self.Y_test.flatten()
+            self.Y_scaled_test = self.Y_scaled_test.flatten()
             if not self.rom_train.shape[1] == 0:
                 self.rom_scaled_train = self.romScaler.fit_transform(self.rom_train)
                 self.rom_scaled_test = self.romScaler.fit_transform(self.rom_test)

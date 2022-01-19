@@ -44,7 +44,6 @@ class PCDNNV2ExperimentExecutor:
         self.epochs_override = None
         self.n_models_override = None
         self.batch_size = 64
-        self.use_dependants = False
 
     @property
     def modelFactory(self):
@@ -62,35 +61,29 @@ class PCDNNV2ExperimentExecutor:
     
     def getPredicitons(self):
         return self.predicitions
-
     
-    def executeSingleExperiment(self,noOfInputNeurons,dataSetMethod,dataType,inputType,ZmixPresent,noOfCpv,concatenateZmix,kernel_constraint,kernel_regularizer,activity_regularizer, ipscaler = "MinMaxScaler", opscaler = "MinMaxScaler"):
+    def executeSingleExperiment(self,noOfInputNeurons,dataSetMethod,dataType,inputType,ZmixPresent,noOfCpv,concatenateZmix,kernel_constraint,kernel_regularizer,activity_regularizer,
+                                ipscaler = "MinMaxScaler", opscaler = "MinMaxScaler"):
         
         print("--------------------self.build_and_compile_pcdnn_v2_model----------------------")
 
-        method_parts = dataSetMethod.split('_')
-        dependants = method_parts[2]
-
-        self.dm.createTrainTestData(dataSetMethod, noOfCpv, ipscaler,  opscaler)
-        self.errManager.set_souener_index(self.dm) # confirm/set index of souener in output
-        X_train, X_test, Y_train, Y_test, rom_train, rom_test, zmix_train, zmix_test = self.dm.getTrainTestData()
-
-        noOfOutputNeurons = Y_test.shape[1]
-        
         self.modelFactory.debug_mode = self.debug_mode        
-        self.model = self.modelFactory.build_and_compile_model(noOfInputNeurons,noOfOutputNeurons,noOfCpv,concatenateZmix,
-                                                               kernel_constraint,kernel_regularizer,activity_regularizer)
+        self.model = self.modelFactory.build_and_compile_model(noOfInputNeurons,noOfCpv,concatenateZmix,kernel_constraint,kernel_regularizer,activity_regularizer)
             
         self.model.summary()
 
+        self.dm.createTrainTestData(dataSetMethod,noOfCpv, ipscaler,  opscaler)
+
         self.modelFactory.experimentSettings = {"dataSetMethod": dataSetMethod,"ipscaler":ipscaler, "opscaler":opscaler, "noOfCpv": noOfCpv, "ZmixPresent": ZmixPresent, "concatenateZmix": concatenateZmix,"kernel_constraint":kernel_constraint,"kernel_regularizer":kernel_regularizer,"activity_regularizer":activity_regularizer, 'input_data_cols': self.dm.input_data_cols}
+
+        X_train, X_test, Y_train, Y_test, rom_train, rom_test, zmix_train, zmix_test = self.dm.getTrainTestData() 
         
         history = self.fitModelAndCalcErr(X_train, Y_train, X_test, Y_test,None, None,
                                           zmix_train, zmix_test, self.dm.outputScaler, concatenateZmix,
                                           kernel_constraint,kernel_regularizer,activity_regularizer)
         
         #['Model','Dataset','Cpv Type','#Cpv',"ZmixExists",'MAE','TAE','MSE','TSE','#Pts','FitTime','PredTime','MAX-MAE','MAX-TAE','MAX-MSE','MAX-TSE','MIN-MAE','MIN-TAE','MIN-MSE','MIN-TSE']
-        experimentResults = {'Model': self.modelType, 'Dataset':dataType, 'Cpv Type':inputType, 'Dependants': dependants,  '#Cpv':noOfCpv, 
+        experimentResults = {'Model': self.modelType, 'Dataset':dataType, 'Cpv Type':inputType, '#Cpv':noOfCpv, 
                              'ZmixExists': ZmixPresent, '#Pts': self.df_err['#Pts'].mean(), 'FitTime': self.fit_time, 'PredTime': self.pred_time,      
                              'KernelConstraintExists': kernel_constraint, 'KernelRegularizerExists': kernel_regularizer,'ActivityRegularizerExists': activity_regularizer,
                              'OPScaler': opscaler}
@@ -104,7 +97,7 @@ class PCDNNV2ExperimentExecutor:
         printStr = "\t"
 
         printStr = printStr.join(experimentResults)
-        return self.df_err
+        return history
 
 
     def fitModelAndCalcErr(self,X_train, Y_train, X_test, Y_test, rom_train = None, rom_test = None, zmix_train = None, zmix_test = None, Y_scaler = None, concatenateZmix = 'N',kernel_constraint = 'Y',kernel_regularizer = 'Y',activity_regularizer = 'Y'):
@@ -126,15 +119,12 @@ class PCDNNV2ExperimentExecutor:
 
         self.model.summary(expand_nested=True)
 
-        assert len(Y_test.shape) == len(Y_train.shape)
-        if len(Y_test.shape)==1: 
-            Y_test = Y_test.reshape(-1,1)
-            Y_train = Y_train.reshape(-1,1)
         Y_test_raw = Y_test # default 
         if Y_scaler is not None:
-            Y_test_raw = Y_scaler.inverse_transform(Y_test) 
+            if len(Y_test.shape)==1: Y_test = Y_test.reshape(-1,1)
+            Y_test_raw = Y_scaler.inverse_transform(Y_test).flatten() 
  
-        n = 2 if self.debug_mode else 3
+        n = 3 if self.debug_mode else 6
         epochs = 5 if self.debug_mode else 100
         if self.epochs_override: epochs = self.epochs_override
         if self.n_models_override: n = self.n_models_override+1      
@@ -193,25 +183,22 @@ class PCDNNV2ExperimentExecutor:
         self.df_err = pd.DataFrame(errs)
 
         print(self.df_err.describe())
-        return history
+        return history 
 
     def executeExperiments(self,dataManager, modelType, df_experimentTracker):
         self.dm = dataManager
         self.modelType = modelType
         self.df_experimentTracker = df_experimentTracker
         
-        dependents = 'AllDependants' if self.use_dependants else 'NoDependants'
-         #['AllDependants', 'NoDependants'] #"souener","souspecO2", "souspecCO", "souspecCO2", "souspecH2O", "souspecOH", "souspecH2", "souspecCH4"]
-
         # #Experiments  
         #if self.debug_mode:
         #    dataTypes = ["randomequalflamesplit"]
         #    inputTypes = ["AllSpeciesAndZmix"]    
         #    opscalers = ['PositiveLogNormal', 'MinMaxScaler']
         #else:
-        dataTypes = ["randomequalflamesplit", "randomequaltraintestsplit"]#, "frameworkincludedtrainexcludedtest"]
+        dataTypes = ["frameworkincludedtrainexcludedtest", "randomequalflamesplit", "randomequaltraintestsplit"]
         inputTypes = ["AllSpecies","AllSpeciesAndZmix"]
-        opscalers = ['MinMaxScaler', 'PositiveLogNormal']#, 'QuantileTransformer', None]
+        opscalers = ['MinMaxScaler', 'QuantileTransformer', 'PositiveLogNormal', None]
         
         #concatenateZmix = 'N'
         
@@ -227,7 +214,7 @@ class PCDNNV2ExperimentExecutor:
                 print('------------------ ' + inputType + ' ------------------')
                     
                 #ZmixCpv_randomequaltraintestsplit
-                dataSetMethod = inputType + '_' + dataType + '_' + dependents
+                dataSetMethod = inputType + '_' + dataType
                 
                 self.modelFactory.setDataSetMethod(dataSetMethod)
                 

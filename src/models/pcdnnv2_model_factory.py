@@ -89,7 +89,7 @@ class PCDNNV2ModelFactory(DNNModelFactory):
         return
 
     def getLinearLayer(self,noOfInputNeurons,noOfCpv,kernel_constraint='Y',kernel_regularizer='Y',activity_regularizer='Y'):
-
+    
         if kernel_constraint=='Y'and kernel_regularizer =='N' and activity_regularizer =='N':
             layer = layers.Dense(noOfCpv, name="linear_embedding", activation="linear",kernel_constraint=UnitNorm(axis=0))
         
@@ -116,7 +116,7 @@ class PCDNNV2ModelFactory(DNNModelFactory):
         return layer
 
  
-    def build_and_compile_model(self,noOfInputNeurons,noOfOutputNeurons,noOfCpv,concatenateZmix,kernel_constraint='Y',kernel_regularizer='Y',activity_regularizer='Y'):
+    def build_and_compile_model(self,noOfInputNeurons,noOfCpv,concatenateZmix,kernel_constraint='Y',kernel_regularizer='Y',activity_regularizer='Y'):
         print(noOfInputNeurons,noOfCpv,concatenateZmix,kernel_constraint,kernel_regularizer,activity_regularizer)
         
         #The following 2 lines make up the Auto-encoder
@@ -135,7 +135,7 @@ class PCDNNV2ModelFactory(DNNModelFactory):
                                 kernel_regularizer=kernel_regularizer,
                                 activity_regularizer=activity_regularizer)
  
-        souener_pred = self.addRegressorModel(x, noOfOutputNeurons)
+        souener_pred = self.addRegressorModel(x)
         model = keras.Model(inputs=inputs,outputs=souener_pred)
 
         opt = self.getOptimizer()

@@ -23,16 +23,16 @@ from sklearn.preprocessing import MinMaxScaler
 
 class DataPreparer:
     def __init__(self):
-        #read the data into a dataframe
-        #self.df = pd.read_csv('../NewData_flames_data_with_L1_L2_errors_CH4-AIR_with_trimming.txt')
-        self.df = pd.read_csv('../NewData_flames_data_with_L1_L2_errors_CH4-AIR_without_trimming(SouSpec_Included).txt')
-        df.columns=map(lambda x: x.strip(), df.columns) # deal with annoying spaces in column names
-        self.df = self.df.drop(columns=['L1_ERR', 'L2_ERR'], errors='ignore') 
-        # include space misspelling & correct spelling (in-case it is fixed) 
 
+        
+        #read the data into a dataframe
+        self.df = pd.read_csv('../NewData_flames_data_with_L1_L2_errors_CH4-AIR_with_trimming.txt')
+        self.df = self.df.drop(columns=[' L1_ERR', ' L2_ERR'], errors='ignore')       
+ 
         self.num_principal_components = 5
+        
         #create an integer representation of the flame-id and add to the data frame
-        self.df['flame_key_int'] = self.df['flame_key'].mul(10000000).astype(int)
+        self.df['flame_key_int'] = self.df[' flame_key'].mul(10000000).astype(int)
         
         #create an integer to determine if the flame is included by the framework in the manifold creation and reverselookup
         #framework_untrimmed_flameids = [0.00115982, 0.00122087, 0.00128512, 0.00135276, 0.00142396, 0.0014989, 0.00157779, 0.00166083, 0.00174825, 0.00184026, 0.00193711, 0.00203907, 0.00214639, 0.00225936, 0.00237827, 0.01]
@@ -66,11 +66,7 @@ class DataPreparer:
         self.all_flames_int = self.df['flame_key_int'].unique()
         
         self.other_tracking_cols = ['is_flame_included_by_framework','Xpos',' flame_key','flame_key_int']
- 
-        cut_labels = ['0.0 - 0.11', '0.11 - 0.22', '0.22 - 0.33', '0.33 - 0.44', '0.44 - 0.55', '0.55 - 0.66','0.66 - 0.77', '0.77 - 0.88', '0.88 - 0.99', '0.99 - 1.1']
-        cut_bins = np.linspace(0, 1.1, 11)
-        self.df['X_bins'] = pd.cut(self.df['X'], bins=cut_bins, labels=cut_labels)
- 
+        
     def isFlame_included(self,flame_key_int):
         if flame_key_int in self.framework_untrimmed_flame_key_ints:
             ret_val = 1
@@ -90,11 +86,8 @@ class DataPreparer:
         Y = Y.squeeze() # you get nasty broadcast errors when you don't squeeze Y & predictions!
  
         if dm.outputScaler: # These errors need to be raw 
-            if len(Y.shape)==1:
-                Y=Y.reshape(-1,1)
-                predictions=predictions.reshape(-1,1)
-            predictions = dm.outputScaler.inverse_transform(predictions).squeeze()
-            Y = dm.outputScaler.inverse_transform(Y).squeeze()
+            predictions = dm.outputScaler.inverse_transform(predictions.reshape(-1, 1)).squeeze()
+            Y = dm.outputScaler.inverse_transform(Y.reshape(-1,1)).squeeze()
 
         #error_df = pd.DataFrame(np.stack((predictions-Y)**2, np.abs(predictions-Y)), columns=['L2_ERR', 'L1_ERR'])
         PCDNNV2_PCA_df = pd.DataFrame(PCAs, columns=[f'PCDNNV2_PCA_{i+1}' for i in range(PCAs.shape[1])])
