@@ -19,6 +19,7 @@ from sklearn.utils.optimize import _check_optimize_result
 from sklearn.gaussian_process.kernels import Matern, RBF, WhiteKernel, RationalQuadratic, ExpSineSquared
 from sklearn.decomposition import PCA, SparsePCA
 from sklearn.preprocessing import MinMaxScaler
+import warnings
 # demonstrate data normalization with sklearn
 
 class DataPreparer:
@@ -99,8 +100,18 @@ class DataPreparer:
         #error_df = pd.DataFrame(np.stack((predictions-Y)**2, np.abs(predictions-Y)), columns=['L2_ERR', 'L1_ERR'])
         PCDNNV2_PCA_df = pd.DataFrame(PCAs, columns=[f'PCDNNV2_PCA_{i+1}' for i in range(PCAs.shape[1])])
         self.df[PCDNNV2_PCA_df.columns] = PCDNNV2_PCA_df
-        self.df['L1_ERR'] = np.abs(predictions-Y)
-        self.df['L2_ERR'] = (predictions-Y)**2
+
+        L1_ERR = np.abs(predictions-Y)
+        L2_ERR = (predictions-Y)**2
+        if len(L1_ERR.shape) == 1:
+            L1_ERR = L1_ERR.reshape(-1, 1)
+            L2_ERR = L2_ERR.reshape(-1, 1)
+
+        # We assume & assert elsewhere that index of souener is 0
+        # And Amol told me to make error only of souener prediction
+        self.df['L1_ERR'] = L1_ERR[:, 0]
+        self.df['L2_ERR'] = L2_ERR[:, 0]
+        warnings.warn('model error is only recored for souener prediction')
 
 
     def createPCAs(self):
