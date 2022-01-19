@@ -38,13 +38,13 @@ class PCDNNV2ExperimentExecutor:
         self.predicitions = None
         self.errManager = ErrorManager()
         self._modelFactory = None
-        self.min_mae = 0
+        self.min_mae = float('inf')
         
         # override the default number of epochs used
         self.epochs_override = None
         self.n_models_override = None
         self.batch_size = 64
-        #self.use_dependants = False
+        self.use_dependants = False
 
     @property
     def modelFactory(self):
@@ -175,10 +175,10 @@ class PCDNNV2ExperimentExecutor:
                 Y_pred_raw = Y_scaler.inverse_transform(Y_pred)
             #sns.residplot(Y_pred.flatten(), getResiduals(Y_test,Y_pred))
 
-            curr_errs = self.errManager.computeError (Y_pred_raw, Y_test_raw)
+            curr_errs = self.errManager.computeError(Y_pred_raw, Y_test_raw)
                 
-            if (len(errs) == 0) or ((len(errs) > 0) and (curr_errs['MAE'] < self.min_mae)) :
-                self.min_mae = curr_errs['MAE']#MAE
+            if curr_errs['MAE'] < self.min_mae:
+                self.min_mae = curr_errs['MAE']
                 self.modelFactory.saveCurrModelAsBestModel()
                 self.dm.include_PCDNNV2_PCA_data(self.modelFactory, concatenateZmix=concatenateZmix)
                     
