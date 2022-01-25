@@ -109,7 +109,7 @@ class ModelInspector:
         self._X_data, self._Y_data = self._model.get_XY_data(self._dm)
 
         # if the model has a linear model preprocessing layer then use it to get inputs for regressor
-        if type(model_factory) in [PCDNNV2ModelFactory, PCDNNV1ModelFactory]:
+        if isinstance(model_factory, (PCDNNV2ModelFactory, PCDNNV1ModelFactory)):
             linearAutoEncoder = model_factory.getLinearEncoder()
             X_column_names = []
             if experiment_settings['concatenateZmix']=='Y':
