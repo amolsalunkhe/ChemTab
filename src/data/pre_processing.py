@@ -87,7 +87,7 @@ class DataPreparer:
         inputs = {"species_input":X, "zmix":zmix} if concatenateZmix == 'Y' else {"species_input":X}
          
         PCAs = PCA_model.predict({"species_input":X})
-        predictions = model_factory.model.predict(inputs).squeeze()
+        predictions = model_factory.model.predict(inputs)['static_source_prediction'].squeeze()
         Y = Y.squeeze() # you get nasty broadcast errors when you don't squeeze Y & predictions!
  
         if dm.outputScaler: # These errors need to be raw 

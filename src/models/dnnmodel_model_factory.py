@@ -82,7 +82,7 @@ class DNNModelFactory:
         #linear_emb_model = keras.models.Model(inputs=inputs, outputs=output, name="linear_embedding")
         return output
 
-    def addRegressorModel(self, x, num_outputs):
+    def addRegressorModel(self, x, num_outputs, noOfCpv):
         """Gets layers for regression module of model (renamed from get intermediate layers)"""
         def add_regularized_dense_layer(x, layer_size):
             x = layers.Dense(layer_size, activation=self.activation_func)(x)
@@ -118,8 +118,9 @@ class DNNModelFactory:
         #    output = add_regularized_dense_module(output, [self.width//4,self.width//8,self.width//16])
 
         # used to be named 'prediction' (now model is named 'prediction', since it is last layer)
-        souener_pred = layers.Dense(num_outputs)(output)
-        regressor_model=keras.models.Model(inputs=input_, outputs=souener_pred, name='prediction')
+        static_source_pred = layers.Dense(num_outputs, name='static_source_prediction')(output)
+        dynamic_source_pred = layers.Dense(noOfCpv, name='dynamic_source_prediction')(output)
+        regressor_model=keras.models.Model(inputs=input_, outputs={'static_source_prediction': static_source_pred, 'dynamic_source_prediction': dynamic_source_pred}, name='regressor')
 
         return regressor_model(x)
       

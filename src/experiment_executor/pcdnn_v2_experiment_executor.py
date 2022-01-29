@@ -35,7 +35,7 @@ class PCDNNV2ExperimentExecutor:
         self.pred_time = None
         self.err = None
         self.df_err = None 
-        self.predicitions = None
+        self.predictions = None
         self.errManager = ErrorManager()
         self._modelFactory = None
         self.min_mae = float('inf')
@@ -60,8 +60,8 @@ class PCDNNV2ExperimentExecutor:
     def setModelFactory(self,modelFactory):
         self.modelFactory = modelFactory    
     
-    def getPredicitons(self):
-        return self.predicitions
+    def getPredictons(self):
+        return self.predictions
 
     
     def executeSingleExperiment(self,noOfInputNeurons,dataSetMethod,dataType,inputType,ZmixPresent,noOfCpv,concatenateZmix,kernel_constraint,kernel_regularizer,activity_regularizer, ipscaler = "MinMaxScaler", opscaler = "MinMaxScaler"):
@@ -72,7 +72,7 @@ class PCDNNV2ExperimentExecutor:
         dependants = method_parts[2]
 
         self.dm.createTrainTestData(dataSetMethod, noOfCpv, ipscaler,  opscaler)
-        self.errManager.set_souener_index(self.dm) # confirm/set index of souener in output
+        #self.errManager.set_souener_index(self.dm) # confirm/set index of souener in output
         X_train, X_test, Y_train, Y_test, rom_train, rom_test, zmix_train, zmix_test = self.dm.getTrainTestData()
 
         noOfOutputNeurons = Y_test.shape[1]
@@ -151,9 +151,9 @@ class PCDNNV2ExperimentExecutor:
                 input_dict_train = {"species_input":X_train}
                 input_dict_test = {"species_input":X_test}
             
-            history = self.model.fit(input_dict_train, {"prediction":Y_train}, verbose=1,
+            history = self.model.fit(input_dict_train, {"static_source_prediction":Y_train}, verbose=1,
                                      batch_size=self.batch_size, epochs=epochs, shuffle=True, 
-                                     validation_data=(input_dict_test, {'prediction': Y_test}))
+                                     validation_data=(input_dict_test, {'static_source_prediction': Y_test}))
             #self.plot_loss_physics_and_regression(history)
             
             fit_times.append(time.process_time() - t)
@@ -167,15 +167,17 @@ class PCDNNV2ExperimentExecutor:
                 
             pred_times.append(time.process_time() - t)
             
-            self.predicitions = predictions
+            self.predictions = predictions
             
-            Y_pred_raw = Y_pred = predictions
+            # select only static source prediction output, to match scaler
+            Y_pred_raw = Y_pred = predictions['static_source_prediction']
 
             if Y_scaler is not None:
                 Y_pred_raw = Y_scaler.inverse_transform(Y_pred)
             #sns.residplot(Y_pred.flatten(), getResiduals(Y_test,Y_pred))
 
-            curr_errs = self.errManager.computeError(Y_pred_raw, Y_test_raw)
+            # select only static source-ener term for official error computation
+            curr_errs = self.errManager.computeError(Y_pred_raw[:, self.dm.souener_index], Y_test_raw[:, self.dm.souener_index])
                 
             if curr_errs['MAE'] < self.min_mae:
                 self.min_mae = curr_errs['MAE']

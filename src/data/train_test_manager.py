@@ -260,13 +260,17 @@ class DataManager:
         self.input_data_cols = input_data_cols
         self.output_data_cols = output_data_cols
 
-        souener_index = self.output_data_cols.index('souener')
-        assert souener_index == 0 # souener_index MUST BE 0 this is an assumption made in other parts of the code too
- 
         assert len(self.Y_train.shape)==len(self.Y_test.shape)
         if len(self.Y_train.shape)==1:
             self.Y_train = self.Y_train.reshape(-1, 1)
             self.Y_test = self.Y_test.reshape(-1, 1)
+
+    @property
+    def souener_index(self):
+        souener_index = self.output_data_cols.index('souener')
+        assert souener_index == 0 # souener_index MUST BE 0 this is an assumption made in other parts of the code too
+        # DON'T REMOVE THIS ASSERT!     
+        return souener_index
 
     def _setInputOutputScalers(self, ipscaler, opscaler):
         if ipscaler == "MinMaxScaler":

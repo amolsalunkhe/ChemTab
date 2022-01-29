@@ -80,11 +80,26 @@ class UncorrelatedFeaturesConstraint (Constraint):
     def get_config(self):
         return {'weightage': self.weightage, 'encoding_dim':self.encoding_dim}
 
+# for recording in custom objects dict
+def get_metric_dict():
+    def log_mse(x,y): return tf.math.log(tf.math.reduce_mean((x-y)**2))
+    def log_mae(x,y): return tf.math.log(tf.math.reduce_mean(tf.math.abs(x-y)))
+    def exp_mse_mag(x,y): return tf.math.log(tf.math.reduce_mean((tf.math.exp(x)-tf.math.exp(y))**2))/tf.math.log(10.0)
+    def exp_mae_mag(x,y): return tf.math.log(tf.math.reduce_mean(tf.math.abs(tf.math.exp(x)-tf.math.exp(y))))/tf.math.log(10.0)
+    def R2(yt,yp): return 1-tf.math.reduce_mean((yp-yt)**2)/(tf.math.reduce_std(yt)**2)
+    def exp_R2(yt,yp): # these are actual names above is for convenience
+        return R2(tf.math.exp(yt), tf.math.exp(yp))
+    return locals()
+# fill globals with metric functions
+globals().update(get_metric_dict())
+
 class PCDNNV2ModelFactory(DNNModelFactory):
     def __init__(self):
         super().__init__()
         self.setModelName("PCDNNV2Model")
-        self.setConcreteClassCustomObject({"PCDNNV2ModelFactory": PCDNNV2ModelFactory,"UncorrelatedFeaturesConstraint":UncorrelatedFeaturesConstraint,"WeightsOrthogonalityConstraint":WeightsOrthogonalityConstraint}) 
+        custom = {"PCDNNV2ModelFactory": PCDNNV2ModelFactory,"UncorrelatedFeaturesConstraint":UncorrelatedFeaturesConstraint,"WeightsOrthogonalityConstraint":WeightsOrthogonalityConstraint}
+        custom.update(get_metric_dict())
+        self.setConcreteClassCustomObject(custom)
         self.loss = 'mean_absolute_error'
         return
 
@@ -135,20 +150,13 @@ class PCDNNV2ModelFactory(DNNModelFactory):
                                 kernel_regularizer=kernel_regularizer,
                                 activity_regularizer=activity_regularizer)
  
-        souener_pred = self.addRegressorModel(x, noOfOutputNeurons)
-        model = keras.Model(inputs=inputs,outputs=souener_pred)
+        source_term_pred = self.addRegressorModel(x, noOfOutputNeurons, noOfCpv)
+        model = keras.Model(inputs=inputs,outputs=source_term_pred)
 
         opt = self.getOptimizer()
         
-        def log_mse(x,y): return tf.math.log(tf.math.reduce_mean((x-y)**2))
-        def log_mae(x,y): return tf.math.log(tf.math.reduce_mean(tf.math.abs(x-y)))
-        def exp_mse_mag(x,y): return tf.math.log(tf.math.reduce_mean((tf.math.exp(x)-tf.math.exp(y))**2))/tf.math.log(10.0)
-        def exp_mae_mag(x,y): return tf.math.log(tf.math.reduce_mean(tf.math.abs(tf.math.exp(x)-tf.math.exp(y))))/tf.math.log(10.0)
-        def R2(yt,yp): return 1-tf.math.reduce_mean((yp-yt)**2)/(tf.math.reduce_std(yt)**2)
-        def exp_R2(yt,yp): # these are actual names above is for convenience
-            return R2(tf.math.exp(yt), tf.math.exp(yp))
-        
-        model.compile(loss=self.loss,optimizer=opt, metrics=['mae', 'mse',  exp_mse_mag, exp_mae_mag, exp_R2, R2])
+        # for metric definitions see get_metric_dict()
+        model.compile(loss={'static_source_prediction': self.loss},optimizer=opt, metrics={'static_source_prediction': ['mae', 'mse',  exp_mse_mag, exp_mae_mag, exp_R2, R2]})
         
         self.model = model
         tf.keras.utils.plot_model(self.model,to_file="model.png",show_shapes=True,show_layer_names=True,rankdir="TB",expand_nested=False,dpi=96)

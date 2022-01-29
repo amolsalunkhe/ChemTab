@@ -27,20 +27,20 @@ class ErrorManager:
         #print("Error Manager Instantiated")
         self.souener_index = 0 # should always be 0, still it is set manually later 
    
-    def set_souener_index(self, dm):
-        self.souener_index = dm.output_data_cols.index('souener')
-        assert self.souener_index == 0 # somewhat rediculous sanity check, since it is not dynamic
+    #def set_souener_index(self, dm):
+    #    self.souener_index = dm.output_data_cols.index('souener')
+    #    assert self.souener_index == 0 # somewhat rediculous sanity check, since it is not dynamic
  
     def computeError (self, Y_pred, Y_test):
         # select souener only
-        Y_pred = Y_pred[:, self.souener_index]
-        Y_test = Y_test[:, self.souener_index]
+        #Y_pred = Y_pred[:, self.souener_index]
+        #Y_test = Y_test[:, self.souener_index]
 
         evaluation_df_1 = pd.DataFrame()
 
-        evaluation_df_1['souener'] = Y_test.flatten()
+        evaluation_df_1['souener'] = Y_test.squeeze()
 
-        evaluation_df_1['souener_pred'] = Y_pred.flatten()
+        evaluation_df_1['souener_pred'] = Y_pred.squeeze()
 
         evaluation_df_1['souener_pred_L1'] = (evaluation_df_1['souener'] - evaluation_df_1['souener_pred']).abs() 
 
