@@ -150,8 +150,12 @@ class PCDNNV2ExperimentExecutor:
             else:
                 input_dict_train = {"species_input":X_train}
                 input_dict_test = {"species_input":X_test}
-            
-            history = self.model.fit(input_dict_train, {"static_source_prediction":Y_train}, verbose=1,
+
+            # [1] skips batch dimension
+            dynamic_size = self.model.output_shape['dynamic_source_prediction'][1]
+            dummy_source_term_data = np.zeros(shape=(Y_train.shape[0],dynamic_size))            
+
+            history = self.model.fit(input_dict_train, {"static_source_prediction":Y_train, 'dynamic_source_prediction': dummy_source_term_data}, verbose=1,
                                      batch_size=self.batch_size, epochs=epochs, shuffle=True, 
                                      validation_data=(input_dict_test, {'static_source_prediction': Y_test}))
             #self.plot_loss_physics_and_regression(history)

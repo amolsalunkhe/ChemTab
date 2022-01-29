@@ -89,6 +89,15 @@ def get_metric_dict():
     def R2(yt,yp): return 1-tf.math.reduce_mean((yp-yt)**2)/(tf.math.reduce_std(yt)**2)
     def exp_R2(yt,yp): # these are actual names above is for convenience
         return R2(tf.math.exp(yt), tf.math.exp(yp))
+    def dynamic_source_loss(y_true, y_pred):
+        encoding_dim = y_true.shape[1]//2
+        abs_diff = tf.math.abs(y_pred[:,:encoding_dim]-y_pred[:,encoding_dim:])
+        return tf.reduce_mean(abs_diff, axis=-1)  # Note the `axis=-1`
+    def R2_split(yt,yp):
+        encoding_dim = yt.shape[1]//2
+        yt=yp[:,encoding_dim:]
+        yp=yp[:,:encoding_dim]
+        return 1-tf.math.reduce_mean((yp-yt)**2)/(tf.math.reduce_std(yt)**2)
     return locals()
 # fill globals with metric functions
 globals().update(get_metric_dict())
@@ -154,9 +163,12 @@ class PCDNNV2ModelFactory(DNNModelFactory):
         model = keras.Model(inputs=inputs,outputs=source_term_pred)
 
         opt = self.getOptimizer()
-        
+       
+        losses={'static_source_prediction': self.loss, 'dynamic_source_prediction': dynamic_source_loss}
+        metrics={'static_source_prediction': ['mae', 'mse',  exp_mse_mag, exp_mae_mag, exp_R2, R2], 'dynamic_source_prediction': R2_split} 
         # for metric definitions see get_metric_dict()
-        model.compile(loss={'static_source_prediction': self.loss},optimizer=opt, metrics={'static_source_prediction': ['mae', 'mse',  exp_mse_mag, exp_mae_mag, exp_R2, R2]})
+
+        model.compile(loss=losses, optimizer=opt, metrics=metrics)
         
         self.model = model
         tf.keras.utils.plot_model(self.model,to_file="model.png",show_shapes=True,show_layer_names=True,rankdir="TB",expand_nested=False,dpi=96)
