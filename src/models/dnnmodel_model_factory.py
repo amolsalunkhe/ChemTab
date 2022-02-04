@@ -159,17 +159,18 @@ class DNNModelFactory:
         file.close()
         
         return self.model, self.experimentSettings 
-    
-    def getLinearEncoder(self):
-        model_layers = {layer.name: layer for layer in self.model.layers}
-        model = model_layers['linear_embedding'] # this 'layer' is actually a bonafied model
-        model.summary(expand_nested=True)
 
+    def getEmbRegressor():
+        return self.model
+
+    def getLinearEncoder(self):
+        model = self.getEmbRegressor()
+        model = model.get_layer('linear_embedding') # this 'layer' is actually a bonafied model
+        model.summary(expand_nested=True)
         return model
     
     def getRegressor(self):
-        model_layers = {layer.name: layer for layer in self.model.layers}
-        model = model_layers['prediction'] # unfortunately regressor is named this for compatibility with older code
+        model = self.getEmbRegressor()
+        model = model.get_layer('regressor') # this 'layer' is actually a bonafied model
         model.summary(expand_nested=True)
-
         return model

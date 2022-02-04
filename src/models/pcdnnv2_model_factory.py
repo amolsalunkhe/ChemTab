@@ -5,6 +5,7 @@ Created on Thu Aug  5 21:42:26 2021
 @author: amol
 """
 
+import numpy as np
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
@@ -90,17 +91,67 @@ def get_metric_dict():
     def exp_R2(yt,yp): # these are actual names above is for convenience
         return R2(tf.math.exp(yt), tf.math.exp(yp))
     def dynamic_source_loss(y_true, y_pred):
+        assert y_true.shape[1]//2 == y_true.shape[1]/2
         encoding_dim = y_true.shape[1]//2
         abs_diff = tf.math.abs(y_pred[:,:encoding_dim]-y_pred[:,encoding_dim:])
         return tf.reduce_mean(abs_diff, axis=-1)  # Note the `axis=-1`
     def R2_split(yt,yp):
+        assert yt.shape[1]//2 == yt.shape[1]/2
         encoding_dim = yt.shape[1]//2
-        yt=yp[:,encoding_dim:]
-        yp=yp[:,:encoding_dim]
+        yt=yp[:,:encoding_dim]
+        yp=yp[:,encoding_dim:]
         return 1-tf.math.reduce_mean((yp-yt)**2)/(tf.math.reduce_std(yt)**2)
     return locals()
 # fill globals with metric functions
 globals().update(get_metric_dict())
+
+# well tested on 2/1/22
+def dynamic_source_term_pred_wrap(base_regression_model):
+    from tensorflow import keras
+    from tensorflow.keras import layers
+
+    # verified to work 1/31/21
+    def get_dynamic_source_truth_model(W_emb_layer):
+        source_term_inputs = keras.Input(shape=(n_species,), name='source_term_input')
+        source_term_truth = W_emb_layer(source_term_inputs)
+        source_term_truth_model = keras.Model(inputs=source_term_inputs, outputs=source_term_truth, name='source_term_truth')
+        return source_term_truth_model
+
+    # verified to work (when assert holds)
+    # copies a models input dictionary, for reuse in a higher level model
+    def copy_model_inputs(model):
+        input_shape = model.input_shape
+        if isinstance(model.input_shape, dict):
+            # we assume coherence between input_shapes and input_names, if not true then it should be made so
+            assert np.all(np.isin(model.input_names, list(model.input_shapes.keys())))
+            input_shape = (model.input_shape[name] for name in model.input_names)
+        return [layers.Input(shape[1:],name=name) for name,shape in zip(model.input_names,input_shape)]
+    
+    # NOTE on indices: first squeeze is to select first input, 2nd '[1]' is to skip past batch dimension
+    n_species = np.squeeze(base_regression_model.get_layer('species_input').input_shape)[1]
+    encoding_dim = np.squeeze(base_regression_model.get_layer('linear_embedding').output_shape)[1]
+    
+    # copy model inputs for container model & call base_regression_model as layer/module
+    copied_inputs = copy_model_inputs(base_regression_model)
+    regression_outputs = base_regression_model(copied_inputs)
+    dynamic_source_pred = regression_outputs['dynamic_source_prediction']
+    
+    all_species_source_inputs = keras.Input(shape=(n_species,), name='source_term_input')
+    W_emb_layer = base_regression_model.get_layer('linear_embedding')
+    dynamic_source_truth_model = get_dynamic_source_truth_model(W_emb_layer)
+    dynamic_source_truth = dynamic_source_truth_model(all_species_source_inputs)
+    dynamic_source_all = layers.Concatenate(name='dynamic_source_prediction')([dynamic_source_pred, dynamic_source_truth])
+    # dynamic_source_all: contains predicted and true values for computing loss
+    # give it the same name as the original layer name, so it is easier to drop-in place 
+    
+    # This + source_term_truth_model facilitates dynamic source term training!
+    container_model = keras.Model(
+        inputs=copied_inputs + [all_species_source_inputs],
+        outputs={'static_source_prediction': regression_outputs['static_source_prediction'],
+                 'dynamic_source_prediction': dynamic_source_all},
+        name='container_model'
+    )
+    return container_model
 
 class PCDNNV2ModelFactory(DNNModelFactory):
     def __init__(self):
@@ -110,6 +161,7 @@ class PCDNNV2ModelFactory(DNNModelFactory):
         custom.update(get_metric_dict())
         self.setConcreteClassCustomObject(custom)
         self.loss = 'mean_absolute_error'
+        self.use_dynamic_pred = False
         return
 
     def getLinearLayer(self,noOfInputNeurons,noOfCpv,kernel_constraint='Y',kernel_regularizer='Y',activity_regularizer='Y'):
@@ -158,10 +210,13 @@ class PCDNNV2ModelFactory(DNNModelFactory):
                                 kernel_constraint=kernel_constraint,
                                 kernel_regularizer=kernel_regularizer,
                                 activity_regularizer=activity_regularizer)
- 
-        source_term_pred = self.addRegressorModel(x, noOfOutputNeurons, noOfCpv)
-        model = keras.Model(inputs=inputs,outputs=source_term_pred)
 
+        source_term_pred = self.addRegressorModel(x, noOfOutputNeurons, noOfCpv)
+        model = keras.Model(inputs=inputs,outputs=source_term_pred, name='emb_and_regression_model')
+        
+        if self.use_dynamic_pred: # if use all dependents is on this will be a hybrid model
+            model = dynamic_source_term_pred_wrap(model) 
+        
         opt = self.getOptimizer()
        
         losses={'static_source_prediction': self.loss, 'dynamic_source_prediction': dynamic_source_loss}
@@ -175,3 +230,9 @@ class PCDNNV2ModelFactory(DNNModelFactory):
     
         return model
 
+    def getEmbRegressor(self):
+        if self.model.name == 'container_model':
+            return self.model.get_layer('emb_and_regression_model')
+        else:
+            assert self.model.name == 'emb_and_regression_model'
+            return self.model

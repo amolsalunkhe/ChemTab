@@ -84,7 +84,9 @@ class DataPreparer:
         X,Y,rom,zmix = dm.getAllData()
         PCA_model = model_factory.getLinearEncoder()
 
-        inputs = {"species_input":X, "zmix":zmix} if concatenateZmix == 'Y' else {"species_input":X}
+        inputs = {"species_input":X}
+        if concatenateZmix == 'Y':
+            inputs['zmix'] = zmix
          
         PCAs = PCA_model.predict({"species_input":X})
         predictions = model_factory.model.predict(inputs)['static_source_prediction'].squeeze()
@@ -109,8 +111,8 @@ class DataPreparer:
 
         # We assume & assert elsewhere that index of souener is 0
         # And Amol told me to make error only of souener prediction
-        self.df['L1_ERR'] = L1_ERR[:, 0]
-        self.df['L2_ERR'] = L2_ERR[:, 0]
+        self.df['L1_ERR'] = L1_ERR[:, dm.souener_index]
+        self.df['L2_ERR'] = L2_ERR[:, dm.souener_index]
         warnings.warn('model error is only recored for souener prediction')
 
 
