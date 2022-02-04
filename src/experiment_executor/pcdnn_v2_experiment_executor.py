@@ -45,6 +45,7 @@ class PCDNNV2ExperimentExecutor:
         self.n_models_override = None
         self.batch_size = 64
         self.use_dependants = False
+        self.use_dynamic_pred = False
 
     @property
     def modelFactory(self):
@@ -68,14 +69,16 @@ class PCDNNV2ExperimentExecutor:
         
         print("--------------------self.build_and_compile_pcdnn_v2_model----------------------")
 
+        self.modelFactory.use_dynamic_pred = self.use_dynamic_pred
+
+
         method_parts = dataSetMethod.split('_')
         dependants = method_parts[2]
 
         self.dm.createTrainTestData(dataSetMethod, noOfCpv, ipscaler,  opscaler)
         #self.errManager.set_souener_index(self.dm) # confirm/set index of souener in output
-        X_train, X_test, Y_train, Y_test, rom_train, rom_test, zmix_train, zmix_test = self.dm.getTrainTestData()
 
-        noOfOutputNeurons = Y_test.shape[1]
+        noOfOutputNeurons = len(self.dm.output_data_cols)
         
         self.modelFactory.debug_mode = self.debug_mode        
         self.model = self.modelFactory.build_and_compile_model(noOfInputNeurons,noOfOutputNeurons,noOfCpv,concatenateZmix,
@@ -85,9 +88,7 @@ class PCDNNV2ExperimentExecutor:
 
         self.modelFactory.experimentSettings = {"dataSetMethod": dataSetMethod,"ipscaler":ipscaler, "opscaler":opscaler, "noOfCpv": noOfCpv, "ZmixPresent": ZmixPresent, "concatenateZmix": concatenateZmix,"kernel_constraint":kernel_constraint,"kernel_regularizer":kernel_regularizer,"activity_regularizer":activity_regularizer, 'input_data_cols': self.dm.input_data_cols}
         
-        history = self.fitModelAndCalcErr(X_train, Y_train, X_test, Y_test,None, None,
-                                          zmix_train, zmix_test, self.dm.outputScaler, concatenateZmix,
-                                          kernel_constraint,kernel_regularizer,activity_regularizer)
+        history = self.fitModelAndCalcErr(self.dm, concatenateZmix, kernel_constraint,kernel_regularizer,activity_regularizer)
         
         #['Model','Dataset','Cpv Type','#Cpv',"ZmixExists",'MAE','TAE','MSE','TSE','#Pts','FitTime','PredTime','MAX-MAE','MAX-TAE','MAX-MSE','MAX-TSE','MIN-MAE','MIN-TAE','MIN-MSE','MIN-TSE']
         experimentResults = {'Model': self.modelType, 'Dataset':dataType, 'Cpv Type':inputType, 'Dependants': dependants,  '#Cpv':noOfCpv, 
@@ -107,23 +108,16 @@ class PCDNNV2ExperimentExecutor:
         return self.df_err
 
 
-    def fitModelAndCalcErr(self,X_train, Y_train, X_test, Y_test, rom_train = None, rom_test = None, zmix_train = None, zmix_test = None, Y_scaler = None, concatenateZmix = 'N',kernel_constraint = 'Y',kernel_regularizer = 'Y',activity_regularizer = 'Y'):
+    def fitModelAndCalcErr(self, dm = None, concatenateZmix = 'N', kernel_constraint = 'Y',kernel_regularizer = 'Y',activity_regularizer = 'Y'):
+        if dm is None: dm = self.dm
 
+        X_train, X_test, Y_train, Y_test, rom_train, rom_test, zmix_train, zmix_test = dm.getTrainTestData()
+        Y_scaler = dm.outputScaler       
+ 
         fit_times = []
-        
         pred_times = []
-        
         errs = []
       
-        #if len(Y_train.shape)==1: Y_train = Y_train.reshape(-1,1)
-
-        ## doesn't this skew the evaluation on the test data later? (e.g. outside of keras?)        
-        ## TODO: remove this!
-        #import warnings; warnings.warn("This is probably a bug")
-        #X_train = np.concatenate((X_train, X_test),axis=0)
-        #zmix_train = np.concatenate((zmix_train, zmix_test),axis=0)
-        #Y_train = np.concatenate((Y_train, Y_test),axis=0)
-
         self.model.summary(expand_nested=True)
 
         assert len(Y_test.shape) == len(Y_train.shape)
@@ -144,13 +138,13 @@ class PCDNNV2ExperimentExecutor:
             print(f'training model: {itr}')
             t = time.process_time()
 
-            if concatenateZmix == 'Y':
-                input_dict_train = {"species_input":X_train, "zmix":zmix_train}
-                input_dict_test = {"species_input":X_test, "zmix":zmix_test}
-            else:
-                input_dict_train = {"species_input":X_train}
-                input_dict_test = {"species_input":X_test}
+            input_dict_train = {"species_input":X_train}
+            input_dict_test = {"species_input":X_test}
 
+            if concatenateZmix == 'Y':
+                input_dict_train['zmix'] = zmix_train
+                input_dict_test["zmix"] = zmix_test
+    
             # [1] skips batch dimension
             dynamic_size = self.model.output_shape['dynamic_source_prediction'][1]
             dummy_source_term_data = np.zeros(shape=(Y_train.shape[0],dynamic_size))            
@@ -163,12 +157,7 @@ class PCDNNV2ExperimentExecutor:
             fit_times.append(time.process_time() - t)
         
             t = time.process_time()
-
-            if concatenateZmix == 'Y':
-                predictions = self.model.predict({"species_input":X_test, "zmix":zmix_test})
-            else:
-                predictions = self.model.predict({"species_input":X_test})
-                
+            predictions = self.model.predict(input_dict_test)
             pred_times.append(time.process_time() - t)
             
             self.predictions = predictions
