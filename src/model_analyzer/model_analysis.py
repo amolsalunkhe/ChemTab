@@ -32,9 +32,16 @@ class NNWrapper(BaseEstimator, RegressorMixin):
         super().__init__()
 
         assert type(concatenate_zmix) is bool
-        self._model = model
+        
         self._input_names = [i.name for i in model.inputs]
         print(f'input names: {self._input_names}')
+
+        # this is for finding only static_source_pred outputs
+        output_names = [i.name.split('/')[0] for i in model.outputs] # the split removes the /addBias part (which I'm not sure the purpose of...)
+        print(f'output names (before pruning): {output_names}')
+      
+        # here we rebulid the model with only outputs from static_source_prediction, this way the inspection classes funciton as normal 
+        self._model = keras.models.Model(inputs=model.inputs, outputs=model.outputs[output_names.index('static_source_prediction')])
         self._concatenate_zmix = concatenate_zmix
 
         # this tells sklearn that the model is fitted apparently... (as of version 1.6.2)
@@ -162,6 +169,7 @@ class ModelInspector:
             plt.yscale('log')
             plt.title('Model\'s (Permutation) Feature Importance')
             plt.xticks(rotation = 90)
+                X_data = pd.DataFrame(data_manager.X_test, columns=data_manager.input_data_cols)
             plt.legend(handles=[bar, err])
             plt.show()
         
