@@ -176,7 +176,7 @@ class PCDNNV2ExperimentExecutor:
             errs.append(curr_errs)
 
             # in case we are using a container model for dynamic prediction extract base model            
-            self.model = self.modelFactory.extractEmbRegressorModel()
+            self.model = self.modelFactory.extractEmbRegressor()
     
             if curr_errs['MAE'] < self.min_mae:
                 self.min_mae = curr_errs['MAE']

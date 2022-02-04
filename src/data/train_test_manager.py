@@ -82,6 +82,7 @@ class DataManager:
         assert constants.getDataframe() is df_totalData
         self.constants = constants
         self.df = df_totalData
+        self.df['souspecAR'] = 0 # dummy value since it is constant
         self.outputScaler = None
         self.inputScaler = None
         self.zmixScaler = None

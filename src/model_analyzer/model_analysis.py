@@ -169,7 +169,6 @@ class ModelInspector:
             plt.yscale('log')
             plt.title('Model\'s (Permutation) Feature Importance')
             plt.xticks(rotation = 90)
-                X_data = pd.DataFrame(data_manager.X_test, columns=data_manager.input_data_cols)
             plt.legend(handles=[bar, err])
             plt.show()
         
