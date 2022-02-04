@@ -134,7 +134,7 @@ class PCDNNV2ExperimentExecutor:
         if Y_scaler is not None:
             Y_test_raw = Y_scaler.inverse_transform(Y_test) 
  
-        n = 2 if self.debug_mode else 3
+        n = 2# if self.debug_mode else 3
         epochs = 5 if self.debug_mode else 100
         if self.epochs_override: epochs = self.epochs_override
         if self.n_models_override: n = self.n_models_override+1      
@@ -200,7 +200,7 @@ class PCDNNV2ExperimentExecutor:
         self.modelType = modelType
         self.df_experimentTracker = df_experimentTracker
         
-        dependents = 'AllDependants' if self.use_dependants else 'NoDependants'
+        dependents = 'AllDependants' if self.use_dependants else 'SouenerOnly'
          #['AllDependants', 'NoDependants'] #"souener","souspecO2", "souspecCO", "souspecCO2", "souspecH2O", "souspecOH", "souspecH2", "souspecCH4"]
 
         # #Experiments  

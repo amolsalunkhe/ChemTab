@@ -30,15 +30,15 @@ exprExec.setModelFactory(PCDNNV2ModelFactory())
 
 dataType = 'randomequaltraintestsplit' #'frameworkincludedtrainexcludedtest'
 inputType = 'AllSpecies'
-dependants = 'NoDependants'
+dependants = 'SouenerOnly'
 dataSetMethod = f'{inputType}_{dataType}_{dependants}'
 opscaler = "MinMaxScaler" #'PositiveLogNormal'
-ZmixPresent = 'Y'
-concatenateZmix = 'Y'
+ZmixPresent = 'N'
+concatenateZmix = 'N'
 kernel_constraint = 'N'
 kernel_regularizer = 'Y'
 activity_regularizer = 'N'
-noOfCpv = 4
+noOfCpv = 5
 noOfNeurons = 53
 
 exprExec.modelFactory.loss='mae'
@@ -60,11 +60,19 @@ exprExec.modelType = 'PCDNNV2'
 assert exprExec.epochs_override >= 10000 # ensure this model is the best!
 history = exprExec.executeSingleExperiment(noOfNeurons,dataSetMethod,dataType,inputType,ZmixPresent,noOfCpv,concatenateZmix,kernel_constraint,
                                             kernel_regularizer,activity_regularizer,opscaler=opscaler)
+
+import os
+os.system('mkdir long_train_results')
+os.chdir('long_train_results')
+exprExec.df_err.to_csv('long_train_df_err.csv')
 dm.save_PCA_data(fn='PCA_data_long_train.csv')
 #df.to_csv('PCA_data.csv', index=False)
 
-import matplotlib.pyplot as plt
+import pickle
+with open('long_train_history.pickle', 'wb') as f:
+    pickle.dump(history.history, f)
 
+import matplotlib.pyplot as plt
 #  "Accuracy"
 plt.plot(history.history['R2'])
 plt.plot(history.history['val_R2'])
