@@ -242,9 +242,8 @@ class DataManager:
         else:
             input_data_cols = self.constants.icovariates
 
-
         self.X_train = self.df_training [input_data_cols].values
-        self.X_test = self.df_testing [input_data_cols].values
+        self.X_test = self.df_testing[input_data_cols].values
         self.rom_train = self.df_training [rom_cols].values
         self.rom_test = self.df_testing [rom_cols].values
         self.zmix_train = self.df_training ['Zmix'].values
@@ -259,6 +258,12 @@ class DataManager:
        
         self.input_data_cols = input_data_cols
         self.output_data_cols = output_data_cols
+
+        # column ends used later to identify corresponding source terms
+        Yi_cols = [col for col in self.df.columns if col[:2]=='Yi']
+        self.source_input_cols = ['souspec' + col[2:] for col in Yi_cols]
+        self.source_train = self.df_training[self.source_input_cols]
+        self.source_test = self.df_testing[self.source_input_cols]
 
         assert len(self.Y_train.shape)==len(self.Y_test.shape)
         if len(self.Y_train.shape)==1:
@@ -297,6 +302,9 @@ class DataManager:
         else:
             self.outputScaler = None
             self.romScaler = None
+
+    def getSourceTrainTestData(self):
+        return self.source_train, self.source_test 
 
     #TODO: MULTIOUTPUTS, add dependents argument 
     def createTrainTestData(self,dataSetMethod,numCpvComponents, ipscaler, opscaler):

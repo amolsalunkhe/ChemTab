@@ -144,7 +144,10 @@ class PCDNNV2ExperimentExecutor:
             if concatenateZmix == 'Y':
                 input_dict_train['zmix'] = zmix_train
                 input_dict_test["zmix"] = zmix_test
-    
+
+            if self.use_dynamic_pred:
+                input_dict_train['source_term_input'], input_dict_test['source_term_input'] = dm.getSourceTrainTestData() 
+ 
             # [1] skips batch dimension
             dynamic_size = self.model.output_shape['dynamic_source_prediction'][1]
             dummy_source_term_data = np.zeros(shape=(Y_train.shape[0],dynamic_size))            
@@ -153,7 +156,7 @@ class PCDNNV2ExperimentExecutor:
                                      batch_size=self.batch_size, epochs=epochs, shuffle=True, 
                                      validation_data=(input_dict_test, {'static_source_prediction': Y_test}))
             #self.plot_loss_physics_and_regression(history)
-            
+ 
             fit_times.append(time.process_time() - t)
         
             t = time.process_time()
@@ -164,20 +167,22 @@ class PCDNNV2ExperimentExecutor:
             
             # select only static source prediction output, to match scaler
             Y_pred_raw = Y_pred = predictions['static_source_prediction']
-
             if Y_scaler is not None:
                 Y_pred_raw = Y_scaler.inverse_transform(Y_pred)
             #sns.residplot(Y_pred.flatten(), getResiduals(Y_test,Y_pred))
 
             # select only static source-ener term for official error computation
             curr_errs = self.errManager.computeError(Y_pred_raw[:, self.dm.souener_index], Y_test_raw[:, self.dm.souener_index])
-                
+            errs.append(curr_errs)
+
+            # in case we are using a container model for dynamic prediction extract base model            
+            self.model = self.modelFactory.extractEmbRegressorModel()
+    
             if curr_errs['MAE'] < self.min_mae:
                 self.min_mae = curr_errs['MAE']
                 self.modelFactory.saveCurrModelAsBestModel()
                 self.dm.include_PCDNNV2_PCA_data(self.modelFactory, concatenateZmix=concatenateZmix)
                     
-            errs.append(curr_errs)
         
         self.fit_time = sum(fit_times)/len(fit_times)
         

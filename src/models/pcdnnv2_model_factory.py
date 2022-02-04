@@ -230,6 +230,11 @@ class PCDNNV2ModelFactory(DNNModelFactory):
     
         return model
 
+    # extract emb+regression model from container model (if container model is being used)
+    def extractEmbRegressor(self):
+        self.model = self.getEmbRegressor()
+        return self.model
+
     def getEmbRegressor(self):
         if self.model.name == 'container_model':
             return self.model.get_layer('emb_and_regression_model')

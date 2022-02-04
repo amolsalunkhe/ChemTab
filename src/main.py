@@ -155,7 +155,8 @@ def main(debug_mode=False):
     '''
     Run the PCDNN_v2 Experiments
     '''
-    run_model_experiments(dm, models='PCDNN_V2', debug_mode=debug_mode)
+    #run_model_experiments(dm, models='PCDNN_V2', debug_mode=debug_mode)
+    run_pcdnn_v2_experiments(dm, use_dependants=True)
     '''
     Run the PCDNN_v1 Experiments
     '''
