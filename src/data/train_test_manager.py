@@ -201,11 +201,11 @@ class DataManager:
         
         rom_cols = []
 
-        dependants = []
+        dependants = ["souener"]
         if len(method_parts)>2 and method_parts[2]=='AllDependants':
-            dependants = all_dependants
+            dependants = all_dependants # includes souener
         # this is only change for depedendents 
-        output_data_cols = ["souener"] + dependants 
+        output_data_cols = dependants 
 
         if method_parts[0] == "ZmixCpv":
             input_data_cols = ["Zmix","Cpv"]
