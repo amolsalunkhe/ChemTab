@@ -117,13 +117,6 @@ class PCDNNV2ExperimentExecutor:
       
         #if len(Y_train.shape)==1: Y_train = Y_train.reshape(-1,1)
 
-        ## doesn't this skew the evaluation on the test data later? (e.g. outside of keras?)        
-        ## TODO: remove this!
-        #import warnings; warnings.warn("This is probably a bug")
-        #X_train = np.concatenate((X_train, X_test),axis=0)
-        #zmix_train = np.concatenate((zmix_train, zmix_test),axis=0)
-        #Y_train = np.concatenate((Y_train, Y_test),axis=0)
-
         self.model.summary(expand_nested=True)
 
         assert len(Y_test.shape) == len(Y_train.shape)
@@ -176,7 +169,7 @@ class PCDNNV2ExperimentExecutor:
             #sns.residplot(Y_pred.flatten(), getResiduals(Y_test,Y_pred))
 
             curr_errs = self.errManager.computeError(Y_pred_raw, Y_test_raw)
-                
+ 
             if curr_errs['MAE'] < self.min_mae:
                 self.min_mae = curr_errs['MAE']
                 self.modelFactory.saveCurrModelAsBestModel()
@@ -209,7 +202,7 @@ class PCDNNV2ExperimentExecutor:
         #    inputTypes = ["AllSpeciesAndZmix"]    
         #    opscalers = ['PositiveLogNormal', 'MinMaxScaler']
         #else:
-        dataTypes = ["randomequalflamesplit", "randomequaltraintestsplit"]#, "frameworkincludedtrainexcludedtest"]
+        dataTypes = ["randomequaltraintestsplit", "randomequalflamesplit"]#, "frameworkincludedtrainexcludedtest"]
         inputTypes = ["AllSpecies","AllSpeciesAndZmix"]
         opscalers = ['MinMaxScaler', 'PositiveLogNormal']#, 'QuantileTransformer', None]
         
@@ -217,8 +210,10 @@ class PCDNNV2ExperimentExecutor:
         
         kernel_constraints = ['Y','N']
         kernel_regularizers = ['Y','N']
-        activity_regularizers = ['Y','N']        
-       
+        activity_regularizers = ['Y','N']
+
+        train_portions = [0.5 + i*0.1 for i in range(4)]
+
         for dataType in dataTypes:
             print('=================== ' + dataType + ' ===================')
             
@@ -243,14 +238,19 @@ class PCDNNV2ExperimentExecutor:
                 m = 3 if self.debug_mode else 6
                 noOfCpvs = [item for item in range(2, m)]
 
-                for noOfCpv in noOfCpvs:
-                    for kernel_constraint in kernel_constraints:
-                        for kernel_regularizer in kernel_regularizers:
-                            for activity_regularizer in activity_regularizers:
-                                for opscaler in opscalers:
-                                    self.executeSingleExperiment(noOfNeurons,dataSetMethod,dataType,inputType,ZmixPresent,noOfCpv,concatenateZmix,kernel_constraint,
-                                                                 kernel_regularizer,activity_regularizer,opscaler=opscaler)
-                       
+                try:
+                    old_tp = self.dm.train_portion
+                    for noOfCpv in noOfCpvs:
+                        for kernel_constraint in kernel_constraints:
+                            for kernel_regularizer in kernel_regularizers:
+                                for activity_regularizer in activity_regularizers:
+                                    for opscaler in opscalers:
+                                        for tp in train_portions:
+                                            self.dm.train_portion=tp
+                                            self.executeSingleExperiment(noOfNeurons,dataSetMethod,dataType,inputType,ZmixPresent,noOfCpv,concatenateZmix,kernel_constraint,
+                                                                         kernel_regularizer,activity_regularizer,opscaler=opscaler)
+                finally:
+                    self.dm.train_portion = old_tp
         
     def plot_loss_physics_and_regression(self,history):
         
