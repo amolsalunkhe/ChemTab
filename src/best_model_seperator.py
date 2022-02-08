@@ -37,9 +37,9 @@ print(f'linear embedder weights shape: {w.shape}') # shape is [53, nCPV]
 CPV_names = [f'CPV_{i}' for i in range(w.shape[1])]
 
 if 'zmix' in layers_by_name:
-    #raise NotImplementedError('you need to get the actual weights for zmix here')
-    zmix_weights = np.random.normal(size=(w.shape[0],1))
-    w = np.concatenate([zmix_weights, w],axis=1) # checked on 10/10/21: that zmix comes first
+    raise NotImplementedError('you need to get the actual weights for zmix here')
+    #zmix_weights = np.random.normal(size=(w.shape[0],1))
+    w = np.concatenate([zmix_weights, w],axis=1) # checked on 10/10/21: that zmix comes first <-- irrelevant! This is in the concat not embedding layer!
     CPV_names = ['zmix'] + CPV_names
 weight_df = pd.DataFrame(w, index=dm.input_data_cols, columns=CPV_names) # dm.input_data_cols is why we recreate training data
 weight_df.to_csv(f'{decomp_dir}/weights.csv', index=True, header=True)
