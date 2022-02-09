@@ -88,32 +88,20 @@ class PCDNNV2ModelFactory(DNNModelFactory):
         self.loss = 'mean_absolute_error'
         return
 
-    def getLinearLayer(self,noOfInputNeurons,noOfCpv,kernel_constraint='Y',kernel_regularizer='Y',activity_regularizer='Y'):
+    def get_layer_constraints(self, noOfCpv,kernel_constraint='Y',kernel_regularizer='Y',activity_regularizer='Y'):
+        layer_constraints = {}
+        if kernel_constraint=='Y':
+            layer_constraints['kernel_constraint'] = UnitNorm(axis=0)
+        if kernel_regularizer =='Y':
+            layer_constraints['kernel_regularizer'] = WeightsOrthogonalityConstraint(noOfCpv, weightage=1., axis=0)
+        if activity_regularizer =='Y':
+            layer_constraints['activity_regularizer'] = UncorrelatedFeaturesConstraint(noOfCpv, weightage=1.)
+        return layer_constraints
 
-        if kernel_constraint=='Y'and kernel_regularizer =='N' and activity_regularizer =='N':
-            layer = layers.Dense(noOfCpv, name="linear_embedding", activation="linear",kernel_constraint=UnitNorm(axis=0))
-        
-        elif kernel_constraint=='N'and kernel_regularizer =='Y' and activity_regularizer =='N':
-            layer = layers.Dense(noOfCpv, name="linear_embedding", activation="linear",kernel_regularizer=WeightsOrthogonalityConstraint(noOfCpv, weightage=1., axis=0))
-            
-        elif kernel_constraint=='N'and kernel_regularizer =='N' and activity_regularizer =='Y':
-            layer = layers.Dense(noOfCpv, name="linear_embedding", activation="linear",activity_regularizer=UncorrelatedFeaturesConstraint(noOfCpv, weightage=1.))
-        
-        elif kernel_constraint=='Y'and kernel_regularizer =='Y' and activity_regularizer =='N':
-            layer = layers.Dense(noOfCpv, name="linear_embedding", activation="linear",kernel_constraint=UnitNorm(axis=0),kernel_regularizer=WeightsOrthogonalityConstraint(noOfCpv, weightage=1., axis=0))
-        
-        elif kernel_constraint=='Y'and kernel_regularizer =='N' and activity_regularizer =='Y':
-            layer = layers.Dense(noOfCpv, name="linear_embedding", activation="linear",kernel_constraint=UnitNorm(axis=0),activity_regularizer=UncorrelatedFeaturesConstraint(noOfCpv, weightage=1.))
-        
-        elif kernel_constraint=='N'and kernel_regularizer =='Y' and activity_regularizer =='Y':
-            layer = layers.Dense(noOfCpv, name="linear_embedding", activation="linear",kernel_regularizer=WeightsOrthogonalityConstraint(noOfCpv, weightage=1., axis=0),activity_regularizer=UncorrelatedFeaturesConstraint(noOfCpv, weightage=1.))
-        
-        elif kernel_constraint=='N'and kernel_regularizer =='N' and activity_regularizer =='N':
-            layer = layers.Dense(noOfCpv, name="linear_embedding", activation="linear")
-                
-        else:
-            layer = layers.Dense(noOfCpv, name="linear_embedding", activation="linear",kernel_constraint=UnitNorm(axis=0),kernel_regularizer=WeightsOrthogonalityConstraint(noOfCpv, weightage=1., axis=0),activity_regularizer=UncorrelatedFeaturesConstraint(noOfCpv, weightage=1.))
-        return layer
+    #def getLinearLayer(self,noOfInputNeurons,noOfCpv,kernel_constraint='Y',kernel_regularizer='Y',activity_regularizer='Y'):
+    #    constraints = self.get_layer_constraints(noOfCpv,kernel_constraint,kernel_regularizer,activity_regularizer)
+    #    layer = layers.Dense(noOfCpv, name="linear_embedding", activation="linear", **constraints)
+    #    return layer
 
  
     def build_and_compile_model(self,noOfInputNeurons,noOfOutputNeurons,noOfCpv,concatenateZmix,kernel_constraint='Y',kernel_regularizer='Y',activity_regularizer='Y'):
