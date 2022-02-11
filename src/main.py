@@ -101,7 +101,7 @@ def run_pcdnn_v1_experiments(dm, debug_mode = False):
     
     return expExectr
  
-def run_pcdnn_v2_experiments(dm, use_dependants=False, debug_mode = False):
+def run_pcdnn_v2_experiments(dm, n_models_override=None, n_epochs_override=None, use_dependants=False, debug_mode = False):
     '''
     TODO: search for '#TODO:uncomment' in the 'experiment_executor/pcdnn_v2_experiment_executor.py' uncomment & comment out the necessary lines
     '''
@@ -109,7 +109,9 @@ def run_pcdnn_v2_experiments(dm, use_dependants=False, debug_mode = False):
     
     expExectr = PCDNNV2ExperimentExecutor()
     expExectr.debug_mode = debug_mode
-    expExectr.use_dependants = use_dependants   
+    expExectr.use_dependants = use_dependants
+	expExectr.n_models_override = n_models_override
+	expExectr.n_epochs_override = n_epochs_override
  
     expExectr.setModelFactory(PCDNNV2ModelFactory())
     expExectr.executeExperiments(dm, "PCDNNV2", pd.DataFrame())
@@ -155,7 +157,8 @@ def main(debug_mode=False):
     '''
     Run the PCDNN_v2 Experiments
     '''
-    run_model_experiments(dm, models='PCDNN_V2', debug_mode=debug_mode)
+    run_pcdnn_v2_experiments(dm, n_models_override=5, n_epochs_override=200, use_dependants=True, debug_mode = False)
+	#run_model_experiments(dm, models='PCDNN_V2', debug_mode=debug_mode)
     '''
     Run the PCDNN_v1 Experiments
     '''

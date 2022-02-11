@@ -41,7 +41,7 @@ class PCDNNV2ExperimentExecutor:
         self.min_mae = float('inf')
         
         # override the default number of epochs used
-        self.epochs_override = None
+        self.n_epochs_override = None
         self.n_models_override = None
         self.batch_size = 64
         self.use_dependants = False
@@ -129,7 +129,7 @@ class PCDNNV2ExperimentExecutor:
  
         n = 2# if self.debug_mode else 3
         epochs = 5 if self.debug_mode else 100
-        if self.epochs_override: epochs = self.epochs_override
+        if self.n_epochs_override: epochs = self.n_epochs_override
         if self.n_models_override: n = self.n_models_override+1      
 
         for itr in range(1,n): 
