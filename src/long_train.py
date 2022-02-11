@@ -47,7 +47,7 @@ exprExec.modelFactory.width=512
 exprExec.modelFactory.dropout_rate=0#.5
 exprExec.debug_mode = False
 exprExec.batch_size = 512
-exprExec.epochs_override = 10000
+exprExec.epochs_override = 20000
 exprExec.n_models_override = 1
 #exprExec.min_mae = -float('inf')
 
