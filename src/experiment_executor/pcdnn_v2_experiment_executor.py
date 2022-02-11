@@ -71,7 +71,7 @@ class PCDNNV2ExperimentExecutor:
         method_parts = dataSetMethod.split('_')
         dependants = method_parts[2]
 
-        self.dm.createTrainTestData(dataSetMethod, noOfCpv, ipscaler,  opscaler)
+        self.dm.createTrainTestData(dataSetMethod, noOfCpv, ipscaler, opscaler)
         self.errManager.set_souener_index(self.dm) # confirm/set index of souener in output
         X_train, X_test, Y_train, Y_test, rom_train, rom_test, zmix_train, zmix_test = self.dm.getTrainTestData()
 
@@ -127,7 +127,7 @@ class PCDNNV2ExperimentExecutor:
         if Y_scaler is not None:
             Y_test_raw = Y_scaler.inverse_transform(Y_test) 
  
-        n = 2# if self.debug_mode else 3
+        n = 2 if self.debug_mode else 3
         epochs = 5 if self.debug_mode else 100
         if self.n_epochs_override: epochs = self.n_epochs_override
         if self.n_models_override: n = self.n_models_override+1      
@@ -203,8 +203,8 @@ class PCDNNV2ExperimentExecutor:
         #    opscalers = ['PositiveLogNormal', 'MinMaxScaler']
         #else:
         dataTypes = ["randomequaltraintestsplit", "randomequalflamesplit"]#, "frameworkincludedtrainexcludedtest"]
-        inputTypes = ["AllSpecies","AllSpeciesAndZmix"]
-        opscalers = ['MinMaxScaler', 'PositiveLogNormal']#, 'QuantileTransformer', None]
+        inputTypes = ["AllSpecies", "AllSpeciesAndZmix"]
+        opscalers = ['MinMaxScaler']#, 'PositiveLogNormal']#, 'QuantileTransformer', None]
         
         #concatenateZmix = 'N'
         
@@ -212,7 +212,7 @@ class PCDNNV2ExperimentExecutor:
         kernel_regularizers = ['Y','N']
         activity_regularizers = ['Y','N']
 
-        train_portions = [0.5 + i*0.1 for i in range(4)]
+        train_portions = [0.5]#[0.5 + i*0.1 for i in range(4)]
 
         for dataType in dataTypes:
             print('=================== ' + dataType + ' ===================')
