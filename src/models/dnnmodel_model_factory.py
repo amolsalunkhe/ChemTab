@@ -74,8 +74,11 @@ class DNNModelFactory:
 
 		# get constraints and extract activity regularizer for concat layer!
 		contraints = self.get_layer_constraints(noOfCpv, **kwds)
-		activity_regularizer = contraints['activity_regularizer']
-		del contraints['activity_regularizer']
+		try:
+			activity_regularizer = contraints['activity_regularizer']
+			del contraints['activity_regularizer']
+		except KeyError:
+			activity_regularizer=None
 
 		# here we only use kernel_regularizer & kernel_constraint constraints, activity regularizer is saved for concat layer to work with zmix
 		output = layers.Dense(noOfCpv, name="linear_embedding", activation="linear", **contraints)(inputs[0]) #self.getLinearLayer(noOfInputNeurons, noOfCpv)(inputs[0])
