@@ -29,12 +29,11 @@ exprExec = PCDNNV2ExperimentExecutor()
 exprExec.setModelFactory(PCDNNV2ModelFactory())
 
 dataType = 'randomequaltraintestsplit' #'frameworkincludedtrainexcludedtest'
-inputType = 'AllSpecies'
-dependants = 'SouenerOnly'
+inputType = 'AllSpecies'#AndZmix'
+dependants = 'AllDependants'
 dataSetMethod = f'{inputType}_{dataType}_{dependants}'
 opscaler = "MinMaxScaler" #'PositiveLogNormal'
-ZmixPresent = 'N'
-concatenateZmix = 'N'
+concatenateZmix = ZmixPresent = 'Y' if 'Zmix' in inputType else 'N'
 kernel_constraint = 'N'
 kernel_regularizer = 'Y'
 activity_regularizer = 'N'
@@ -47,8 +46,9 @@ exprExec.modelFactory.width=512
 exprExec.modelFactory.dropout_rate=0#.5
 exprExec.debug_mode = False
 exprExec.batch_size = 512
-exprExec.epochs_override = 20000
+exprExec.n_epochs_override = 20000
 exprExec.n_models_override = 1
+exprExec.use_dependants = True
 #exprExec.min_mae = -float('inf')
 
 # initialize experiment executor...
@@ -57,7 +57,7 @@ exprExec.df_experimentTracker = pd.DataFrame()
 exprExec.modelType = 'PCDNNV2'
 
 # this will save the model as the best (since it starts with min_mae=-inf), but that is ok because it will also be the best
-assert exprExec.epochs_override >= 10000 # ensure this model is the best!
+assert exprExec.n_epochs_override >= 10000 # ensure this model is the best!
 history = exprExec.executeSingleExperiment(noOfNeurons,dataSetMethod,dataType,inputType,ZmixPresent,noOfCpv,concatenateZmix,kernel_constraint,
                                             kernel_regularizer,activity_regularizer,opscaler=opscaler)
 
