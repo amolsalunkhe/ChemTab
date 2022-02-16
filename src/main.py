@@ -122,7 +122,7 @@ def run_pcdnn_v2_experiments(dm, n_models_override=None, n_epochs_override=None,
 
     return expExectr
 
-def run_model_experiments(dm, models=['PCDNN_V2'], debug_mode=False):
+def run_model_experiments(dm, models=['PCDNN_V2'], **kwd_args):
     # liberal inputs accepted!
     if type(models) is str: models = [models] # also accepts just 1 string
     supported_models = {'PCDNN_V2': run_pcdnn_v2_experiments, 'PCDNN_V1': run_pcdnn_v1_experiments, 'GP': run_gp_experiments, 'SIMPLE_DNN': run_simple_dnn_experiments}
@@ -132,11 +132,11 @@ def run_model_experiments(dm, models=['PCDNN_V2'], debug_mode=False):
     for model in models:
         model = model.upper().replace('_','')
         assert model in supported_models
-        expExectrs.append(supported_models[model](dm, debug_mode=debug_mode))
+        expExectrs.append(supported_models[model](dm, **kwd_args))
     
     dm.save_PCA_data(fn='PCA_data.csv') # save updated PCA data
     compile_results()
-    return expExectrs if len(expExectrs)>1 else expExectrs[0] 
+    return expExectrs if len(expExectrs)>1 else expExectrs[0]
 
 def main(debug_mode=False):
     #Prepare the DataFrame that will be used downstream
@@ -157,8 +157,7 @@ def main(debug_mode=False):
     '''
     Run the PCDNN_v2 Experiments
     '''
-    run_pcdnn_v2_experiments(dm, n_models_override=5, n_epochs_override=200, use_dependants=True, debug_mode = False)
-	#run_model_experiments(dm, models='PCDNN_V2', debug_mode=debug_mode)
+    run_model_experiments(dm, models='PCDNN_V2', n_models_override=5, n_epochs_override=200, use_dependants=True, debug_mode=debug_mode)
     '''
     Run the PCDNN_v1 Experiments
     '''

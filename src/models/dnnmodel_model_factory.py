@@ -74,11 +74,12 @@ class DNNModelFactory:
 
 		# get constraints and extract activity regularizer for concat layer!
 		contraints = self.get_layer_constraints(noOfCpv, **kwds)
-		try:
-			activity_regularizer = contraints['activity_regularizer']
-			del contraints['activity_regularizer']
-		except KeyError:
-			activity_regularizer=None
+		if concatenateZmix:
+			try:
+				activity_regularizer = contraints['activity_regularizer']
+				del contraints['activity_regularizer']
+			except KeyError:
+				activity_regularizer=None
 
 		# here we only use kernel_regularizer & kernel_constraint constraints, activity regularizer is saved for concat layer to work with zmix
 		output = layers.Dense(noOfCpv, name="linear_embedding", activation="linear", **contraints)(inputs[0]) #self.getLinearLayer(noOfInputNeurons, noOfCpv)(inputs[0])
@@ -92,10 +93,10 @@ class DNNModelFactory:
 		if concatenateZmix:
 			zmix = inputs[1]
 			concat_list = [zmix] + concat_list # best model seperator maybe assuming that zmix comes first here...
+			output = layers.Concatenate(name="concatenated_CPVs", activity_regularizer=activity_regularizer)(concat_list)
 			#output = layers.Concatenate(name="concatenated_zmix_linear_embedding", **contraints)([zmix, output])
 
 		#Concatenate the Linear Embedding and Zmix together
-		output = layers.Concatenate(name="concatenated_CPVs", activity_regularizer=activity_regularizer)(concat_list)
 		return output
 
 	def addRegressorModel(self, x, num_outputs):
