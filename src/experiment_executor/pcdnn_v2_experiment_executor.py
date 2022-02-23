@@ -108,53 +108,63 @@ class PCDNNV2ExperimentExecutor:
 		return self.df_err
 
 
-	def fitModelAndCalcErr(self, dm = None, concatenateZmix = 'N', kernel_constraint = 'Y',kernel_regularizer = 'Y',activity_regularizer = 'Y'):
+	def prepare_model_data_dicts(dm = None, concatenateZmix = 'N'):
 		if dm is None: dm = self.dm
-
 		X_train, X_test, Y_train, Y_test, rom_train, rom_test, zmix_train, zmix_test = dm.getTrainTestData()
-		Y_scaler = dm.outputScaler		 
- 
-		fit_times = []
-		pred_times = []
-		errs = []
-	  
-		self.model.summary(expand_nested=True)
 
 		assert len(Y_test.shape) == len(Y_train.shape)
-		if len(Y_test.shape)==1: 
+		if len(Y_test.shape)==1:
 			Y_test = Y_test.reshape(-1,1)
 			Y_train = Y_train.reshape(-1,1)
-		Y_test_raw = Y_test # default 
+
+		input_dict_train = {"species_input":X_train}
+		input_dict_test = {"species_input":X_test}
+		output_dict_train = {'static_source_prediction': Y_train}
+		output_dict_test = {'static_source_prediction': Y_test}
+
+		if concatenateZmix == 'Y':
+			input_dict_train['zmix'] = zmix_train
+			input_dict_test["zmix"] = zmix_test
+
+		if self.use_dynamic_pred:
+			# [1] skips batch dimension
+			dynamic_size = self.model.output_shape['dynamic_source_prediction'][1] # [1] skips batch dimension
+			dummy_source_term_data = np.zeros(shape=(Y_train.shape[0],dynamic_size))
+			output_dict_train['dynamic_source_prediction'] = output_dict_test['dynamic_source_prediction'] = dummy_source_term_data	
+			input_dict_train['source_term_input'], input_dict_test['source_term_input'] = dm.getSourceTrainTestData()
+
+		return input_dict_train, input_dict_test, output_dict_train, output_dict_test 
+
+	def fitModelAndCalcErr(self, dm = None, concatenateZmix = 'N', kernel_constraint = 'Y',kernel_regularizer = 'Y',activity_regularizer = 'Y'):
+		self.model.summary(expand_nested=True)
+
+		if dm is None: dm = self.dm
+		Y_scaler = dm.outputScaler 
+
+		input_dict_train, input_dict_test, output_dict_train, output_dict_test = self.prepare_model_data_dicts(dm, concatenateZmix)
+
+		Y_test_raw = output_dict_test['static_source_prediction'] # default, aka Y_test 
 		if Y_scaler is not None:
-			Y_test_raw = Y_scaler.inverse_transform(Y_test) 
- 
+			Y_test_raw = Y_scaler.inverse_transform(Y_test)
+
+		# setup params
 		n = 2 if self.debug_mode else 3
 		epochs = 5 if self.debug_mode else 100
 		if self.epochs_override: epochs = self.epochs_override
 		if self.n_models_override: n = self.n_models_override+1		 
+
+		fit_times = []
+		pred_times = []
+		errs = []
 
 		for itr in range(1,n): 
 			self.model = self.modelFactory.rebuild_model() 
 			print(f'training model: {itr}')
 			t = time.process_time()
 
-			input_dict_train = {"species_input":X_train}
-			input_dict_test = {"species_input":X_test}
-
-			if concatenateZmix == 'Y':
-				input_dict_train['zmix'] = zmix_train
-				input_dict_test["zmix"] = zmix_test
-
-			if self.use_dynamic_pred:
-				input_dict_train['source_term_input'], input_dict_test['source_term_input'] = dm.getSourceTrainTestData() 
- 
-			# [1] skips batch dimension
-			dynamic_size = self.model.output_shape['dynamic_source_prediction'][1]
-			dummy_source_term_data = np.zeros(shape=(Y_train.shape[0],dynamic_size))			
-
-			history = self.model.fit(input_dict_train, {"static_source_prediction":Y_train, 'dynamic_source_prediction': dummy_source_term_data}, verbose=1,
+			history = self.model.fit(input_dict_train, output_dict_train, verbose=1,
 									 batch_size=self.batch_size, epochs=epochs, shuffle=True, 
-									 validation_data=(input_dict_test, {'static_source_prediction': Y_test}))
+									 validation_data=(input_dict_test, output_dict_test))
 			#self.plot_loss_physics_and_regression(history)
  
 			fit_times.append(time.process_time() - t)
