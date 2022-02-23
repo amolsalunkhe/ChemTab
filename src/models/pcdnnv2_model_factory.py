@@ -96,6 +96,7 @@ def get_metric_dict():
         abs_diff = tf.math.abs(y_pred[:,:encoding_dim]-y_pred[:,encoding_dim:])
         return tf.reduce_mean(abs_diff, axis=-1)  # Note the `axis=-1`
     def R2_split(yt,yp):
+        print(f'//: {yt.shape[1]//2}, /: {yt.shape[1]/2}')
         assert yt.shape[1]//2 == yt.shape[1]/2
         encoding_dim = yt.shape[1]//2
         yt=yp[:,:encoding_dim]
@@ -125,6 +126,8 @@ def dynamic_source_term_pred_wrap(base_regression_model):
             # we assume coherence between input_shapes and input_names, if not true then it should be made so
             assert np.all(np.isin(model.input_names, list(model.input_shapes.keys())))
             input_shape = (model.input_shape[name] for name in model.input_names)
+        elif isinstance(model.input_shape, tuple):
+            input_shape = [input_shape]
         return [layers.Input(shape[1:],name=name) for name,shape in zip(model.input_names,input_shape)]
     
     # NOTE on indices: first squeeze is to select first input, 2nd '[1]' is to skip past batch dimension

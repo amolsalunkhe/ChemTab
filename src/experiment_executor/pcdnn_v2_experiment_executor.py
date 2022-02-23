@@ -108,7 +108,7 @@ class PCDNNV2ExperimentExecutor:
 		return self.df_err
 
 
-	def prepare_model_data_dicts(dm = None, concatenateZmix = 'N'):
+	def prepare_model_data_dicts(self, dm = None, concatenateZmix = 'N'):
 		if dm is None: dm = self.dm
 		X_train, X_test, Y_train, Y_test, rom_train, rom_test, zmix_train, zmix_test = dm.getTrainTestData()
 
@@ -127,10 +127,9 @@ class PCDNNV2ExperimentExecutor:
 			input_dict_test["zmix"] = zmix_test
 
 		if self.use_dynamic_pred:
-			# [1] skips batch dimension
 			dynamic_size = self.model.output_shape['dynamic_source_prediction'][1] # [1] skips batch dimension
-			dummy_source_term_data = np.zeros(shape=(Y_train.shape[0],dynamic_size))
-			output_dict_train['dynamic_source_prediction'] = output_dict_test['dynamic_source_prediction'] = dummy_source_term_data	
+			dummy_source_term_data = np.zeros(shape=(Y_train.shape[0],dynamic_size)), np.zeros(shape=(Y_test.shape[0],dynamic_size))
+			output_dict_train['dynamic_source_prediction'], output_dict_test['dynamic_source_prediction'] = dummy_source_term_data	
 			input_dict_train['source_term_input'], input_dict_test['source_term_input'] = dm.getSourceTrainTestData()
 
 		return input_dict_train, input_dict_test, output_dict_train, output_dict_test 
@@ -145,7 +144,7 @@ class PCDNNV2ExperimentExecutor:
 
 		Y_test_raw = output_dict_test['static_source_prediction'] # default, aka Y_test 
 		if Y_scaler is not None:
-			Y_test_raw = Y_scaler.inverse_transform(Y_test)
+			Y_test_raw = Y_scaler.inverse_transform(Y_test_raw)
 
 		# setup params
 		n = 2 if self.debug_mode else 3
