@@ -73,3 +73,21 @@ plt.ylabel('R2')
 plt.xlabel('epoch')
 plt.legend(['train', 'validation'], loc='upper left')
 plt.savefig('long_train_R2.png')
+
+
+def build_mass_fraction_model(n_species=53):
+    mass_fraction_pred = keras.models.Sequential()
+    #layer_sizes = [32,64,128,256,512,256,128,64,32]
+    layer_sizes = [16, 32, 64, 64] # TODO: use less layers
+    for size in layer_sizes:
+        mass_fraction_pred.add(L.Dense(size, activation='relu'))
+    mass_fraction_pred.add(L.Dense(n_species))
+    mass_fraction_pred.compile(optimizer='adam',loss='mse', metrics='mae')
+    return mass_fraction_pred
+
+data = dm.df
+input_data = data[[f'PCDNNV2_PCA_{i+1}' for i in range(5)]]
+output_data = data[[c for c in data.columns if c.startswith('Yi')]]
+mass_fraction_pred.fit(input_data, output_data, epochs=10000, validation_split=0.2)
+
+mass_fraction_pred.save('mass_fraction_pred_model.h5')
