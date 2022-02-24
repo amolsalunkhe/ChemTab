@@ -279,34 +279,19 @@ class DataManager:
         return souener_index
 
     def _setInputOutputScalers(self, ipscaler, opscaler):
-        if ipscaler == "MinMaxScaler":
-            self.inputScaler = MinMaxScaler()
-            self.zmixScaler = MinMaxScaler()
-        elif ipscaler == "QuantileTransformer":
-            self.inputScaler = QuantileTransformer()
-            self.zmixScaler = QuantileTransformer()
-        elif ipscaler == "PositiveLogNormal":
-            self.inputScaler = PositiveLogNormal()
-            self.zmixScaler = PositiveLogNormal()
-        else:
-            self.inputScaler = None
-            self.zmixScaler = None
-        if opscaler == "MinMaxScaler":
-            self.outputScaler = MinMaxScaler()
-            self.romScaler = MinMaxScaler()
-        elif opscaler == "QuantileTransformer":
-            self.outputScaler = QuantileTransformer()
-            self.romScaler = QuantileTransformer()
-        elif opscaler == "PositiveLogNormal":
-            self.outputScaler = PositiveLogNormal()
-            self.romScaler = PositiveLogNormal()
-        else:
-            self.outputScaler = None
-            self.romScaler = None
+        scalers = {None: lambda: None, 'MinMaxScaler': MinMaxScaler, 'QuantileTransformer': QuantileTransformer, 'PositiveLogNormal': PositiveLogNormal}
+
+        self.inputScaler = scalers[ipscaler]()
+        self.zmixScaler = scalers[ipscaler]()
+        self.sourceScaler = scalers[ipscaler]()
+
+        self.outputScaler = scalers[opscaler]()
+        self.romScaler = scalers[opscaler]()
 
     def getSourceTrainTestData(self):
-        return self.source_train, self.source_test 
-
+        if self.sourceScaler: return self.sourceScaler.fit_transform(self.source_train), self.sourceScaler.transform(self.source_test) 
+        else: return self.source_train, self.source_train
+    
     #TODO: MULTIOUTPUTS, add dependents argument 
     def createTrainTestData(self,dataSetMethod,numCpvComponents, ipscaler, opscaler):
         self.dataSetMethod = dataSetMethod
