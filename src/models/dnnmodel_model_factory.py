@@ -37,15 +37,15 @@ class DNNModelFactory:
         self.concreteClassCustomObject = concreteClassCustomObject
         
     def getOptimizer(self):
-        starter_learning_rate = 0.1
-        end_learning_rate = 0.01
+        starter_learning_rate = 0.001
+        end_learning_rate = 0.0001
         decay_steps = 10000
         learning_rate_fn = tf.keras.optimizers.schedules.PolynomialDecay(starter_learning_rate, decay_steps, end_learning_rate, power=0.5)
        
         # NOTE: we are testing this again for compatibility with benchmark notebook 
-        opt = keras.optimizers.Adam(learning_rate=0.001)
+        #opt = keras.optimizers.Adam(learning_rate=0.001)
         
-        #opt = keras.optimizers.Adam(learning_rate=learning_rate_fn, clipnorm=5)
+        opt = keras.optimizers.Adam(learning_rate=learning_rate_fn, clipnorm=5)
                 
         return opt
 
