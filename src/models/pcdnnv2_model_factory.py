@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Created on Thu Aug  5 21:42:26 2021
+Created on Thu Aug	5 21:42:26 2021
 
 @author: amol
 """
@@ -21,7 +21,7 @@ from .dnnmodel_model_factory import DNNModelFactory
 
 class WeightsOrthogonalityConstraint (Constraint):
     def __init__(self, encoding_dim, weightage = 1.0, axis = 0):
-    
+ 
         self.encoding_dim = encoding_dim
         self.weightage = weightage
         self.axis = axis
@@ -59,7 +59,7 @@ class UncorrelatedFeaturesConstraint (Constraint):
             x_centered_list.append(x[:, i] - tf.math.reduce_mean(x[:, i]))
 
         x_centered = tf.stack(x_centered_list)
-        
+
         covariance = tf.matmul(x_centered, tf.transpose(x_centered)) / tf.cast(x_centered.get_shape()[0], tf.float32)
         #covariance = tf.matmul(x_centered, tf.transpose(x_centered)) / tf.cast(tf.shape(x_centered)[0], tf.float32)
 
@@ -67,11 +67,11 @@ class UncorrelatedFeaturesConstraint (Constraint):
 
     # Constraint penalty
     def uncorrelated_feature(self, x):
+        
         if(self.encoding_dim <= 1):
             return 0.0
         else:
-            output = tf.math.reduce_sum(tf.math.square(
-                self.covariance - tf.math.multiply(self.covariance, tf.eye(self.encoding_dim))))
+            output = tf.math.reduce_sum(tf.math.square(self.covariance - tf.math.multiply(self.covariance, tf.eye(self.encoding_dim))))
             return output
 
     def __call__(self, x):
@@ -90,6 +90,19 @@ def get_metric_dict():
     def R2(yt,yp): return 1-tf.math.reduce_mean((yp-yt)**2)/(tf.math.reduce_std(yt)**2)
     def exp_R2(yt,yp): # these are actual names above is for convenience
         return R2(tf.math.exp(yt), tf.math.exp(yp))
+
+    def source_true_mean(yt, yp):
+        encoding_dim = yt.shape[1]//2
+        yt=yp[:,encoding_dim:]
+        yp=yp[:,:encoding_dim]
+        return tf.reduce_mean(yt, axis=-1)
+
+    def source_pred_mean(yt, yp):
+        encoding_dim = yt.shape[1]//2
+        yt=yp[:,encoding_dim:]
+        yp=yp[:,:encoding_dim]
+        return tf.reduce_mean(yp, axis=-1)
+        
     def dynamic_source_loss(y_true, y_pred):
         assert y_true.shape[1]//2 == y_true.shape[1]/2
         encoding_dim = y_true.shape[1]//2
@@ -99,9 +112,9 @@ def get_metric_dict():
         print(f'//: {yt.shape[1]//2}, /: {yt.shape[1]/2}')
         assert yt.shape[1]//2 == yt.shape[1]/2
         encoding_dim = yt.shape[1]//2
-        yt=yp[:,:encoding_dim]
-        yp=yp[:,encoding_dim:]
-        return 1-tf.math.reduce_mean((yp-yt)**2)/(tf.math.reduce_std(yt)**2)
+        yt=yp[:,encoding_dim:]
+        yp=yp[:,:encoding_dim]
+        return 1-tf.reduce_mean((yp-yt)**2,axis=-1)/(tf.math.reduce_std(yt,axis=-1)**2)
     return locals()
 # fill globals with metric functions
 globals().update(get_metric_dict())
@@ -114,7 +127,8 @@ def dynamic_source_term_pred_wrap(base_regression_model):
     # verified to work 1/31/21
     def get_dynamic_source_truth_model(W_emb_layer):
         source_term_inputs = keras.Input(shape=(n_species,), name='source_term_input')
-        source_term_truth = W_emb_layer(source_term_inputs)
+        source_term_truth = source_term_inputs#keras.layers.Lambda(lambda x: keras.backend.stop_gradient(x))(source_term_inputs)
+        source_term_truth = W_emb_layer(source_term_truth)
         source_term_truth_model = keras.Model(inputs=source_term_inputs, outputs=source_term_truth, name='source_term_truth')
         return source_term_truth_model
 
@@ -223,7 +237,7 @@ class PCDNNV2ModelFactory(DNNModelFactory):
         opt = self.getOptimizer()
        
         losses={'static_source_prediction': self.loss, 'dynamic_source_prediction': dynamic_source_loss}
-        metrics={'static_source_prediction': ['mae', 'mse',  exp_mse_mag, exp_mae_mag, exp_R2, R2], 'dynamic_source_prediction': R2_split} 
+        metrics={'static_source_prediction': ['mae', 'mse', R2], 'dynamic_source_prediction': [R2_split, source_pred_mean, source_true_mean]} 
         # for metric definitions see get_metric_dict()
 
         model.compile(loss=losses, optimizer=opt, metrics=metrics)
