@@ -289,7 +289,7 @@ class DataManager:
         self.romScaler = scalers[opscaler]()
 
     def getSourceTrainTestData(self):
-        if self.sourceScaler: return self.sourceScaler.fit_transform(self.source_train), self.sourceScaler.transform(self.source_test) 
+        if self.sourceScaler: return self.sourceScaler.fit_transform(self.source_train), self.sourceScaler.fit_transform(self.source_test) 
         else: return self.source_train, self.source_train
     
     #TODO: MULTIOUTPUTS, add dependents argument 

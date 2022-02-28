@@ -140,7 +140,7 @@ class ModelInspector:
         X_chunky=self._X_data.describe().iloc[3:]
         print(X_chunky)
 
-        plot_partial_dependence(self._model, X_chunky, features=features)
+        plot_partial_dependence(self._model, X_chunky, features=features, target=0)
 
     def plot_permutation_feature_importance(self, n_repeats=5):
         def do_perm_feature_importance(model, X_data=None, Y_data=None,
