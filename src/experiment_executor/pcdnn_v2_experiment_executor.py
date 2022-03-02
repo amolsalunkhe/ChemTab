@@ -106,7 +106,7 @@ class PCDNNV2ExperimentExecutor:
         printStr = "\t"
 
         printStr = printStr.join(experimentResults)
-        return self.df_err
+        return history#self.df_err
 
 
     def prepare_model_data_dicts(self, dm = None, concatenateZmix = 'N'):
