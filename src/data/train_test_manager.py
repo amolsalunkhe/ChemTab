@@ -5,7 +5,7 @@ Created on Wed Aug  4 19:42:05 2021
 @author: amol
 """
 from sklearn.utils import shuffle
-from sklearn.preprocessing import MinMaxScaler, QuantileTransformer
+from sklearn.preprocessing import MinMaxScaler, QuantileTransformer, StandardScaler, MaxAbsScaler
 import numpy as np
 import pandas as pd
 import random
@@ -86,6 +86,7 @@ class DataManager:
         self.outputScaler = None
         self.inputScaler = None
         self.zmixScaler = None
+        self.sourceScaler = None
         self.df_training = None
         self.df_testing = None
         self.X_train = None
@@ -279,17 +280,19 @@ class DataManager:
         return souener_index
 
     def _setInputOutputScalers(self, ipscaler, opscaler):
-        scalers = {None: lambda: None, 'MinMaxScaler': MinMaxScaler, 'QuantileTransformer': QuantileTransformer, 'PositiveLogNormal': PositiveLogNormal}
+        scalers = {None: lambda: None, 'MinMaxScaler': MinMaxScaler, 'MaxAbsScaler': MaxAbsScaler, 'StandardScaler': StandardScaler,
+                  'QuantileTransformer': QuantileTransformer, 'PositiveLogNormal': PositiveLogNormal}
 
         self.inputScaler = scalers[ipscaler]()
         self.zmixScaler = scalers[ipscaler]()
-        self.sourceScaler = scalers[ipscaler]()
+        self.sourceScaler = self.inputScaler#scalers[ipscaler]()
+        # transformation much match exactly across sources and species
 
         self.outputScaler = scalers[opscaler]()
         self.romScaler = scalers[opscaler]()
 
     def getSourceTrainTestData(self):
-        if self.sourceScaler: return self.sourceScaler.fit_transform(self.source_train), self.sourceScaler.fit_transform(self.source_test) 
+        if self.sourceScaler: return self.sourceScaler.transform(self.source_train), self.sourceScaler.transform(self.source_test) 
         else: return self.source_train, self.source_train
     
     #TODO: MULTIOUTPUTS, add dependents argument 
@@ -302,10 +305,10 @@ class DataManager:
  
         if self.inputScaler is not None:
             self.X_scaled_train = self.inputScaler.fit_transform(self.X_train)
-            self.X_scaled_test = self.inputScaler.fit_transform(self.X_test)
+            self.X_scaled_test = self.inputScaler.transform(self.X_test)
             
             self.zmix_scaled_train = self.zmixScaler.fit_transform(self.zmix_train.reshape(self.zmix_train.shape[0], 1))
-            self.zmix_scaled_test = self.zmixScaler.fit_transform(self.zmix_test.reshape(self.zmix_test.shape[0], 1))
+            self.zmix_scaled_test = self.zmixScaler.transform(self.zmix_test.reshape(self.zmix_test.shape[0], 1))
         else:
             self.X_scaled_train = None
             self.X_scaled_test = None
@@ -314,10 +317,10 @@ class DataManager:
             
         if self.outputScaler is not None:
             self.Y_scaled_train = self.outputScaler.fit_transform(self.Y_train)
-            self.Y_scaled_test = self.outputScaler.fit_transform(self.Y_test)
+            self.Y_scaled_test = self.outputScaler.transform(self.Y_test)
             if not self.rom_train.shape[1] == 0:
                 self.rom_scaled_train = self.romScaler.fit_transform(self.rom_train)
-                self.rom_scaled_test = self.romScaler.fit_transform(self.rom_test)
+                self.rom_scaled_test = self.romScaler.transform(self.rom_test)
         else:
             self.Y_scaled_train = None
             self.Y_scaled_test = None
