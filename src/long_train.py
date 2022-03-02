@@ -9,6 +9,8 @@ import tensorflow as tf
 physical_devices = tf.config.list_physical_devices('GPU')
 tf.config.experimental.set_memory_growth(physical_devices[0], True)
 
+from tensorflow import keras
+from tensorflow.keras import layers as L
 from main import *
 
 # util for getting objects' fields' names
@@ -32,7 +34,7 @@ dataType = 'randomequaltraintestsplit' #'frameworkincludedtrainexcludedtest'
 inputType = 'AllSpecies'
 dependants = 'NoDependants'
 dataSetMethod = f'{inputType}_{dataType}_{dependants}'
-ipscaler=opscaler = None#"MinMaxScaler" #'PositiveLogNormal'
+ipscaler=opscaler = "MinMaxScaler" #'PositiveLogNormal'
 ZmixPresent = 'N'
 concatenateZmix = 'Y' if ZmixPresent=='Y' else 'N'
 kernel_constraint = 'N'
@@ -47,7 +49,7 @@ exprExec.modelFactory.width=512
 exprExec.modelFactory.dropout_rate=0#.5
 exprExec.debug_mode = False
 exprExec.batch_size = 512
-exprExec.epochs_override = 10000
+exprExec.epochs_override = 20000
 exprExec.n_models_override = 1
 exprExec.use_dependants = True
 exprExec.use_dynamic_pred = True
@@ -59,22 +61,22 @@ exprExec.df_experimentTracker = pd.DataFrame()
 exprExec.modelType = 'PCDNNV2'
 
 # this will save the model as the best (since it starts with min_mae=-inf), but that is ok because it will also be the best
-assert exprExec.epochs_override >= 10000 # ensure this model is the best!
+#assert exprExec.epochs_override >= 10000 # ensure this model is the best!
 history = exprExec.executeSingleExperiment(noOfNeurons,dataSetMethod,dataType,inputType,ZmixPresent,noOfCpv,concatenateZmix,kernel_constraint,
                                             kernel_regularizer,activity_regularizer,opscaler=opscaler, ipscaler=ipscaler)
 dm.save_PCA_data(fn='PCA_data_long_train.csv')
 #df.to_csv('PCA_data.csv', index=False)
 
-import matplotlib.pyplot as plt
-
-#  "Accuracy"
-plt.plot(history.history['R2'])
-plt.plot(history.history['val_R2'])
-plt.title('model R2 history')
-plt.ylabel('R2')
-plt.xlabel('epoch')
-plt.legend(['train', 'validation'], loc='upper left')
-plt.savefig('long_train_R2.png')
+#import matplotlib.pyplot as plt
+#
+##  "Accuracy"
+#plt.plot(history.history['R2'])
+#plt.plot(history.history['val_R2'])
+#plt.title('model R2 history')
+#plt.ylabel('R2')
+#plt.xlabel('epoch')
+#plt.legend(['train', 'validation'], loc='upper left')
+#plt.savefig('long_train_R2.png')
 
 
 def build_mass_fraction_model(n_species=53):
@@ -88,8 +90,9 @@ def build_mass_fraction_model(n_species=53):
     return mass_fraction_pred
 
 data = dm.df
-input_data = data[[f'PCDNNV2_PCA_{i+1}' for i in range(5)]]
+input_data = data[[f'PCDNNV2_PCA_{i+1}' for i in range(noOfCpv)]]
 output_data = data[[c for c in data.columns if c.startswith('Yi')]]
-mass_fraction_pred.fit(input_data, output_data, epochs=10000, validation_split=0.2)
+mass_fraction_pred = build_mass_fraction_model(noOfNeurons)
+mass_fraction_pred.fit(input_data, output_data, epochs=exprExec.epochs_override, validation_split=0.2)
 
 mass_fraction_pred.save('mass_fraction_pred_model.h5')
