@@ -110,7 +110,8 @@ class DataManager:
         self.other_tracking_cols_train = None
         self.other_tracking_cols_test = None
         self.dataSetMethod = None      
- 
+        self.train_portion = 0.5 
+
         return
 
     def include_PCDNNV2_PCA_data(self, PCDNNV2_model_factory, concatenateZmix: str):
@@ -139,15 +140,17 @@ class DataManager:
     def _createTrainTestDfs(self,method):
         if method=='randomequalflamesplit':
             df_shuffled= shuffle(self.df, random_state=0)
-            self.df_training, self.df_testing = self.train_test_split_on_flamekey(df_shuffled)
+            self.df_training, self.df_testing = self.train_test_split_on_flamekey(df_shuffled, train_portion=self.train_portion)
         elif(method == "randomequaltraintestsplit"):
             df_shuffled= shuffle(self.df, random_state=0)
-            self.df_training = df_shuffled[::2]
-            self.df_testing = df_shuffled[1::2]
+            self.df_training = df_shuffled.sample(frac=self.train_portion)
+            self.df_testing = df_shuffled.drop(index=self.df_training.index)
+            #self.df_training = df_shuffled[::2]
+            #self.df_testing = df_shuffled[1::2]
         else:
+            if self.train_portion is not None:
+                raise NotImplementedError('custom train/test split is only supported for flame-keys and point-based splitting')
             training_flames_int = []
-
-
             testing_flames_int = []
 
             if(method == "frameworkincludedexcludedequalsplit"):
@@ -203,11 +206,11 @@ class DataManager:
         
         rom_cols = []
 
-        dependants = []
+        dependants = ["souener"]
         if len(method_parts)>2 and method_parts[2]=='AllDependants':
-            dependants = all_dependants
+            dependants = all_dependants # includes souener
         # this is only change for depedendents 
-        output_data_cols = ["souener"] + dependants 
+        output_data_cols = dependants 
 
         if method_parts[0] == "ZmixCpv":
             input_data_cols = ["Zmix","Cpv"]

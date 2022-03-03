@@ -101,7 +101,7 @@ def run_pcdnn_v1_experiments(dm, debug_mode = False):
     
     return expExectr
  
-def run_pcdnn_v2_experiments(dm, use_dependants=False, use_dynamic_pred=False, debug_mode = False):
+def run_pcdnn_v2_experiments(dm, n_models_override=None, n_epochs_override=None, use_dependants=False, use_dynamic_pred=False, debug_mode = False):
     '''
     TODO: search for '#TODO:uncomment' in the 'experiment_executor/pcdnn_v2_experiment_executor.py' uncomment & comment out the necessary lines
     '''
@@ -111,7 +111,9 @@ def run_pcdnn_v2_experiments(dm, use_dependants=False, use_dynamic_pred=False, d
     expExectr.debug_mode = debug_mode
     expExectr.use_dependants = use_dependants
     expExectr.use_dynamic_pred = use_dynamic_pred 
-
+    expExectr.n_models_override = n_models_override
+    expExectr.n_epochs_override = n_epochs_override
+ 
     expExectr.setModelFactory(PCDNNV2ModelFactory())
     expExectr.executeExperiments(dm, "PCDNNV2", pd.DataFrame())
     
@@ -121,7 +123,7 @@ def run_pcdnn_v2_experiments(dm, use_dependants=False, use_dynamic_pred=False, d
 
     return expExectr
 
-def run_model_experiments(dm, models=['PCDNN_V2'], debug_mode=False):
+def run_model_experiments(dm, models=['PCDNN_V2'], **kwd_args):
     # liberal inputs accepted!
     if type(models) is str: models = [models] # also accepts just 1 string
     supported_models = {'PCDNN_V2': run_pcdnn_v2_experiments, 'PCDNN_V1': run_pcdnn_v1_experiments, 'GP': run_gp_experiments, 'SIMPLE_DNN': run_simple_dnn_experiments}
@@ -131,11 +133,11 @@ def run_model_experiments(dm, models=['PCDNN_V2'], debug_mode=False):
     for model in models:
         model = model.upper().replace('_','')
         assert model in supported_models
-        expExectrs.append(supported_models[model](dm, debug_mode=debug_mode))
+        expExectrs.append(supported_models[model](dm, **kwd_args))
     
     dm.save_PCA_data(fn='PCA_data.csv') # save updated PCA data
     compile_results()
-    return expExectrs if len(expExectrs)>1 else expExectrs[0] 
+    return expExectrs if len(expExectrs)>1 else expExectrs[0]
 
 def main(debug_mode=False):
     #Prepare the DataFrame that will be used downstream
@@ -156,8 +158,7 @@ def main(debug_mode=False):
     '''
     Run the PCDNN_v2 Experiments
     '''
-    #run_model_experiments(dm, models='PCDNN_V2', debug_mode=debug_mode)
-    run_pcdnn_v2_experiments(dm, use_dependants=True, use_dynamic_pred=True)
+    run_model_experiments(dm, models='PCDNN_V2', n_models_override=5, n_epochs_override=200, use_dependants=True, use_dynamic_pred=True, debug_mode=debug_mode)
     '''
     Run the PCDNN_v1 Experiments
     '''

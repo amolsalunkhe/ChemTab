@@ -42,7 +42,7 @@ class PCDNNV2ExperimentExecutor:
         self.min_mae = float('inf')
         
         # override the default number of epochs used
-        self.epochs_override = None
+        self.n_epochs_override = None
         self.n_models_override = None
         self.batch_size = 64
         self.use_dependants = False
@@ -213,7 +213,7 @@ class PCDNNV2ExperimentExecutor:
         self.modelType = modelType
         self.df_experimentTracker = df_experimentTracker
         
-        dependents = 'AllDependants' if self.use_dependants else 'NoDependants'
+        dependents = 'AllDependants' if self.use_dependants else 'SouenerOnly'
          #['AllDependants', 'NoDependants'] #"souener","souspecO2", "souspecCO", "souspecCO2", "souspecH2O", "souspecOH", "souspecH2", "souspecCH4"]
 
         # #Experiments	
@@ -222,16 +222,17 @@ class PCDNNV2ExperimentExecutor:
         #	 inputTypes = ["AllSpeciesAndZmix"]	   
         #	 opscalers = ['PositiveLogNormal', 'MinMaxScaler']
         #else:
-        dataTypes = ["randomequalflamesplit", "randomequaltraintestsplit"]#, "frameworkincludedtrainexcludedtest"]
-        inputTypes = ["AllSpecies","AllSpeciesAndZmix"]
-        opscalers = ['MinMaxScaler', 'PositiveLogNormal']#, 'QuantileTransformer', None]
+        dataTypes = ["randomequaltraintestsplit", "randomequalflamesplit"]#, "frameworkincludedtrainexcludedtest"]
+        inputTypes = ["AllSpecies", "AllSpeciesAndZmix"]
+        opscalers = ['MinMaxScaler']#, 'PositiveLogNormal']#, 'QuantileTransformer', None]
         
         #concatenateZmix = 'N'
         
         kernel_constraints = ['Y','N']
         kernel_regularizers = ['Y','N']
-        activity_regularizers = ['Y','N']		 
-       
+        activity_regularizers = ['Y','N']
+        train_portions = [0.5]#[0.5 + i*0.1 for i in range(4)]
+
         for dataType in dataTypes:
             print('=================== ' + dataType + ' ===================')
             
@@ -256,14 +257,19 @@ class PCDNNV2ExperimentExecutor:
                 m = 3 if self.debug_mode else 6
                 noOfCpvs = [item for item in range(2, m)]
 
-                for noOfCpv in noOfCpvs:
-                    for kernel_constraint in kernel_constraints:
-                        for kernel_regularizer in kernel_regularizers:
-                            for activity_regularizer in activity_regularizers:
-                                for opscaler in opscalers:
-                                    self.executeSingleExperiment(noOfNeurons,dataSetMethod,dataType,inputType,ZmixPresent,noOfCpv,concatenateZmix,kernel_constraint,
-                                                                 kernel_regularizer,activity_regularizer,opscaler=opscaler)
-                       
+                try:
+                    old_tp = self.dm.train_portion
+                    for noOfCpv in noOfCpvs:
+                        for kernel_constraint in kernel_constraints:
+                            for kernel_regularizer in kernel_regularizers:
+                                for activity_regularizer in activity_regularizers:
+                                    for opscaler in opscalers:
+                                        for tp in train_portions:
+                                            self.dm.train_portion=tp
+                                            self.executeSingleExperiment(noOfNeurons,dataSetMethod,dataType,inputType,ZmixPresent,noOfCpv,concatenateZmix,kernel_constraint,
+                                                                         kernel_regularizer,activity_regularizer,opscaler=opscaler)
+                finally:
+                    self.dm.train_portion = old_tp
         
     def plot_loss_physics_and_regression(self,history):
         
