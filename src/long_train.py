@@ -25,6 +25,7 @@ df = dp.getDataframe()
 
 # currently passing dp eventually we want to abstract all the constants into 1 class
 dm = DataManager(df, dp)
+dm.train_portion = 0.8
 
 """ prepare PCDNNV2 for loading (from prior experiments) """
 exprExec = PCDNNV2ExperimentExecutor()
@@ -34,7 +35,7 @@ dataType = 'randomequaltraintestsplit' #'frameworkincludedtrainexcludedtest'
 inputType = 'AllSpecies'
 dependants = 'NoDependants'
 dataSetMethod = f'{inputType}_{dataType}_{dependants}'
-ipscaler=opscaler = "MinMaxScaler" #'PositiveLogNormal'
+ipscaler=opscaler = "MaxAbsScaler"#"MinMaxScaler" #'PositiveLogNormal'
 ZmixPresent = 'N'
 concatenateZmix = 'Y' if ZmixPresent=='Y' else 'N'
 kernel_constraint = 'N'
@@ -48,8 +49,8 @@ exprExec.modelFactory.activation_func='relu'
 exprExec.modelFactory.width=512
 exprExec.modelFactory.dropout_rate=0#.5
 exprExec.debug_mode = False
-exprExec.batch_size = 512
-exprExec.epochs_override = 20000
+exprExec.batch_size = 8192
+exprExec.epochs_override = 300000
 exprExec.n_models_override = 1
 exprExec.use_dependants = True
 exprExec.use_dynamic_pred = True

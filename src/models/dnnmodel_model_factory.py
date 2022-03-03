@@ -37,23 +37,23 @@ class DNNModelFactory:
         self.concreteClassCustomObject = concreteClassCustomObject
         
     def getOptimizer(self):
-        starter_learning_rate = 0.001
-        end_learning_rate = 0.0001
+        starter_learning_rate = 0.0001
+        end_learning_rate = starter_learning_rate/10
         decay_steps = 10000
         learning_rate_fn = tf.keras.optimizers.schedules.PolynomialDecay(starter_learning_rate, decay_steps, end_learning_rate, power=0.5)
        
         # NOTE: we are testing this again for compatibility with benchmark notebook 
         #opt = keras.optimizers.Adam(learning_rate=0.001)
         
-        opt = keras.optimizers.Adam(learning_rate=learning_rate_fn, clipnorm=5)
+        opt = keras.optimizers.Adam(learning_rate=learning_rate_fn, clipnorm=2.5)
                 
         return opt
 
     # reimplmeneted to non-trivial version in PCDNNv2
     # this only exists for compatibility reasons really it should only be called by addLinearLayer()
-    def getLinearLayer(self,noOfInputNeurons, noOfCpv, **kwds):
+    def addLinearLayer(self,x,noOfInputNeurons, noOfCpv, **kwds):
         layer = layers.Dense(noOfCpv, name="linear_embedding", activation="linear")
-        return layer
+        return layer(x)
 
     def addLinearModel(self, inputs, noOfInputNeurons, noOfCpv, concatenateZmix='N', **kwds):
         """ adds PCA linear embedding 'model' (as a layer) 
@@ -66,7 +66,7 @@ class DNNModelFactory:
         # the [1] is really important because that skips the extra (batch)
         # dimension that keras adds implicitly
         assert noOfInputNeurons == inputs[0].shape[1]
-        output = self.getLinearLayer(noOfInputNeurons, noOfCpv, **kwds)(inputs[0])
+        output = self.addLinearLayer(inputs[0], noOfInputNeurons, noOfCpv, **kwds)
 
         linear_emb_model = keras.models.Model(inputs=inputs[0], outputs=output, name="linear_embedding")
         output = linear_emb_model(inputs[0])       
@@ -75,7 +75,6 @@ class DNNModelFactory:
         assert concatenateZmix == (len(inputs)>1)
         if concatenateZmix:
             zmix = inputs[1]
- 
             #Concatenate the Linear Embedding and Zmix together
             output = layers.Concatenate(name="concatenated_zmix_linear_embedding")([zmix, output])
 

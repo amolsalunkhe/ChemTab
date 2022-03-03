@@ -307,7 +307,8 @@ class DataManager:
         self._setInputOutputScalers(ipscaler, opscaler)
  
         if self.inputScaler is not None:
-            self.X_scaled_train = self.inputScaler.fit_transform(self.X_train)
+            self.inputScaler.fit(np.concatenate((self.X_train, self.X_test),axis=0))
+            self.X_scaled_train = self.inputScaler.transform(self.X_train)
             self.X_scaled_test = self.inputScaler.transform(self.X_test)
             
             self.zmix_scaled_train = self.zmixScaler.fit_transform(self.zmix_train.reshape(self.zmix_train.shape[0], 1))

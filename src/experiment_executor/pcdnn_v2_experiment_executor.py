@@ -157,7 +157,7 @@ class PCDNNV2ExperimentExecutor:
         pred_times = []
         errs = []
 
-        my_callbacks = [tf.keras.callbacks.TensorBoard(log_dir='./tb_logs', histogram_freq=1)]
+        my_callbacks = None#[tf.keras.callbacks.TensorBoard(log_dir='./tb_logs', histogram_freq=1)]
 
         for itr in range(1,n): 
             self.model = self.modelFactory.rebuild_model() 
