@@ -52,7 +52,7 @@ class DNNModelFactory:
     # reimplmeneted to non-trivial version in PCDNNv2
     # this only exists for compatibility reasons really it should only be called by addLinearLayer()
     def addLinearLayer(self,x,noOfInputNeurons, noOfCpv, **kwds):
-        layer = layers.Dense(noOfCpv, name="linear_embedding", activation="linear")
+        layer = layers.Dense(noOfCpv, use_bias=False, name="linear_embedding", activation="linear")
         return layer(x)
 
     def addLinearModel(self, inputs, noOfInputNeurons, noOfCpv, concatenateZmix='N', **kwds):

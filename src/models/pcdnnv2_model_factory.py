@@ -193,8 +193,8 @@ class PCDNNV2ModelFactory(DNNModelFactory):
 
     def addLinearLayer(self,x,noOfInputNeurons,noOfCpv,kernel_constraint='Y',kernel_regularizer='Y',activity_regularizer='Y'):
         constraints = self.get_layer_constraints(noOfCpv,kernel_constraint,kernel_regularizer,activity_regularizer)
-        x = layers.BatchNormalization(center=False, scale=False)(x)
-        layer = layers.Dense(noOfCpv, name="linear_embedding", activation="linear", **constraints)
+        x = layers.BatchNormalization(center=False, scale=False, name='batch_norm')(x)
+        layer = layers.Dense(noOfCpv, use_bias=False, name="linear_embedding", activation="linear", **constraints)
         
         return layer(x)
 
