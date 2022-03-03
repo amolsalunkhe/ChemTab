@@ -191,10 +191,10 @@ class PCDNNV2ModelFactory(DNNModelFactory):
             layer_constraints['activity_regularizer'] = UncorrelatedFeaturesConstraint(noOfCpv, weightage=1.)
         return layer_constraints
 
-    #def getLinearLayer(self,noOfInputNeurons,noOfCpv,kernel_constraint='Y',kernel_regularizer='Y',activity_regularizer='Y'):
-    #    constraints = self.get_layer_constraints(noOfCpv,kernel_constraint,kernel_regularizer,activity_regularizer)
-    #    layer = layers.Dense(noOfCpv, name="linear_embedding", activation="linear", **constraints)
-    #    return layer
+    def getLinearLayer(self,noOfInputNeurons,noOfCpv,kernel_constraint='Y',kernel_regularizer='Y',activity_regularizer='Y'):
+        constraints = self.get_layer_constraints(noOfCpv,kernel_constraint,kernel_regularizer,activity_regularizer)
+        layer = layers.Dense(noOfCpv, name="linear_embedding", activation="linear", **constraints)
+        return layer
 
  
     def build_and_compile_model(self,noOfInputNeurons,noOfOutputNeurons,noOfCpv,concatenateZmix,kernel_constraint='Y',kernel_regularizer='Y',activity_regularizer='Y'):
