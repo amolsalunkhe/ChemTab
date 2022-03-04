@@ -50,7 +50,7 @@ exprExec.modelFactory.width=512
 exprExec.modelFactory.dropout_rate=0#.5
 exprExec.debug_mode = False
 exprExec.batch_size = 8192
-exprExec.epochs_override = 300000
+exprExec.epochs_override = 30000
 exprExec.n_models_override = 1
 exprExec.use_dependants = True
 exprExec.use_dynamic_pred = True
@@ -94,6 +94,6 @@ data = dm.df
 input_data = data[[f'PCDNNV2_PCA_{i+1}' for i in range(noOfCpv)]]
 output_data = data[[c for c in data.columns if c.startswith('Yi')]]
 mass_fraction_pred = build_mass_fraction_model(noOfNeurons)
-mass_fraction_pred.fit(input_data, output_data, epochs=exprExec.epochs_override, validation_split=0.2)
+mass_fraction_pred.fit(input_data, output_data, epochs=1000, validation_split=0.2)
 
 mass_fraction_pred.save('mass_fraction_pred_model.h5')
