@@ -4,12 +4,13 @@ Created on Thu Aug  5 21:05:29 2021
 
 @author: amol
 """
+import pickle
+
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
 from tensorflow.keras.callbacks import EarlyStopping
-import pickle
-import os
+
 # patient early stopping
 es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=45)
 
@@ -19,7 +20,6 @@ class DNNModelFactory:
         self.width = 512
         self.dropout_rate = 0.5
         self.activation_func='relu'
-        #self.halfwidth = 128
         self.model = None
         self.experimentSettings = None
         self.modelName = None
@@ -38,15 +38,9 @@ class DNNModelFactory:
         
     def getOptimizer(self):
         starter_learning_rate = 0.0001
-        end_learning_rate = starter_learning_rate/10
-        decay_steps = 10000
-        learning_rate_fn = tf.keras.optimizers.schedules.PolynomialDecay(starter_learning_rate, decay_steps, end_learning_rate, power=0.5)
-       
+
         # NOTE: we are testing this again for compatibility with benchmark notebook 
-        #opt = keras.optimizers.Adam(learning_rate=0.001)
-        
-        opt = keras.optimizers.Adam(learning_rate=learning_rate_fn, clipnorm=2.5)
-                
+        opt = keras.optimizers.Adam(learning_rate=starter_learning_rate, clipnorm=2.5)
         return opt
 
     # reimplmeneted to non-trivial version in PCDNNv2
@@ -77,8 +71,6 @@ class DNNModelFactory:
             zmix = inputs[1]
             #Concatenate the Linear Embedding and Zmix together
             output = layers.Concatenate(name="concatenated_zmix_linear_embedding")([zmix, output])
-
-        #linear_emb_model = keras.models.Model(inputs=inputs, outputs=output, name="linear_embedding")
         return output
 
     def addRegressorModel(self, x, num_outputs, noOfCpv):
@@ -102,13 +94,15 @@ class DNNModelFactory:
         input_ = layers.Input(x.shape[1:], name='input_1')
 
         # # This is the simple baseline model architecture:
-        layer_sizes = [32,64,128,256,512,256,128,64,32]
-        ##layer_sizes = [16, 32, 64, 64, 32, 16]
+        layer_sizes = [self.width//16,self.width//8,self.width//4,self.width//2]
+        layer_sizes += [self.width] + layer_sizes[::-1]
+
+        #layer_sizes = [16, 32, 64, 64, 32, 16] # [32,64,128,256,512,256,128,64,32]
         output = input_
         for size in layer_sizes:
             output = layers.Dense(size, activation=self.activation_func)(output)
-        
-        #if self.debug_mode: 
+
+        #if self.debug_mode:
         #    # for debugging only
         #    output = add_regularized_dense_module(input_, [16,32,16])
         #else:
@@ -124,8 +118,6 @@ class DNNModelFactory:
         return regressor_model(x)
       
     def saveCurrModelAsBestModel(self):
-        #print("current directory " + os.getcwd())
-
         import os
         os.system('mkdir -p ./models/best_models/'+self.modelName)
 
@@ -159,7 +151,7 @@ class DNNModelFactory:
         
         return self.model, self.experimentSettings 
 
-    def getEmbRegressor():
+    def getEmbRegressor(self):
         return self.model
 
     def getLinearEncoder(self):

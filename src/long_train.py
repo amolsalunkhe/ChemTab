@@ -11,7 +11,7 @@ tf.config.experimental.set_memory_growth(physical_devices[0], True)
 
 from tensorflow import keras
 from tensorflow.keras import layers as L
-from main import *
+from .main import *
 
 # util for getting objects' fields' names
 field_names = lambda x: list(vars(x).keys())
@@ -50,7 +50,7 @@ exprExec.modelFactory.width=512
 exprExec.modelFactory.dropout_rate=0#.5
 exprExec.debug_mode = False
 exprExec.batch_size = 8192
-exprExec.epochs_override = 30000
+exprExec.epochs_override = 300000
 exprExec.n_models_override = 1
 exprExec.use_dependants = True
 exprExec.use_dynamic_pred = True
@@ -62,7 +62,7 @@ exprExec.df_experimentTracker = pd.DataFrame()
 exprExec.modelType = 'PCDNNV2'
 
 # this will save the model as the best (since it starts with min_mae=-inf), but that is ok because it will also be the best
-#assert exprExec.epochs_override >= 10000 # ensure this model is the best!
+assert exprExec.epochs_override >= 10000 # ensure this model is the best!
 history = exprExec.executeSingleExperiment(noOfNeurons,dataSetMethod,dataType,inputType,ZmixPresent,noOfCpv,concatenateZmix,kernel_constraint,
                                             kernel_regularizer,activity_regularizer,opscaler=opscaler, ipscaler=ipscaler)
 dm.save_PCA_data(fn='PCA_data_long_train.csv')

@@ -1,47 +1,35 @@
 # main.py imports
-from data.pre_processing import DataPreparer
-from data.train_test_manager import DataManager
-from experiment_executor.gp_experiment_executor import GPExperimentExecutor
-from experiment_executor.simple_dnn_experiment_executor import DNNExperimentExecutor
-from experiment_executor.pcdnn_v1_experiment_executor import PCDNNV1ExperimentExecutor
-from experiment_executor.pcdnn_v2_experiment_executor import PCDNNV2ExperimentExecutor
-from models.gp_model_factory import GPModel, CustomGPR
-from models.simplednn_model_factory import SimpleDNNModelFactory
-from models.pcdnnv1_model_factory import PCDNNV1ModelFactory
-from models.pcdnnv2_model_factory import PCDNNV2ModelFactory
-from models.dnnmodel_model_factory import DNNModelFactory
-import pandas as pd
-
-
 # baseline imports
 import matplotlib.pyplot as plt
-import tensorflow as tf
-from tensorflow import keras
-from sklearn.inspection import plot_partial_dependence
-from sklearn.base import BaseEstimator, RegressorMixin
-import scipy.stats as stats
-import pandas as pd
 import numpy as np
-import os
+import pandas as pd
+from models.dnnmodel_model_factory import DNNModelFactory
+from models.pcdnnv2_model_factory import PCDNNV2ModelFactory
+from sklearn.base import BaseEstimator, RegressorMixin
+from sklearn.inspection import plot_partial_dependence
+from tensorflow import keras
 
 
 class NNWrapper(BaseEstimator, RegressorMixin):
     """Wraps Amol's NN classes to comform to the interface expected by SciPy"""
+
     def __init__(self, model, concatenate_zmix=False):
         # QUESTION: what are the things that concatenate_zmix does currently?
         super().__init__()
 
         assert type(concatenate_zmix) is bool
-        
+
         self._input_names = [i.name for i in model.inputs]
         print(f'input names: {self._input_names}')
 
         # this is for finding only static_source_pred outputs
-        output_names = [i.name.split('/')[0] for i in model.outputs] # the split removes the /addBias part (which I'm not sure the purpose of...)
+        output_names = [i.name.split('/')[0] for i in
+                        model.outputs]  # the split removes the /addBias part (which I'm not sure the purpose of...)
         print(f'output names (before pruning): {output_names}')
-      
+
         # here we rebulid the model with only outputs from static_source_prediction, this way the inspection classes funciton as normal 
-        self._model = keras.models.Model(inputs=model.inputs, outputs=model.outputs[output_names.index('static_source_prediction')])
+        self._model = keras.models.Model(inputs=model.inputs,
+                                         outputs=model.outputs[output_names.index('static_source_prediction')])
         self._concatenate_zmix = concatenate_zmix
 
         # this tells sklearn that the model is fitted apparently... (as of version 1.6.2)
@@ -53,22 +41,21 @@ class NNWrapper(BaseEstimator, RegressorMixin):
         Extracts appropriate X & Y data from data-manager for evaluation of our model.
         (assumes that datamanager was already called to create relevant dataset)
         """
-        X_train, X_test, Y_train, Y_test, rom_train, rom_test, zmix_train, zmix_test = dm.getTrainTestData()
-        
+        X_train, X_test, Y_train, Y_test, zmix_train, zmix_test = dm.getTrainTestData()
+
         X_data = X_test
         Y_data = Y_test
         zmix = zmix_test
-        
+
         # assert if zmix is in the input data that it is the first column
         lower_case_cols = [s.lower() for s in dm.input_data_cols]
-        assert ('zmix' in lower_case_cols) == ('zmix'==dm.input_data_cols[0])# == self._concatenate_zmix
-        
+        assert ('zmix' in lower_case_cols) == ('zmix' == dm.input_data_cols[0])  # == self._concatenate_zmix
+
         if self._concatenate_zmix:
             X_data = np.concatenate((zmix.reshape([-1, 1]), X_data), axis=1)
         extra_input_cols = ['zmix'] if self._concatenate_zmix else []
-        
 
-        X_data = pd.DataFrame(X_data.astype('f8'), columns=extra_input_cols+list(dm.input_data_cols))
+        X_data = pd.DataFrame(X_data.astype('f8'), columns=extra_input_cols + list(dm.input_data_cols))
         Y_data = pd.DataFrame(Y_data.astype('f8'), columns=dm.output_data_cols)
         return X_data, Y_data
 
@@ -81,34 +68,39 @@ class NNWrapper(BaseEstimator, RegressorMixin):
     def fit(self, X_data, Y_data):
         self._model.fit(X_data, Y_data, batch_size=32)
 
-# original CustomGPR class is already compatible with scipy so we just need to add get_XY_data method...
-class GPWrapper(CustomGPR):
-    def __init__(self, gp_model):
-        # integrate gp_model into this class (i.e. this class 'becomes' gp model)
-        vars(self).update(vars(gp_model))
-        
-    def get_XY_data(self, dm):
-        """
-        Extracts appropriate X & Y data from data-manager for evaluation of our model
-        (assumes that datamanager was already called to create relevant dataset)
-        """
-        X_data = pd.DataFrame(dm.X_test, columns=dm.input_data_cols)
-        Y_data = pd.DataFrame(dm.Y_test, columns=dm.output_data_cols)
-        return X_data, Y_data
+
+# # original CustomGPR class is already compatible with scipy so we just need to add get_XY_data method...
+# class GPWrapper(CustomGPR):
+#     def __init__(self, gp_model):
+#         # integrate gp_model into this class (i.e. this class 'becomes' gp model)
+#         vars(self).update(vars(gp_model))
+#
+#     def get_XY_data(self, dm):
+#         """
+#         Extracts appropriate X & Y data from data-manager for evaluation of our model
+#         (assumes that datamanager was already called to create relevant dataset)
+#         """
+#         X_data = pd.DataFrame(dm.X_test, columns=dm.input_data_cols)
+#         Y_data = pd.DataFrame(dm.Y_test, columns=dm.output_data_cols)
+#         return X_data, Y_data
+
 
 class ModelInspector:
     """ Abstract model inspector (e.g. error analysis) """
+
     def __init__(self, model_factory, dm):
         experiment_settings = model_factory.experimentSettings
-        dm.createTrainTestData(dataSetMethod=experiment_settings['dataSetMethod'], numCpvComponents=experiment_settings['noOfCpv'],
+        dm.createTrainTestData(dataSetMethod=experiment_settings['dataSetMethod'],
+                               numCpvComponents=experiment_settings['noOfCpv'],
                                ipscaler=experiment_settings['ipscaler'], opscaler=experiment_settings['opscaler'])
 
         # wrap model for use with scipy
         if isinstance(model_factory, DNNModelFactory):
-            model_wrapper = NNWrapper(model_factory.getRegressor(), concatenate_zmix=experiment_settings['concatenateZmix']=='Y')
-        else:
-            assert type(model_factory.model) is CustomGPR
-            model_wrapper = GPWrapper(model_factory.model)
+            model_wrapper = NNWrapper(model_factory.getRegressor(),
+                                      concatenate_zmix=experiment_settings['concatenateZmix'] == 'Y')
+        # else:
+        #     assert type(model_factory.model) is CustomGPR
+        #     model_wrapper = GPWrapper(model_factory.model)
 
         self._model_factory = model_factory
         self._model = model_wrapper
@@ -116,28 +108,28 @@ class ModelInspector:
         self._X_data, self._Y_data = self._model.get_XY_data(self._dm)
 
         # if the model has a linear model preprocessing layer then use it to get inputs for regressor
-        if isinstance(model_factory, (PCDNNV2ModelFactory, PCDNNV1ModelFactory)):
+        if isinstance(model_factory, PCDNNV2ModelFactory):
             linearAutoEncoder = model_factory.getLinearEncoder()
             X_column_names = []
-            if experiment_settings['concatenateZmix']=='Y':
+            if experiment_settings['concatenateZmix'] == 'Y':
                 zmix = self._X_data['zmix']
                 self._X_data = self._X_data.drop('zmix', axis=1)
                 self._X_data = np.concatenate((np.asarray(zmix).reshape([-1, 1]),
                                                linearAutoEncoder.predict(self._X_data)), axis=1)
-                                               # Zmix is on the left
+                # Zmix is on the left
                 X_column_names = ['zmix']
             else:
                 self._X_data = linearAutoEncoder.predict(self._X_data)
-            X_column_names = X_column_names + [f'cpv{i+1}' for i in range(experiment_settings['noOfCpv'])]
+            X_column_names = X_column_names + [f'cpv{i + 1}' for i in range(experiment_settings['noOfCpv'])]
             print(X_column_names)
             self._X_data = pd.DataFrame(columns=X_column_names, data=self._X_data)
 
     def plot_partial_dependence(self, features: list = None):
-        features=list(range(min(self._X_data.shape[1], 25)))
+        features = list(range(min(self._X_data.shape[1], 25)))
 
         # this gives us the same dataframe but with only quartiles for each variable
         # thereby covering the relevant ranges but much faster
-        X_chunky=self._X_data.describe().iloc[3:]
+        X_chunky = self._X_data.describe().iloc[3:]
         print(X_chunky)
 
         plot_partial_dependence(self._model, X_chunky, features=features, target=0)
@@ -159,8 +151,8 @@ class ModelInspector:
             argsort = r.importances_mean.argsort()[::-1]
 
             for i in argsort:
-                 #if r.importances_mean[i] - 2 * r.importances_std[i] > 0:
-                 print(f"{list(X_data.columns)[i]}; {r.importances_mean[i]:e} +/- {r.importances_std[i]:e}")
+                # if r.importances_mean[i] - 2 * r.importances_std[i] > 0:
+                print(f"{list(X_data.columns)[i]}; {r.importances_mean[i]:e} +/- {r.importances_std[i]:e}")
             a = list(X_data.columns[argsort])
             b = r.importances_mean[argsort]
             c = r.importances_std[argsort]
@@ -168,8 +160,8 @@ class ModelInspector:
             err = plt.errorbar(a, b, yerr=c, fmt="o", color="r", label='std')
             plt.yscale('log')
             plt.title('Model\'s (Permutation) Feature Importance')
-            plt.xticks(rotation = 90)
+            plt.xticks(rotation=90)
             plt.legend(handles=[bar, err])
             plt.show()
-        
+
         do_perm_feature_importance(self._model, self._X_data, self._Y_data, n_repeats=n_repeats)

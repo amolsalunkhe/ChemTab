@@ -1,7 +1,10 @@
 
 import time
+
 import pandas as pd
+
 from .error_manager import ErrorManager
+
 
 class DNNExperimentExecutor:
     def __init__(self):
@@ -42,7 +45,7 @@ class DNNExperimentExecutor:
         
         self.model.summary()
 
-        X_train, X_test, Y_train, Y_test, rom_train, rom_test, zmix_train, zmix_test = self.dm.getTrainTestData()
+        X_train, X_test, Y_train, Y_test, zmix_train, zmix_test = self.dm.getTrainTestData()
         self.fitModelAndCalcErr(X_train, Y_train, X_test, Y_test, Y_scaler=self.dm.outputScaler)
 
         #['Model','Dataset','Cpv Type','#Cpv',"ZmixExists",'MAE','TAE','MSE','TSE','#Pts','FitTime','PredTime','MAX-MAE','MAX-TAE','MAX-MSE','MAX-TSE','MIN-MAE','MIN-TAE','MIN-MSE','MIN-TSE']
