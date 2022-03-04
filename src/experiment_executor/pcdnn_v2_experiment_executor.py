@@ -124,7 +124,7 @@ class PCDNNV2ExperimentExecutor:
 
     def prepare_model_data_dicts(self, dm=None, concatenateZmix='N'):
         if dm is None: dm = self.dm
-        X_train, X_test, Y_train, Y_test, rom_train, rom_test, zmix_train, zmix_test = dm.getTrainTestData()
+        X_train, X_test, Y_train, Y_test, zmix_train, zmix_test = dm.getTrainTestData()
 
         assert len(Y_test.shape) == len(Y_train.shape)
         if len(Y_test.shape) == 1:

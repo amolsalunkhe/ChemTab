@@ -102,10 +102,6 @@ class DataManager:
         self.X_test = None
         self.X_scaled_train = None
         self.X_scaled_test = None
-        self.rom_train = None
-        self.rom_test = None
-        self.rom_scaled_train = None
-        self.rom_scaled_test = None
         self.zmix_train = None
         self.zmix_test = None
         self.zmix_scaled_train = None
@@ -283,7 +279,6 @@ class DataManager:
         # transformation much match exactly across sources and species
 
         self.outputScaler = scalers[opscaler]()
-        self.romScaler = scalers[opscaler]()
 
     def getSourceTrainTestData(self):
         if self.sourceScaler:
@@ -315,14 +310,9 @@ class DataManager:
         if self.outputScaler is not None:
             self.Y_scaled_train = self.outputScaler.fit_transform(self.Y_train)
             self.Y_scaled_test = self.outputScaler.transform(self.Y_test)
-            if not self.rom_train.shape[1] == 0:
-                self.rom_scaled_train = self.romScaler.fit_transform(self.rom_train)
-                self.rom_scaled_test = self.romScaler.transform(self.rom_test)
         else:
             self.Y_scaled_train = None
             self.Y_scaled_test = None
-            self.rom_scaled_train = None
-            self.rom_scaled_test = None
         # print("In createTrainTestData Y_test.shape: " + str(self.Y_test.shape))
 
     def getTrainTestData(self):
