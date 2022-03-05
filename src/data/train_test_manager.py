@@ -338,9 +338,12 @@ class DataManager:
 
     def getAllData(self):
         X_train, X_test, Y_train, Y_test, zmix_train, zmix_test = self.getTrainTestData()
+        source_train, source_test = self.getSourceTrainTestData()
+
         X = None
         Y = None
         zmix = None
+        source = None
 
         if X_train is not None:
             X = np.append(X_train, X_test, axis=0)
@@ -348,6 +351,8 @@ class DataManager:
             Y = np.append(Y_train, Y_test, axis=0)
         if zmix_train is not None:
             zmix = np.append(zmix_train, zmix_test, axis=0)
+        if source_train is not None:
+            source = np.append(source_train, source_test, axis=0)
 
         # master index represents original index of self.df reshuffled for training/testing
         # we can use this to return to original order! (unshuffle)
@@ -361,4 +366,4 @@ class DataManager:
             return array
 
         # this should fix PCA logging bug! 
-        return reorder(X), reorder(Y), reorder(zmix)
+        return reorder(X), reorder(Y), reorder(zmix), reorder(source)

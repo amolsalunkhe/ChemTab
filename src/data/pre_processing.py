@@ -77,7 +77,7 @@ class DataPreparer:
 
     def include_PCDNNV2_PCA_data(self, dm, model_factory, concatenateZmix: str):
         # this appends (train, test) data in that order
-        X, Y, zmix = dm.getAllData()
+        X, Y, zmix, sources = dm.getAllData()
         PCA_model = model_factory.getLinearEncoder()
 
         inputs = {"species_input": X}
@@ -85,11 +85,12 @@ class DataPreparer:
             inputs['zmix'] = zmix
 
         PCAs = PCA_model.predict({"species_input": X})
+        CPV_sources = PCA_model.predict({"species_input": sources})
         predictions = model_factory.model.predict(inputs)['static_source_prediction'].squeeze()
         Y = Y.squeeze()  # you get nasty broadcast errors when you don't squeeze Y & predictions!
 
         if dm.outputScaler:  # These errors need to be raw
-            if len(Y.shape) == 1:
+            if len(Y.shape) == 1: # its ok notice reshape is behind it, this isn't a bug
                 Y = Y.reshape(-1, 1)
                 predictions = predictions.reshape(-1, 1)
             predictions = dm.outputScaler.inverse_transform(predictions).squeeze()
@@ -97,7 +98,10 @@ class DataPreparer:
 
         # error_df = pd.DataFrame(np.stack((predictions-Y)**2, np.abs(predictions-Y)), columns=['L2_ERR', 'L1_ERR'])
         PCDNNV2_PCA_df = pd.DataFrame(PCAs, columns=[f'PCDNNV2_PCA_{i + 1}' for i in range(PCAs.shape[1])])
+        PCDNNV2_PCA_sources_df = pd.DataFrame(CPV_sources, columns=[f'PCDNNV2_PCA_source_{i + 1}' for i in range(PCAs.shape[1])])
         self.df[PCDNNV2_PCA_df.columns] = PCDNNV2_PCA_df
+        self.df[PCDNNV2_PCA_sources_df.columns] = PCDNNV2_PCA_sources_df
+        import pdb; pdb.set_trace()
 
         L1_ERR = np.abs(predictions - Y)
         L2_ERR = (predictions - Y) ** 2
