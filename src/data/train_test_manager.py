@@ -147,7 +147,7 @@ class DataManager:
                                                                                   train_portion=self.train_portion)
         elif (method == "randomequaltraintestsplit"):
             df_shuffled = shuffle(self.df, random_state=0)
-            self.df_training = df_shuffled.sample(frac=self.train_portion)
+            self.df_training = df_shuffled.sample(frac=self.train_portion, random_state=0)
             self.df_testing = df_shuffled.drop(index=self.df_training.index)
         else:
             if self.train_portion is not None:
