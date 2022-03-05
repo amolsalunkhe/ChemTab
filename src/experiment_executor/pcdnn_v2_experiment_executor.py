@@ -100,7 +100,8 @@ class PCDNNV2ExperimentExecutor:
                                                 "kernel_constraint": kernel_constraint,
                                                 "kernel_regularizer": kernel_regularizer,
                                                 "activity_regularizer": activity_regularizer,
-                                                'input_data_cols': self.dm.input_data_cols}
+                                                'input_data_cols': self.dm.input_data_cols,
+                                                'data_manager': self.dm}
 
         history = self.fitModelAndCalcErr(self.dm, concatenateZmix)
 

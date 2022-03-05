@@ -12,17 +12,18 @@ from main import *
 
 from models.pcdnnv2_model_factory import get_metric_dict 
 
-dp = DataPreparer() #Prepare the DataFrame that will be used downstream
-df = dp.getDataframe()
-dm = DataManager(df, dp) # currently passing dp eventually we want to abstract all the constants into 1 class
+#dp = DataPreparer() #Prepare the DataFrame that will be used downstream
+#df = dp.getDataframe()
+#dm = DataManager(df, dp) # currently passing dp eventually we want to abstract all the constants into 1 class
 
 exprExec = PCDNNV2ExperimentExecutor()
 exprExec.setModelFactory(PCDNNV2ModelFactory())
 bestModel, experimentSettings = exprExec.modelFactory.openBestModel()
 assert experimentSettings['ipscaler']=='MaxAbsScaler' # we cannot center data, as it makes transform non-linear
 
-dm.createTrainTestData(experimentSettings['dataSetMethod'], experimentSettings['noOfCpv'],
-                       experimentSettings['ipscaler'], experimentSettings['opscaler'])
+#dm.createTrainTestData(experimentSettings['dataSetMethod'], experimentSettings['noOfCpv'],
+#                       experimentSettings['ipscaler'], experimentSettings['opscaler'])
+dm = experimentSettings['data_manager']
 
 composite_model = bestModel#keras.models.load_model(sys.argv[1])
 composite_model.summary()
@@ -83,7 +84,8 @@ weight_df.to_csv(f'{decomp_dir}/weights.csv', index=True, header=True)
 
 regressor = layers_by_name['regressor']
 input_ = keras.layers.Input(shape=regressor.input_shape[1:], name='input_1')
-wrapper = keras.models.Model(inputs=input_, outputs=regressor(input_))
+output = regressor(input_)
+wrapper = keras.models.Model(inputs=input_, outputs=output)
 #wrapper.add(keras.layers.Input(shape=regressor.input_shape[1:], name='input_1'))
 #wrapper.add(regressor)
 wrapper.save(f'{decomp_dir}/regressor')
