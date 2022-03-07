@@ -94,7 +94,7 @@ def get_metric_dict():
     def exp_mae_mag(x, y): return tf.math.log(
         tf.math.reduce_mean(tf.math.abs(tf.math.exp(x) - tf.math.exp(y)))) / tf.math.log(10.0)
 
-    def R2(yt, yp): return 1 - tf.math.reduce_mean((yp - yt) ** 2) / (tf.math.reduce_std(yt) ** 2)
+    def R2(yt,yp): return tf.reduce_mean(1-tf.reduce_mean((yp-yt)**2, axis=0)/(tf.math.reduce_std(yt,axis=0)**2))
 
     def exp_R2(yt, yp):  # these are actual names above is for convenience
         return R2(tf.math.exp(yt), tf.math.exp(yp))
@@ -115,22 +115,21 @@ def get_metric_dict():
         assert y_true.shape[1] // 2 == y_true.shape[1] / 2
         encoding_dim = y_true.shape[1] // 2
         abs_diff = tf.math.abs(y_pred[:, :encoding_dim] - y_pred[:, encoding_dim:])
-        return tf.reduce_mean(abs_diff, axis=-1)  # Note the `axis=-1`
+        return tf.reduce_mean(abs_diff)
 
-    def R2_split(yt, yp):
-        print(f'//: {yt.shape[1] // 2}, /: {yt.shape[1] / 2}')
-        assert yt.shape[1] // 2 == yt.shape[1] / 2
-        encoding_dim = yt.shape[1] // 2
-        yt = yp[:, encoding_dim:]
-        yp = yp[:, :encoding_dim]
-        return 1 - tf.reduce_mean((yp - yt) ** 2, axis=-1) / (tf.math.reduce_std(yt, axis=-1) ** 2)
-
+    def R2_split(yt,yp):
+        assert yt.shape[1]//2 == yp.shape[1]/2
+        encoding_dim = yt.shape[1]//2
+        yt=yp[:,:encoding_dim]
+        yp=yp[:,encoding_dim:]
+        # NOTES: verified that len(yt.shape)==2 and yt.shape[0] is None
+        assert len(yt.shape)==2
+        assert yt.shape[0] is None
+        return tf.reduce_mean(1-tf.math.reduce_mean((yp-yt)**2, axis=0)/(tf.math.reduce_std(yt,axis=0)**2))
     return locals()
-
 
 # fill globals with metric functions
 globals().update(get_metric_dict())
-
 
 # well tested on 2/1/22
 def dynamic_source_term_pred_wrap(base_regression_model):
@@ -212,8 +211,8 @@ class PCDNNV2ModelFactory(DNNModelFactory):
     def addLinearLayer(self, x, noOfInputNeurons, noOfCpv, kernel_constraint='Y', kernel_regularizer='Y',
                        activity_regularizer='Y'):
         constraints = self.get_layer_constraints(noOfCpv, kernel_constraint, kernel_regularizer, activity_regularizer)
-        x = layers.BatchNormalization(center=False, scale=False, name='batch_norm')(x)
         layer = layers.Dense(noOfCpv, use_bias=False, name="linear_embedding", activation="linear", **constraints)
+        x = layers.BatchNormalization(center=False, scale=False, name='batch_norm')(x)
 
         return layer(x)
 
