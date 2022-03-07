@@ -101,7 +101,6 @@ class DataPreparer:
         PCDNNV2_PCA_sources_df = pd.DataFrame(CPV_sources, columns=[f'PCDNNV2_PCA_source_{i + 1}' for i in range(PCAs.shape[1])])
         self.df[PCDNNV2_PCA_df.columns] = PCDNNV2_PCA_df
         self.df[PCDNNV2_PCA_sources_df.columns] = PCDNNV2_PCA_sources_df
-        import pdb; pdb.set_trace()
 
         L1_ERR = np.abs(predictions - Y)
         L2_ERR = (predictions - Y) ** 2

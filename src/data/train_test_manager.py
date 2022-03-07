@@ -9,7 +9,7 @@ import warnings
 
 import numpy as np
 import pandas as pd
-from sklearn.preprocessing import MinMaxScaler, QuantileTransformer, StandardScaler, MaxAbsScaler
+from sklearn.preprocessing import *
 from sklearn.utils import shuffle
 
 
@@ -270,7 +270,7 @@ class DataManager:
 
     def _setInputOutputScalers(self, ipscaler, opscaler):
         scalers = {None: lambda: None, 'MinMaxScaler': MinMaxScaler, 'MaxAbsScaler': MaxAbsScaler,
-                   'StandardScaler': StandardScaler,
+                   'StandardScaler': StandardScaler, 'RobustScaler': RobustScaler,
                    'QuantileTransformer': QuantileTransformer, 'PositiveLogNormal': PositiveLogNormal}
 
         self.inputScaler = scalers[ipscaler]()
