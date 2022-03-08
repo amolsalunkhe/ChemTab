@@ -212,7 +212,7 @@ class PCDNNV2ModelFactory(DNNModelFactory):
                        activity_regularizer='Y'):
         constraints = self.get_layer_constraints(noOfCpv, kernel_constraint, kernel_regularizer, activity_regularizer)
         layer = layers.Dense(noOfCpv, use_bias=False, name="linear_embedding", activation="linear", **constraints)
-        x = layers.BatchNormalization(center=False, scale=False, name='batch_norm')(x)
+#        x = layers.BatchNormalization(center=False, scale=False, name='batch_norm')(x)
 
         return layer(x)
 
