@@ -284,7 +284,7 @@ class DataManager:
         if self.sourceScaler:
             return self.sourceScaler.transform(self.source_train), self.sourceScaler.transform(self.source_test)
         else:
-            return self.source_train, self.source_train
+            return self.source_train, self.source_test
 
     # TODO: MULTIOUTPUTS, add dependents argument
     def createTrainTestData(self, dataSetMethod, numCpvComponents, ipscaler, opscaler):
@@ -296,6 +296,7 @@ class DataManager:
 
         if self.inputScaler is not None:
             self.inputScaler.fit(np.concatenate((self.X_train, self.X_test), axis=0))
+            #self.inputScaler.fit(np.concatenate((self.X_train, self.X_test, self.source_train, self.source_test), axis=0))
             self.X_scaled_train = self.inputScaler.transform(self.X_train)
             self.X_scaled_test = self.inputScaler.transform(self.X_test)
 
@@ -308,7 +309,8 @@ class DataManager:
             self.zmix_scaled_test = None
 
         if self.outputScaler is not None:
-            self.Y_scaled_train = self.outputScaler.fit_transform(self.Y_train)
+            self.outputScaler.fit(np.concatenate((self.Y_train, self.Y_test),axis=0))
+            self.Y_scaled_train = self.outputScaler.transform(self.Y_train)
             self.Y_scaled_test = self.outputScaler.transform(self.Y_test)
         else:
             self.Y_scaled_train = None
