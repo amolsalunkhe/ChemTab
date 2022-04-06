@@ -18,7 +18,7 @@ es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=45)
 class DNNModelFactory:
     def __init__(self):
         self.width = 512
-        self.dropout_rate = 0.5
+        self.dropout_rate = 0.0
         self.activation_func='relu'
         self.model = None
         self.experimentSettings = None
@@ -75,20 +75,6 @@ class DNNModelFactory:
 
     def addRegressorModel(self, x, num_outputs, noOfCpv):
         """Gets layers for regression module of model (renamed from get intermediate layers)"""
-        def add_regularized_dense_layer(x, layer_size):
-            x = layers.Dense(layer_size, activation=self.activation_func)(x)
-            x = layers.BatchNormalization()(x)
-            x = layers.Dropout(self.dropout_rate)(x)
-            return x
-
-        def add_regularized_dense_module(x, layer_sizes):
-            assert len(layer_sizes)==3
-            skip_input = x = add_regularized_dense_layer(x, layer_sizes[0])
-            x = add_regularized_dense_layer(x, layer_sizes[1])
-            x = add_regularized_dense_layer(x, layer_sizes[2])
-            x = layers.Concatenate()([x, skip_input])
-            return x
-
         # the [1:] is really important because that removes the extra (batch)
         # dimension that keras adds implicitly
         input_ = layers.Input(x.shape[1:], name='input_1')
@@ -97,18 +83,16 @@ class DNNModelFactory:
         layer_sizes = [self.width//16,self.width//8,self.width//4,self.width//2]
         layer_sizes += [self.width] + layer_sizes[::-1]
 
+        assert self.dropout_rate == 0.0
+
         #layer_sizes = [16, 32, 64, 64, 32, 16] # [32,64,128,256,512,256,128,64,32]
         output = input_
+        #reg = lambda: tf.keras.regularizers.l1_l2(l1=0.01, l2=0.01)
         for size in layer_sizes:
             output = layers.Dense(size, activation=self.activation_func)(output)
-
-        #if self.debug_mode:
-        #    # for debugging only
-        #    output = add_regularized_dense_module(input_, [16,32,16])
-        #else:
-        #    output = add_regularized_dense_module(input_, [self.width//16,self.width//8,self.width//4])
-        #    output = add_regularized_dense_module(output, [self.width//2,self.width,self.width//2])
-        #    output = add_regularized_dense_module(output, [self.width//4,self.width//8,self.width//16])
+            #output = layers.Dense(size, activation=self.activation_func,
+            #                      kernel_regularizer=reg(),
+            #                      activity_regularizer=reg())(output)
 
         # used to be named 'prediction' (now model is named 'prediction', since it is last layer)
         static_source_pred = layers.Dense(num_outputs, name='static_source_prediction')(output)
