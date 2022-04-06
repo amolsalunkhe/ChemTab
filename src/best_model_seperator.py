@@ -11,9 +11,9 @@ import pandas as pd
 from main import *
 
 
-#dp = DataPreparer() #Prepare the DataFrame that will be used downstream
-#df = dp.getDataframe()
-#dm = DataManager(df, dp) # currently passing dp eventually we want to abstract all the constants into 1 class
+dp = DataPreparer() #Prepare the DataFrame that will be used downstream
+df = dp.getDataframe()
+dm = DataManager(df, dp) # currently passing dp eventually we want to abstract all the constants into 1 class
 
 exprExec = PCDNNV2ExperimentExecutor()
 exprExec.setModelFactory(PCDNNV2ModelFactory())
