@@ -19,6 +19,8 @@ class DNNModelFactory:
     def __init__(self):
         self.width = 512
         self.dropout_rate = 0.5
+        self.regressor_batch_norm = False
+        self.regressor_skip_connections = False
         self.activation_func='relu'
         self.model = None
         self.experimentSettings = None
@@ -77,7 +79,7 @@ class DNNModelFactory:
         """Gets layers for regression module of model (renamed from get intermediate layers)"""
         def add_regularized_dense_layer(x, layer_size):
             x = layers.Dense(layer_size, activation=self.activation_func)(x)
-            x = layers.BatchNormalization()(x)
+            if self.regressor_batch_norm: x = layers.BatchNormalization()(x)
             x = layers.Dropout(self.dropout_rate)(x)
             return x
 
@@ -86,7 +88,7 @@ class DNNModelFactory:
             skip_input = x = add_regularized_dense_layer(x, layer_sizes[0])
             x = add_regularized_dense_layer(x, layer_sizes[1])
             x = add_regularized_dense_layer(x, layer_sizes[2])
-            x = layers.Concatenate()([x, skip_input])
+            if self.regressor_skip_connections: x = layers.Concatenate()([x, skip_input])
             return x
 
         # the [1:] is really important because that removes the extra (batch)
@@ -94,26 +96,33 @@ class DNNModelFactory:
         input_ = layers.Input(x.shape[1:], name='input_1')
 
         # # This is the simple baseline model architecture:
-        layer_sizes = [self.width//16,self.width//8,self.width//4,self.width//2]
-        layer_sizes += [self.width] + layer_sizes[::-1]
+        #layer_sizes = [self.width//16,self.width//8,self.width//4,self.width//2]
+        #layer_sizes += [self.width] + layer_sizes[::-1]
 
-        #layer_sizes = [16, 32, 64, 64, 32, 16] # [32,64,128,256,512,256,128,64,32]
-        output = input_
-        for size in layer_sizes:
-            output = layers.Dense(size, activation=self.activation_func)(output)
+        ##layer_sizes = [16, 32, 64, 64, 32, 16]
+        #output = input_
+        #for size in layer_sizes:
+        #    output = add_regularized_dense_layer(output, size) 
+        #    #output = layers.Dense(size, activation=self.activation_func)(output)
 
-        #if self.debug_mode:
-        #    # for debugging only
-        #    output = add_regularized_dense_module(input_, [16,32,16])
-        #else:
-        #    output = add_regularized_dense_module(input_, [self.width//16,self.width//8,self.width//4])
-        #    output = add_regularized_dense_module(output, [self.width//2,self.width,self.width//2])
-        #    output = add_regularized_dense_module(output, [self.width//4,self.width//8,self.width//16])
+        # TODO: refractor?
+        def addRegressorOutputs(x):
+            # used to be named 'prediction' (now model is named 'prediction', since it is last layer)
+            static_source_pred = layers.Dense(num_outputs, name='static_source_prediction')(x)
+            dynamic_source_pred = layers.Dense(noOfCpv, name='dynamic_source_prediction')(x)
+            if self.batch_norm_dynamic_pred: dynamic_source_pred = layers.BatchNormalization()(dynamic_source_pred)
+            return {'static_source_prediction': static_source_pred, 'dynamic_source_prediction': dynamic_source_pred}
 
-        # used to be named 'prediction' (now model is named 'prediction', since it is last layer)
-        static_source_pred = layers.Dense(num_outputs, name='static_source_prediction')(output)
-        dynamic_source_pred = layers.Dense(noOfCpv, name='dynamic_source_prediction')(output)
-        regressor_model=keras.models.Model(inputs=input_, outputs={'static_source_prediction': static_source_pred, 'dynamic_source_prediction': dynamic_source_pred}, name='regressor')
+        if self.debug_mode:
+            # for debugging only
+            output = add_regularized_dense_module(input_, [16,32,16])
+        else:
+            output = add_regularized_dense_module(input_, [self.width//16,self.width//8,self.width//4])
+            output = add_regularized_dense_module(output, [self.width//2,self.width,self.width//2])
+            output = add_regularized_dense_module(output, [self.width//4,self.width//8,self.width//16])
+
+        outputs = addRegressorOutputs(output) 
+        regressor_model=keras.models.Model(inputs=input_, outputs=outputs, name='regressor')
 
         return regressor_model(x)
       
@@ -158,11 +167,11 @@ class DNNModelFactory:
     def getLinearEncoder(self):
         model = self.getEmbRegressor()
         model = model.get_layer('linear_embedding') # this 'layer' is actually a bonafied model
-        model.summary(expand_nested=True)
+        #model.summary(expand_nested=True)
         return model
     
     def getRegressor(self):
         model = self.getEmbRegressor()
         model = model.get_layer('regressor') # this 'layer' is actually a bonafied model
-        model.summary(expand_nested=True)
+        #model.summary(expand_nested=True)
         return model

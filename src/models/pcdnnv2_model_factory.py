@@ -132,7 +132,7 @@ def get_metric_dict():
 globals().update(get_metric_dict())
 
 # well tested on 2/1/22
-def dynamic_source_term_pred_wrap(base_regression_model):
+def dynamic_source_term_pred_wrap(base_regression_model, batch_norm_dynamic_pred=False):
     from tensorflow import keras
     from tensorflow.keras import layers
 
@@ -165,6 +165,7 @@ def dynamic_source_term_pred_wrap(base_regression_model):
     copied_inputs = copy_model_inputs(base_regression_model)
     regression_outputs = base_regression_model(copied_inputs)
     dynamic_source_pred = regression_outputs['dynamic_source_prediction']
+    if batch_norm_dynamic_pred: dynamic_source_pred = layers.BatchNormalization()(dynamic_source_pred) 
 
     all_species_source_inputs = keras.Input(shape=(n_species,), name='source_term_input')
     W_emb_layer = base_regression_model.get_layer('linear_embedding')
@@ -195,8 +196,11 @@ class PCDNNV2ModelFactory(DNNModelFactory):
         custom.update(get_metric_dict())
         self.setConcreteClassCustomObject(custom)
         self.loss = 'mean_absolute_error'
+        
+        self.loss_weights = {'static_source_prediction': 1.0, 'dynamic_source_prediction': 1.0}
+        self.use_R2_losses = False
         self.use_dynamic_pred = False
-        return
+        self.batch_norm_dynamic_pred = False
 
     def get_layer_constraints(self, noOfCpv, kernel_constraint='Y', kernel_regularizer='Y', activity_regularizer='Y'):
         layer_constraints = {}
@@ -245,6 +249,8 @@ class PCDNNV2ModelFactory(DNNModelFactory):
         opt = self.getOptimizer()
 
         losses = {'static_source_prediction': self.loss, 'dynamic_source_prediction': dynamic_source_loss}
+        if self.use_R2_losses:
+            losses={'static_source_prediction': lambda yt, yp: -R2(yt, yp), 'dynamic_source_prediction': lambda yt, yp: -R2_split(yt, yp)}
         metrics = {'static_source_prediction': ['mae', 'mse', R2],
                    'dynamic_source_prediction': [R2_split, source_pred_mean, source_true_mean]}
         # for metric definitions see get_metric_dict()
@@ -252,8 +258,8 @@ class PCDNNV2ModelFactory(DNNModelFactory):
         model.compile(loss=losses, optimizer=opt, metrics=metrics)
 
         self.model = model
-        tf.keras.utils.plot_model(self.model, to_file="model.png", show_shapes=True, show_layer_names=True,
-                                  rankdir="TB", expand_nested=False, dpi=96)
+        #tf.keras.utils.plot_model(self.model, to_file="model.png", show_shapes=True, show_layer_names=True,
+        #                          rankdir="TB", expand_nested=False, dpi=96)
 
         return model
 
