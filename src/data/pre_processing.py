@@ -18,7 +18,12 @@ class DataPreparer:
     def __init__(self):
         # read the data into a dataframe
         # self.df = pd.read_csv('../NewData_flames_data_with_L1_L2_errors_CH4-AIR_with_trimming.txt')
-        self.df = pd.read_csv('../NewData_flames_data_with_L1_L2_errors_CH4-AIR_without_trimming(SouSpec_Included).txt')
+        #self.df = pd.read_csv('../NewData_flames_data_with_L1_L2_errors_CH4-AIR_without_trimming(SouSpec_Included).txt')
+        self.df = pd.read_csv('../full_master_simit.csv').sample(frac=1.0)
+
+        #self.df = pd.read_csv('./real_data_augmented.csv').sample(frac=1.0)
+        #self.df['Zmix'] = self.df['Xpos'] = self.df['X'] = self.df['flame_key'] = 0
+       
         self.df.columns = map(lambda x: x.strip(), self.df.columns)  # deal with annoying spaces in column names
         self.df = self.df.drop(columns=['L1_ERR', 'L2_ERR'], errors='ignore')
         # include space misspelling & correct spelling (in-case it is fixed) 
@@ -63,10 +68,10 @@ class DataPreparer:
 
         self.other_tracking_cols = ['is_flame_included_by_framework', 'Xpos', 'flame_key', 'flame_key_int']
 
-        cut_labels = ['0.0 - 0.11', '0.11 - 0.22', '0.22 - 0.33', '0.33 - 0.44', '0.44 - 0.55', '0.55 - 0.66',
-                      '0.66 - 0.77', '0.77 - 0.88', '0.88 - 0.99', '0.99 - 1.1']
-        cut_bins = np.linspace(0, 1.1, 11)
-        self.df['X_bins'] = pd.cut(self.df['X'], bins=cut_bins, labels=cut_labels)
+        #cut_labels = ['0.0 - 0.11', '0.11 - 0.22', '0.22 - 0.33', '0.33 - 0.44', '0.44 - 0.55', '0.55 - 0.66',
+        #              '0.66 - 0.77', '0.77 - 0.88', '0.88 - 0.99', '0.99 - 1.1']
+        #cut_bins = np.linspace(0, 1.1, 11)
+        #self.df['X_bins'] = pd.cut(self.df['X'], bins=cut_bins, labels=cut_labels)
 
     def isFlame_included(self, flame_key_int):
         if flame_key_int in self.framework_untrimmed_flame_key_ints:
