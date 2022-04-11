@@ -117,12 +117,13 @@ class DNNModelFactory:
 
         return regressor_model(x)
       
-    def saveCurrModelAsBestModel(self):
+    def saveCurrModelAsBestModel(self, path=None):
+        if not path: path = './models/best_models/'+self.modelName 
         import os
-        os.system('mkdir -p ./models/best_models/'+self.modelName)
+        os.system('mkdir -p '+path)
 
         # open a file, where you ant to store the data
-        file = open("./models/best_models/"+self.modelName+"/experimentSettings", "wb")
+        file = open(path + "/experimentSettings", "wb")
         
         # dump information to that file
         pickle.dump(self.experimentSettings, file)
@@ -131,7 +132,7 @@ class DNNModelFactory:
         file.close()
         
         #self.model.save("models\\best_models\\"+self.modelName)
-        filePath = "./models/best_models/"+self.modelName+"/model.h5"
+        filePath = path +"/model.h5"
         tf.keras.models.save_model(self.model, filePath, overwrite=True, include_optimizer=False, save_format='h5')
         
         

@@ -81,9 +81,7 @@ class PositiveLogNormal:
         return np.concatenate(cols_data, axis=1)  # .squeeze()
 
 
-all_dependants = ["souener", "souspecO2", "souspecCO", "souspecCO2", "souspecH2O", "souspecOH", "souspecH2",
-                  "souspecCH4"]
-
+all_dependants = ["souener", "souspecO2", "souspecCO", "souspecCO2", "souspecH2O", "souspecOH", "souspecH2", "souspecCH4"]
 
 class DataManager:
     def __init__(self, df_totalData, constants):
@@ -92,6 +90,14 @@ class DataManager:
         self.constants = constants
         self.df = df_totalData
         self.df['souspecAR'] = 0  # dummy value since it is constant
+
+        ## Add **ALL** souspec dependants
+        #global all_dependants
+        #Yi_cols = [col for col in self.df.columns if col[:2]=='Yi']
+        #source_term_cols = ['souspec' + col[2:] for col in Yi_cols]
+        #all_dependants = ["souener"] + source_term_cols
+        #all_dependants.remove('souspecAR')
+
         self.outputScaler = None
         self.inputScaler = None
         self.zmixScaler = None
@@ -194,6 +200,8 @@ class DataManager:
 
             self.df_training = self.df[self.df['flame_key_int'].isin(training_flames_int)]
             self.df_testing = self.df[self.df['flame_key_int'].isin(testing_flames_int)]
+           
+        print('len testing df: ', len(self.df_testing), flush=True)
 
     def _createTrainTestData(self, method, numCpvComponents):
         method_parts = method.split('_')
@@ -295,7 +303,8 @@ class DataManager:
         self._setInputOutputScalers(ipscaler, opscaler)
 
         if self.inputScaler is not None:
-            self.inputScaler.fit(np.concatenate((self.X_train, self.X_test), axis=0))
+            #self.inputScaler.fit(np.concatenate((self.X_train, self.X_test), axis=0))
+            self.inputScaler.fit(np.concatenate((self.source_train, self.source_test), axis=0))
             #self.inputScaler.fit(np.concatenate((self.X_train, self.X_test, self.source_train, self.source_test), axis=0))
             self.X_scaled_train = self.inputScaler.transform(self.X_train)
             self.X_scaled_test = self.inputScaler.transform(self.X_test)

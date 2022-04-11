@@ -37,22 +37,49 @@ linear_embedder = layers_by_name['linear_embedding']
 w = np.asarray(get_layers_by_name(linear_embedder)['linear_embedding'].weights[0])
 print(f'linear embedder weights shape: {w.shape}') # shape is [53, nCPV]
 
+def derive_Zmix_weights(df):
+    import sklearn.linear_model
+    Yi_cols = [col for col in df.columns if col.startswith('Yi')]
+    X_data = df[Yi_cols]
+    Y_data = df['Zmix']
+
+    lm = sklearn.linear_model.LinearRegression(fit_intercept=False)
+    lm.fit(X_data, Y_data)
+    assert lm.score(X_data, Y_data)==1.0 # assert R^2=1 (since zmix should be linear combinatino of Yi's)
+
+    return {k: v for k,v in zip(X_data.columns, lm.coef_)}
+
+# convert to df to prepare for csv saving
 CPV_names = [f'CPV_{i}' for i in range(w.shape[1])]
+weight_df = pd.DataFrame(w, index=dm.input_data_cols, columns=CPV_names) # dm.input_data_cols is why we recreate training data
 
 if 'zmix' in layers_by_name:
-    raise NotImplementedError('you need to get the actual weights for zmix here')
-    zmix_weights = np.random.normal(size=(w.shape[0],1))
-    w = np.concatenate([zmix_weights, w],axis=1) # checked on 10/10/21: that zmix comes first
-    CPV_names = ['zmix'] + CPV_names
-weight_df = pd.DataFrame(w, index=dm.input_data_cols, columns=CPV_names) # dm.input_data_cols is why we recreate training data
+    zmix_weights = derive_Zmix_weights(dm.df) # get weights as dict, then convert to df
+    zmix_weights = pd.DataFrame({'Zmix': zmix_weights.values()}, index=zmix_weights.keys())
+    weight_df = pd.concat([zmix_weights, weight_df],axis=1) # checked on 10/10/21: that zmix comes first
+    #CPV_names = ['zmix'] + CPV_names
+
 weight_df.to_csv(f'{decomp_dir}/weights.csv', index=True, header=True)
 
 #np.savetxt(f'{decomp_dir}/weights.csv', w, delimiter=',')
 #linear_embedder.save(f'{decomp_dir}/linear_embedding')
 
+# give regressor special input name that works with cpp tensorflow
 regressor = layers_by_name['regressor']
 input_ = keras.layers.Input(shape=regressor.input_shape[1:], name='input_1')
 output = regressor(input_)
+
+import pdb; pdb.set_trace()
+
+# below equations only work for minmax scaler!
+assert experimentSettings['opscaler']=='MinMaxScaler'
+
+# m & b from y=mx+b
+m = 1/dm.outputScaler.data_range_ # aka scale in RescaleLayer
+b = -dm.outputScaler.data_min_/dm.outputScaler.data_range_ # aka offset in RescaleLayer
+output['static_source_prediction'] = keras.layers.Rescaling(m, b)(output['static_source_prediction']) # TODO: only apply to static source prediction!
+
+#keras.layers.Rescale()
 wrapper = keras.models.Model(inputs=input_, outputs=output)
 #wrapper.add(keras.layers.Input(shape=regressor.input_shape[1:], name='input_1'))
 #wrapper.add(regressor)
