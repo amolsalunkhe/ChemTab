@@ -11,6 +11,7 @@ import numpy as np
 import pandas as pd
 
 from .error_manager import ErrorManager
+from tensorflow import keras
 
 
 # returns a wrapped model factory that supports rebuilding using previous config
@@ -175,9 +176,8 @@ class PCDNNV2ExperimentExecutor:
         pred_times = []
         errs = []
 
-        my_callbacks = None  # [tf.keras.callbacks.TensorBoard(log_dir='./tb_logs', histogram_freq=1)]
         from tensorflow import keras
-        my_callbacks = [keras.callbacks.EarlyStopping(monitor='val_loss', patience=2000, restore_best_weights=True)]
+        my_callbacks = [keras.callbacks.EarlyStopping(monitor='val_loss', patience=50, restore_best_weights=True)] # [tf.keras.callbacks.TensorBoard(log_dir='./tb_logs', histogram_freq=1)]
 
         for itr in range(1, n):
             self.model = self.modelFactory.rebuild_model()
