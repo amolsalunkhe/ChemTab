@@ -118,13 +118,12 @@ def get_metric_dict():
         return tf.reduce_mean(abs_diff)
 
     def R2_split(yt,yp):
-        assert yt.shape[1]//2 == yp.shape[1]/2
-        encoding_dim = yt.shape[1]//2
+        assert yp.shape[1]//2 == yp.shape[1]/2
+        encoding_dim = yp.shape[1]//2
         yt=yp[:,:encoding_dim]
         yp=yp[:,encoding_dim:]
-        # NOTES: verified that len(yt.shape)==2 and yt.shape[0] is None
-        assert len(yt.shape)==2
-        assert yt.shape[0] is None
+        # NOTES: verified that len(yt.shape)==2 and yt.shape[0] is batch_dim (not necessarily None)
+        assert len(yp.shape)==2
         return tf.reduce_mean(1-tf.math.reduce_mean((yp-yt)**2, axis=0)/(tf.math.reduce_std(yt,axis=0)**2))
     return locals()
 
