@@ -52,6 +52,7 @@ class PCDNNV2ExperimentExecutor:
         self.batch_size = 64
         self.use_dependants = False
         self.use_dynamic_pred = False
+        self.use_val_loss_for_best = False
 
     @property
     def modelFactory(self):
@@ -175,6 +176,8 @@ class PCDNNV2ExperimentExecutor:
         errs = []
 
         my_callbacks = None  # [tf.keras.callbacks.TensorBoard(log_dir='./tb_logs', histogram_freq=1)]
+        from tensorflow import keras
+        my_callbacks = [keras.callbacks.EarlyStopping(monitor='val_loss', patience=2000, restore_best_weights=True)]
 
         for itr in range(1, n):
             self.model = self.modelFactory.rebuild_model()
@@ -205,12 +208,18 @@ class PCDNNV2ExperimentExecutor:
             curr_errs = self.errManager.computeError(Y_pred_raw[:, self.dm.souener_index],
                                                      Y_test_raw[:, self.dm.souener_index])
             errs.append(curr_errs)
+            
+            # losses[0] == history.history['val_loss'][-1] when early_stopping is off, 
+            # but when it is on it corrects for weight restoration and gives us correct final validation loss
+            val_losses = self.model.evaluate(input_dict_test, output_dict_test, verbose=1, return_dict=True)
+            model_error = val_losses['loss'] if self.use_val_loss_for_best else curr_errs['MAE']
+            # model_error is used to determine which model is 'best'
 
             # in case we are using a container model for dynamic prediction extract base model			  
             self.model = self.modelFactory.extractEmbRegressor()
 
-            if curr_errs['MAE'] < self.min_mae:
-                self.min_mae = curr_errs['MAE']
+            if model_error < self.min_mae:
+                self.min_mae = model_error 
                 self.modelFactory.saveCurrModelAsBestModel()
                 self.dm.include_PCDNNV2_PCA_data(self.modelFactory, concatenateZmix=concatenateZmix)
 
