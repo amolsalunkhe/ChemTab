@@ -60,27 +60,24 @@ if 'zmix' in layers_by_name:
     #CPV_names = ['zmix'] + CPV_names
 
 weight_df.to_csv(f'{decomp_dir}/weights.csv', index=True, header=True)
-
-#np.savetxt(f'{decomp_dir}/weights.csv', w, delimiter=',')
-#linear_embedder.save(f'{decomp_dir}/linear_embedding')
+linear_embedder.save(f'{decomp_dir}/linear_embedding') # usually not needed but included for completeness
 
 # give regressor special input name that works with cpp tensorflow
 regressor = layers_by_name['regressor']
 input_ = keras.layers.Input(shape=regressor.input_shape[1:], name='input_1')
 output = regressor(input_)
 
-import pdb; pdb.set_trace()
-
 # below equations only work for minmax scaler!
 assert experimentSettings['opscaler']=='MinMaxScaler'
 
 # m & b from y=mx+b
-m = 1/dm.outputScaler.data_range_ # aka scale in RescaleLayer
-b = -dm.outputScaler.data_min_/dm.outputScaler.data_range_ # aka offset in RescaleLayer
-output['static_source_prediction'] = keras.layers.Rescaling(m, b)(output['static_source_prediction']) # TODO: only apply to static source prediction!
+m = dm.outputScaler.data_range_ # aka scale in RescaleLayer
+assert np.all(m == (dm.outputScaler.data_max_ - dm.outputScaler.data_min_))
+b = dm.outputScaler.data_min_ # aka offset in RescaleLayer
+output['static_source_prediction'] = keras.layers.Rescaling(m, b, name='static_source_prediction')(output['static_source_prediction']) # TODO: only apply to static source prediction!
+output['dynamic_source_prediction'] = keras.layers.Rescaling(1, name='dynamic_source_prediction')(output['dynamic_source_prediction']) # identity layer to rename properly
+wrapper = keras.models.Model(inputs=input_, outputs=output, name='regressor')
 
-#keras.layers.Rescale()
-wrapper = keras.models.Model(inputs=input_, outputs=output)
 #wrapper.add(keras.layers.Input(shape=regressor.input_shape[1:], name='input_1'))
 #wrapper.add(regressor)
 wrapper.save(f'{decomp_dir}/regressor')
