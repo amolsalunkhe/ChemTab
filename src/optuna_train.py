@@ -40,27 +40,27 @@ def main(cfg={}):
     exprExec = PCDNNV2ExperimentExecutor()
     exprExec.setModelFactory(PCDNNV2ModelFactory())
     
-    dataType = 'randomequaltraintestsplit' #'frameworkincludedtrainexcludedtest'
+    dataType = 'randomequaltraintestsplit'
     inputType = 'AllSpecies'
-    dependants = 'AllDependants'
+    dependants = 'AllDependants' if cfg['use_dependants'] else 'SouenerOnly'
     dataSetMethod = f'{inputType}_{dataType}_{dependants}'
-    ipscaler=cfg['ipscaler']#trial.suggest_categorical('input_scaler', scalers_types) #None#'MaxAbsScaler' #"MinMaxScaler"
-    opscaler=cfg['opscaler']#trial.suggest_categorical('output_scaler', scalers_types[:-1]) # QuantileTransformer is invalid
+    ipscaler=cfg['ipscaler']
+    opscaler=cfg['opscaler']
     assert opscaler!='QuantileTransformer' and ipscaler!='QuantileTransformer'
     ZmixPresent = cfg['zmix'] 
     concatenateZmix = 'Y' if ZmixPresent=='Y' else 'N'
-    kernel_constraint = cfg['kernel_constraint']#trial.suggest_categorical('kernel_constraint', ['Y', 'N'])#'N'
-    kernel_regularizer = cfg['kernel_regularizer']#trial.suggest_categorical('kernel_regularizer', ['Y', 'N'])#'N'
-    activity_regularizer = cfg['activity_regularizer']#trial.suggest_categorical('activity_regularizer', ['Y', 'N'])#'N'
-    noOfCpv = cfg['noOfCpv']#trial.suggest_int('noOfCpv', *[3, 10])
+    kernel_constraint = cfg['kernel_constraint']
+    kernel_regularizer = cfg['kernel_regularizer']
+    activity_regularizer = cfg['activity_regularizer']
+    noOfCpv = cfg['noOfCpv']
     noOfNeurons = 53
     
-    exprExec.modelFactory.loss=cfg['loss']#trial.suggest_categorical('loss', ['mae', 'mse', 'R2'])
-    exprExec.modelFactory.activation_func=cfg['activation']#trial.suggest_categorical('activation', ['selu', 'relu'])
-    exprExec.modelFactory.width=cfg['width']#trial.suggest_int('width', *[256, 1024])
-    exprExec.modelFactory.dropout_rate=cfg['dropout_rate']#trial.suggest_float('dropout_rate', *[0, 0.4])
+    exprExec.modelFactory.loss=cfg['loss']
+    exprExec.modelFactory.activation_func=cfg['activation']
+    exprExec.modelFactory.width=cfg['width']
+    exprExec.modelFactory.dropout_rate=cfg['dropout_rate']
     exprExec.modelFactory.use_R2_losses = exprExec.modelFactory.loss=='R2'
-    exprExec.modelFactory.batch_norm_dynamic_pred = cfg['batch_norm_dynamic']#trial.suggest_categorical('batch_norm_dynamic', [True, False]) 
+    exprExec.modelFactory.batch_norm_dynamic_pred = cfg['batch_norm_dynamic']
     exprExec.modelFactory.loss_weights = cfg['loss_weights'] 
     exprExec.modelFactory.W_batch_norm = cfg['W_batch_norm']
         
@@ -68,8 +68,9 @@ def main(cfg={}):
     exprExec.batch_size = cfg['batch_size'] 
     exprExec.epochs_override = cfg['epochs'] 
     exprExec.n_models_override = cfg['n_models_override']
+    exprExec.use_dynamic_pred = cfg['use_dynamic_pred']
     exprExec.use_dependants = dependants == 'AllDependants'
-    exprExec.use_dynamic_pred = True
+    assert (dependants == 'AllDependants') == cfg['use_dependants']
     #exprExec.min_mae = -float('inf')
     
     # initialize experiment executor...
@@ -101,7 +102,8 @@ main.default_cfg = {'zmix': 'N', 'ipscaler': None, 'opscaler': 'MinMaxScaler', '
                     'activation': 'selu', 'width': 512, 'dropout_rate': 0.0, 'batch_norm_dynamic': False,
                     'kernel_constraint': 'N', 'kernel_regularizer': 'N', 'activity_regularizer': 'N', 'batch_size': 256,
                     'loss_weights': {'static_source_prediction': 1.0, 'dynamic_source_prediction': 1.0}}
-main.default_cfg.update({'W_batch_norm': False, 'epochs': 1 if debug_mode else 500, 'train_portion': 0.8, 'n_models_override': 1})
+main.default_cfg.update({'epochs': 1 if debug_mode else 500, 'train_portion': 0.8, 'n_models_override': 1,
+                         'use_dynamic_pred': True, 'use_dependants': True, 'W_batch_norm': False})
 # add variables generally held as constant
 
 # wrapper for main use in optuna (protects against crashes & uses trials to populate cfg dict)
