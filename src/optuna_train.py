@@ -13,13 +13,17 @@ import sys
 # util for getting objects' fields' names
 field_names = lambda x: list(vars(x).keys())
 
-debug_mode = False#True
+debug_mode = True 
 if debug_mode: print('debugging!', file=sys.stderr)
 
 def main(cfg={}):
+    # assert new cfg values are valid (must exist in default)
+    assert all([k in main.default_cfg for k in cfg])
+    
     # update default template with passed config
     full_cfg = deepcopy(main.default_cfg)
     full_cfg.update(cfg)
+    cfg = full_cfg
 
     #Prepare the DataFrame that will be used downstream
     dp = DataPreparer()
@@ -62,8 +66,8 @@ def main(cfg={}):
         
     exprExec.debug_mode = False
     exprExec.batch_size = cfg['batch_size'] 
-    exprExec.epochs_override = 1 if debug_mode else 500
-    exprExec.n_models_override = 1
+    exprExec.epochs_override = cfg['epochs'] 
+    exprExec.n_models_override = cfg['n_models_override']
     exprExec.use_dependants = dependants == 'AllDependants'
     exprExec.use_dynamic_pred = True
     #exprExec.min_mae = -float('inf')
@@ -97,7 +101,7 @@ main.default_cfg = {'zmix': 'N', 'ipscaler': None, 'opscaler': 'MinMaxScaler', '
                     'activation': 'selu', 'width': 512, 'dropout_rate': 0.0, 'batch_norm_dynamic': False,
                     'kernel_constraint': 'N', 'kernel_regularizer': 'N', 'activity_regularizer': 'N', 'batch_size': 256,
                     'loss_weights': {'static_source_prediction': 1.0, 'dynamic_source_prediction': 1.0}}
-main.default_cfg.update({'W_batch_norm': False, 'epochs': 1 if debug_mode else 500, 'train_portion': 0.8})
+main.default_cfg.update({'W_batch_norm': False, 'epochs': 1 if debug_mode else 500, 'train_portion': 0.8, 'n_models_override': 1})
 # add variables generally held as constant
 
 # wrapper for main use in optuna (protects against crashes & uses trials to populate cfg dict)
@@ -125,31 +129,16 @@ def main_safe(trial=None):
         traceback.print_exc()
         print('offending config:', cfg, flush=True)
         raise optuna.exceptions.TrialPruned() # prune this trial if there is an exception!
-study = optuna.create_study()
-study.optimize(main_safe, n_trials=500)
 
-import pickle
-with open('study.pickle', 'wb') as f:
-    pickle.dump(study, f)
-
-print('best params:')
-print(study.best_params)  # E.g. {'x': 2.002108042}
-
-#import pickle
-#with open('history.pickle', 'wb') as f:
-#    pickle.dump(history, f)
-#dm.save_PCA_data(fn='PCA_data_long_train.csv')
-
-#import matplotlib.pyplot as plt
-#
-##  "Accuracy"
-#plt.plot(history.history['R2'])
-#plt.plot(history.history['val_R2'])
-#plt.title('model R2 history')
-#plt.ylabel('R2')
-#plt.xlabel('epoch')
-#plt.legend(['train', 'validation'], loc='upper left')
-#plt.savefig('long_train_R2.png')
+if __name__ == '__main__':
+    study = optuna.create_study()
+    study.optimize(main_safe, n_trials=5 if debug_mode else 500)
+    import pickle
+    with open('study.pickle', 'wb') as f:
+        pickle.dump(study, f)
+    
+    print('best params:')
+    print(study.best_params)  # E.g. {'x': 2.002108042}
 
 #def build_mass_fraction_model(n_species=53):
 #    mass_fraction_pred = keras.models.Sequential()
