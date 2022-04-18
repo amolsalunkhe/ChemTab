@@ -177,7 +177,7 @@ class PCDNNV2ExperimentExecutor:
         errs = []
 
         from tensorflow import keras
-        my_callbacks = [keras.callbacks.EarlyStopping(monitor='val_loss', patience=50, restore_best_weights=True)] # [tf.keras.callbacks.TensorBoard(log_dir='./tb_logs', histogram_freq=1)]
+        my_callbacks = [keras.callbacks.EarlyStopping(monitor='val_loss', patience=epochs//5, restore_best_weights=True)] # [tf.keras.callbacks.TensorBoard(log_dir='./tb_logs', histogram_freq=1)]
 
         for itr in range(1, n):
             self.model = self.modelFactory.rebuild_model()
