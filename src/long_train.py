@@ -42,8 +42,8 @@ def main(cfg):
     ZmixPresent = cfg['zmix'] 
     concatenateZmix = 'Y' if ZmixPresent=='Y' else 'N'
     kernel_constraint = cfg['kernel_constraint']#trial.suggest_categorical('kernel_constraint', ['Y', 'N'])#'N'
-    kernel_regularizer = cfg['kernel_constraint']#trial.suggest_categorical('kernel_regularizer', ['Y', 'N'])#'N'
-    activity_regularizer = cfg['kernel_constraint']#trial.suggest_categorical('activity_regularizer', ['Y', 'N'])#'N'
+    kernel_regularizer = cfg['kernel_regularizer']#trial.suggest_categorical('kernel_regularizer', ['Y', 'N'])#'N'
+    activity_regularizer = cfg['activity_regularizer']#trial.suggest_categorical('activity_regularizer', ['Y', 'N'])#'N'
     noOfCpv = cfg['noOfCpv']#trial.suggest_int('noOfCpv', *[3, 10])
     noOfNeurons = 53
     
