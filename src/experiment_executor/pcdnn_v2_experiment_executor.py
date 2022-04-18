@@ -45,7 +45,8 @@ class PCDNNV2ExperimentExecutor:
         self.predictions = None
         self.errManager = ErrorManager()
         self._modelFactory = None
-        self.min_mae = float('inf')
+        self.best_model_score = -float('inf')
+        self.best_model_path = './models/best_models/'
 
         # override the default number of epochs used
         self.n_epochs_override = None
@@ -53,7 +54,6 @@ class PCDNNV2ExperimentExecutor:
         self.batch_size = 64
         self.use_dependants = False
         self.use_dynamic_pred = False
-        self.use_val_loss_for_best = True
 
     @property
     def modelFactory(self):
@@ -62,6 +62,13 @@ class PCDNNV2ExperimentExecutor:
     @modelFactory.setter
     def modelFactory(self, modelFactory):
         self._modelFactory = dynamic_rebuild_wrap(modelFactory)
+        
+        try:
+            # immediately update best model score as soon as possible
+            model, experiment_record = self._modelFactory.openBestModel()
+            self.best_model_score = experiment_record['model_R2']
+        except OSError:
+            pass
 
     def setModel(self, model):
         self.model = model
@@ -105,25 +112,25 @@ class PCDNNV2ExperimentExecutor:
                                                 'input_data_cols': self.dm.input_data_cols,
                                                 'data_manager': self.dm}
 
-        history = self.fitModelAndCalcErr(self.dm, concatenateZmix)
+        cfg_score = self.fitModelAndCalcErr(self.dm, concatenateZmix)
 
         # ['Model','Dataset','Cpv Type','#Cpv',"ZmixExists",'MAE','TAE','MSE','TSE','#Pts','FitTime','PredTime',
         # 'MAX-MAE','MAX-TAE','MAX-MSE','MAX-TSE','MIN-MAE','MIN-TAE','MIN-MSE','MIN-TSE']
-        experimentResults = {'Model': self.modelType, 'Dataset': dataType, 'Cpv Type': inputType,
+        experimentRecord = {'Model': self.modelType, 'Dataset': dataType, 'Cpv Type': inputType,
                              'Dependants': dependants, '#Cpv': noOfCpv,
                              'ZmixExists': ZmixPresent, '#Pts': self.df_err['#Pts'].mean(), 'FitTime': self.fit_time,
                              'PredTime': self.pred_time,
                              'KernelConstraintExists': kernel_constraint, 'KernelRegularizerExists': kernel_regularizer,
                              'ActivityRegularizerExists': activity_regularizer,
                              'OPScaler': opscaler}
-        experimentResults.update(self.errManager.getExperimentErrorResults(self.df_err))
-        self.df_experimentTracker = self.df_experimentTracker.append(experimentResults, ignore_index=True)
+        experimentRecord.update(self.errManager.getExperimentErrorResults(self.df_err))
+        self.df_experimentTracker = self.df_experimentTracker.append(experimentRecord, ignore_index=True)
 
         printStr = "self.modelType: " + self.modelType + " dataType: " + dataType + " inputType:" + inputType + \
                    " noOfCpv:" + str(noOfCpv) + " ZmixPresent:" + ZmixPresent + " MAE:" + str(self.df_err['MAE'].min())
 
         print(printStr)
-        return history  # self.df_err
+        return cfg_score
 
     def prepare_model_data_dicts(self, dm=None, concatenateZmix='N'):
         if dm is None: dm = self.dm
@@ -153,6 +160,33 @@ class PCDNNV2ExperimentExecutor:
 
         return input_dict_train, input_dict_test, output_dict_train, output_dict_test
 
+    # computes "final score" of the model (pessimistic R^2) used to determine which model is best
+    # computed from model training history, we don't care that technically best weights are restored...
+    def compute_model_score(self, history, beta=0.7):
+        history = history.history
+        # to compute 'final R^2 score', we take the exponentially weighted average of the 2 val_R2 metrics then choose the lowest one (pessimistic estimate)
+        val_R2s = [0,0]
+        for val_R2_split, val_R2 in zip(history['val_dynamic_source_prediction_R2_split'], history['val_emb_and_regression_model_R2']):
+            val_R2s[0]=val_R2s[0]*(1-beta) + val_R2*beta
+            val_R2s[1]=val_R2s[1]*(1-beta) + val_R2_split*beta
+        final_score = min(val_R2s) if self.use_dynamic_pred else val_R2s[0]  
+        # else just ignore split & use static
+        return final_score
+
+    #def save_current_model_as_best(path=None):
+    #    if not path: path = self.best_model_path+self.modelFactory.modelName 
+    #    self.best_model_score = self.compute_model_score(self.history)
+
+    #    concatenateZmix = self.modelFactory.experimentRecord['concatenateZmix']
+    #    input_dict_train, input_dict_test, output_dict_train, output_dict_test = \
+    #        self.prepare_model_data_dicts(self.dm, concatenateZmix)
+
+    #    val_losses = self.model.evaluate(input_dict_test, output_dict_test, verbose=1, return_dict=True)
+    #    experiment_results = {'val_losses': val_losses, 'model_R2': self.best_model_score, 'history': history.history}
+    #    self.modelFactory.saveCurrModelAsBestModel(path=path, experiment_results=experiment_results)
+    #    self.dm.include_PCDNNV2_PCA_data(self.modelFactory, concatenateZmix=concatenateZmix)
+    #    self.dm.save_PCA_data(fn=path+'/PCA_data.csv') 
+
     def fitModelAndCalcErr(self, dm=None, concatenateZmix='N'):
         self.model.summary(expand_nested=True)
 
@@ -175,6 +209,7 @@ class PCDNNV2ExperimentExecutor:
         fit_times = []
         pred_times = []
         errs = []
+        model_R2_scores = []
 
         from tensorflow import keras
         my_callbacks = [keras.callbacks.EarlyStopping(monitor='val_loss', patience=epochs//5, restore_best_weights=True)] # [tf.keras.callbacks.TensorBoard(log_dir='./tb_logs', histogram_freq=1)]
@@ -184,9 +219,10 @@ class PCDNNV2ExperimentExecutor:
             print(f'training model: {itr}')
             t = time.process_time()
 
-            history = self.model.fit(input_dict_train, output_dict_train, verbose=1,
+            self.history = self.model.fit(input_dict_train, output_dict_train, verbose=1,
                                      batch_size=self.batch_size, epochs=epochs, shuffle=True,
-                                     validation_data=(input_dict_test, output_dict_test),
+                                     validation_split=1-self.dm.train_portion,
+                                     #validation_data=(input_dict_test, output_dict_test),
                                      callbacks=my_callbacks)
             # self.plot_loss_physics_and_regression(history)
 
@@ -202,26 +238,27 @@ class PCDNNV2ExperimentExecutor:
             Y_pred_raw = Y_pred = predictions['static_source_prediction']
             if Y_scaler is not None:
                 Y_pred_raw = Y_scaler.inverse_transform(Y_pred)
-            # sns.residplot(Y_pred.flatten(), getResiduals(Y_test,Y_pred))
 
             # select only static source-ener term for official error computation
             curr_errs = self.errManager.computeError(Y_pred_raw[:, self.dm.souener_index],
                                                      Y_test_raw[:, self.dm.souener_index])
+            model_R2 = self.compute_model_score(self.history)
+            curr_errs['model_R2'] = model_R2
             errs.append(curr_errs)
-            
-            # losses[0] == history.history['val_loss'][-1] when early_stopping is off, 
-            # but when it is on it corrects for weight restoration and gives us correct final validation loss
-            val_losses = self.model.evaluate(input_dict_test, output_dict_test, verbose=1, return_dict=True)
-            model_error = val_losses['loss'] if self.use_val_loss_for_best else curr_errs['MAE']
-            # model_error is used to determine which model is 'best'
+            model_R2_scores.append(model_R2)
 
-            # in case we are using a container model for dynamic prediction extract base model			  
-            self.model = self.modelFactory.extractEmbRegressor()
+            # Now saving container with model!
+            ## in case we are using a container model for dynamic prediction extract base model			  
+            #self.model = self.modelFactory.extractEmbRegressor()
 
-            if model_error < self.min_mae:
-                self.min_mae = model_error 
-                self.modelFactory.saveCurrModelAsBestModel()
+            if model_R2 > self.best_model_score:
+                self.best_model_score = model_R2
+                path = self.best_model_path+self.modelFactory.modelName
+                val_losses = self.model.evaluate(input_dict_test, output_dict_test, verbose=1, return_dict=True)
+                experiment_results = {'val_losses': val_losses, 'model_R2': self.best_model_score, 'history': history.history}
+                self.modelFactory.saveCurrModelAsBestModel(path=path, experiment_results=experiment_results)
                 self.dm.include_PCDNNV2_PCA_data(self.modelFactory, concatenateZmix=concatenateZmix)
+                self.dm.save_PCA_data(fn=path+'/PCA_data.csv')
 
         self.fit_time = sum(fit_times) / len(fit_times)
         self.pred_time = sum(pred_times) / len(pred_times)
@@ -231,7 +268,7 @@ class PCDNNV2ExperimentExecutor:
         self.df_err = pd.DataFrame(errs)
 
         print(self.df_err.describe())
-        return history
+        return np.mean(model_R2_scores)
 
     def executeExperiments(self, dataManager, modelType, df_experimentTracker):
         self.dm = dataManager

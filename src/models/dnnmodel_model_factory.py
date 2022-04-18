@@ -10,6 +10,7 @@ import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
 from tensorflow.keras.callbacks import EarlyStopping
+from copy import deepcopy
 
 # patient early stopping
 es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=45)
@@ -18,17 +19,25 @@ es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=45)
 class DNNModelFactory:
     def __init__(self):
         self.width = 512
-        self.dropout_rate = 0.5
+        self.dropout_rate = 0.0
         self.regressor_batch_norm = False
         self.regressor_skip_connections = False
         self.activation_func='relu'
         self.model = None
-        self.experimentSettings = None
+        self.experimentRecord = {} 
         self.modelName = None
         self.concreteClassCustomObject = None
         self.debug_mode = False
         print("Parent DNNModelFactory Instantiated")
-    
+   
+    @property # for backwards compatibility
+    def experimentSettings(self):
+        return self.experimentRecord
+
+    @experimentSettings.setter # for backwards compatibility
+    def experimentSettings(self, val):
+        self.experimentRecord = val
+
     def setDataSetMethod(self,dataSetMethod):
         self.dataSetMethod = dataSetMethod
 
@@ -126,24 +135,18 @@ class DNNModelFactory:
 
         return regressor_model(x)
       
-    def saveCurrModelAsBestModel(self, path=None):
+    def saveCurrModelAsBestModel(self, path=None, experiment_results={}):
         if not path: path = './models/best_models/'+self.modelName 
         import os
         os.system('mkdir -p '+path)
+        self.experimentRecord.update(experiment_results)
 
-        # open a file, where you ant to store the data
-        file = open(path + "/experimentSettings", "wb")
-        
-        # dump information to that file
-        pickle.dump(self.experimentSettings, file)
-        
-        # close the file
-        file.close()
-        
-        #self.model.save("models\\best_models\\"+self.modelName)
+        # open a file, where you want to store the data
+        with open(path + "/experimentRecord", "wb") as file:
+            pickle.dump(self.experimentRecord, file)
+       
         filePath = path +"/model.h5"
         tf.keras.models.save_model(self.model, filePath, overwrite=True, include_optimizer=False, save_format='h5')
-        
         
     def openBestModel(self):
         #print("current directory" + os.getcwd())
@@ -151,9 +154,8 @@ class DNNModelFactory:
         self.model = tf.keras.models.load_model(filePath, custom_objects=self.concreteClassCustomObject)
         
         # open a file, where you stored the pickled data
-        file = open("./models/best_models/"+self.modelName+"/experimentSettings", "rb")
+        file = open("./models/best_models/"+self.modelName+"/experimentRecord", "rb")
         
-        # dump information to that file
         self.experimentSettings = pickle.load(file)
         
         # close the file
