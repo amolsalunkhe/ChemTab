@@ -1,9 +1,3 @@
-"""
-Created on Wed Aug  4 17:50:06 2021
-
-@author: amol
-"""
-
 # set TF GPU memory growth so that it doesn't hog everything at once
 import tensorflow as tf
 physical_devices = tf.config.list_physical_devices('GPU')
@@ -35,7 +29,7 @@ dataType = 'randomequaltraintestsplit' #'frameworkincludedtrainexcludedtest'
 inputType = 'AllSpecies'
 dependants = 'AllDependants'
 dataSetMethod = f'{inputType}_{dataType}_{dependants}'
-opscaler=ipscaler = None#"MaxAbsScaler"#"MinMaxScaler" #'PositiveLogNormal'
+opscaler=ipscaler = None#"MaxAbsScaler"#"MinMaxScaler" 
 opscaler='MinMaxScaler'
 ZmixPresent = 'N'
 concatenateZmix = 'Y' if ZmixPresent=='Y' else 'N'
@@ -46,16 +40,18 @@ noOfCpv = 4
 noOfNeurons = 53
 
 exprExec.modelFactory.loss='mae'
-exprExec.modelFactory.activation_func='relu'
+exprExec.modelFactory.activation_func='selu'
 exprExec.modelFactory.width=512
 exprExec.modelFactory.dropout_rate=0#.5
+exprExec.modelFactory.W_batch_norm = False
 exprExec.debug_mode = False
-exprExec.batch_size = 512 
-exprExec.epochs_override = 10000
-exprExec.n_models_override = 1
+exprExec.batch_size = 1024 
+exprExec.epochs_override = 10000 
+exprExec.n_models_override = 1#5 
 exprExec.use_dependants = True
 exprExec.use_dynamic_pred = True
-exprExec.min_mae = -float('inf')
+exprExec.use_val_loss_for_best = True
+#exprExec.min_mae = -float('inf')
 
 # initialize experiment executor...
 exprExec.dm = dm
@@ -63,12 +59,11 @@ exprExec.df_experimentTracker = pd.DataFrame()
 exprExec.modelType = 'PCDNNV2'
 
 # this will save the model as the best (since it starts with min_mae=-inf), but that is ok because it will also be the best
-#assert exprExec.epochs_override >= 10000 # ensure this model is the best!
+assert exprExec.epochs_override >= 10000 # ensure this model is the best!
 history = exprExec.executeSingleExperiment(noOfNeurons,dataSetMethod,dataType,inputType,ZmixPresent,noOfCpv,concatenateZmix,kernel_constraint,
                                             kernel_regularizer,activity_regularizer,opscaler=opscaler, ipscaler=ipscaler)
 exprExec.modelFactory.saveCurrModelAsBestModel('./long_train_best')
 dm.save_PCA_data(fn='./long_train_best/PCA_data_long_train.csv')
-#df.to_csv('PCA_data.csv', index=False)
 
 #import matplotlib.pyplot as plt
 #
