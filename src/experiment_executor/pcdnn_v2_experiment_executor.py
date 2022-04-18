@@ -53,7 +53,7 @@ class PCDNNV2ExperimentExecutor:
         self.batch_size = 64
         self.use_dependants = False
         self.use_dynamic_pred = False
-        self.use_val_loss_for_best = False
+        self.use_val_loss_for_best = True
 
     @property
     def modelFactory(self):
