@@ -10,7 +10,6 @@ import sys, os
 import pandas as pd
 from main import *
 
-from models.pcdnnv2_model_factory import get_metric_dict 
 
 #dp = DataPreparer() #Prepare the DataFrame that will be used downstream
 #df = dp.getDataframe()
@@ -20,6 +19,7 @@ exprExec = PCDNNV2ExperimentExecutor()
 exprExec.setModelFactory(PCDNNV2ModelFactory())
 bestModel, experimentSettings = exprExec.modelFactory.openBestModel()
 assert experimentSettings['ipscaler']==None # we cannot center data, as it makes transform non-linear
+bestModel = exprExec.modelFactory.getEmbRegressor() # shed container model
 
 #dm.createTrainTestData(experimentSettings['dataSetMethod'], experimentSettings['noOfCpv'],
 #                       experimentSettings['ipscaler'], experimentSettings['opscaler'])
@@ -35,35 +35,7 @@ get_layers_by_name = lambda model: {layer.name: layer for layer in model.layers}
 layers_by_name = get_layers_by_name(composite_model)
 
 linear_embedder = layers_by_name['linear_embedding']
-
-# this integrates a batch norm layer & input_scaler into simple W mat & bias
-def compute_simplified_W_and_b(linear_embedder, input_scaler):
-    W_layer = linear_embedder.get_layer('linear_embedding')
-    batch_layer = linear_embedder.get_layer('batch_norm')
-
-    from sklearn.preprocessing import MaxAbsScaler
-
-    weights = batch_layer.weights
-    assert len(weights)==2
-    assert type(input_scaler) is MaxAbsScaler
-
-    W = W_layer.weights[0].numpy().T # transpose so this follows standard matrix conventions
-    vec_bias = weights[0].numpy().reshape(-1,1)
-
-    # compute W1
-    sigma_scale_mat = np.diag(1/np.sqrt(weights[1])) # = sigma^-1
-    W1 = W.dot(sigma_scale_mat)
-
-    # use W1
-    M_scale_mat = np.diag(1/np.abs(input_scaler.scale_)) # = |M|^-1
-    W2 = W1.dot(M_scale_mat) # apply input scaling implicitly w/ matrix
-    vec_bias = -W1.dot(vec_bias)
-
-    W2 = W2.T # put W2 back in original weird keras format (e.g x.T*W+b=y)
-    return W2, vec_bias.squeeze()
-
-w, vec_bias = compute_simplified_W_and_b(linear_embedder, dm.inputScaler)
-
+w = np.asarray(get_layers_by_name(linear_embedder)['linear_embedding'].weights[0])
 print(f'linear embedder weights shape: {w.shape}') # shape is [53, nCPV]
 
 def derive_Zmix_weights(df):
