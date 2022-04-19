@@ -80,20 +80,17 @@ def main(cfg={}):
     
     # this will save the model as the best (since it starts with min_mae=-inf), but that is ok because it will also be the best
     #assert exprExec.epochs_override >= 10000 # ensure this model is the best!
-    history = exprExec.executeSingleExperiment(noOfNeurons,dataSetMethod,dataType,inputType,ZmixPresent,noOfCpv,concatenateZmix,kernel_constraint,
-                                               kernel_regularizer,activity_regularizer,opscaler=opscaler, ipscaler=ipscaler)
-    history = history.history
+    final_score = exprExec.executeSingleExperiment(noOfNeurons,dataSetMethod,dataType,inputType,ZmixPresent,noOfCpv,concatenateZmix,kernel_constraint,
+                                                   kernel_regularizer,activity_regularizer,opscaler=opscaler, ipscaler=ipscaler)
     
-    # to compute 'final R^2 score', we take the exponentially weighted average of the 2 val_R2 metrics then choose the lowest one (pessimistic estimate)
-    val_R2s = [0,0]
-    beta = 0.7
-    for val_R2_split, val_R2 in zip(history['val_dynamic_source_prediction_R2_split'], history['val_emb_and_regression_model_R2']):
-        val_R2s[0]=val_R2s[0]*(1-beta) + val_R2_split*beta
-        val_R2s[1]=val_R2s[1]*(1-beta) + val_R2*beta
-    final_score = min(val_R2s)
+    ## to compute 'final R^2 score', we take the exponentially weighted average of the 2 val_R2 metrics then choose the lowest one (pessimistic estimate)
+    #val_R2s = [0,0]
+    #beta = 0.7
+    #for val_R2_split, val_R2 in zip(history['val_dynamic_source_prediction_R2_split'], history['val_emb_and_regression_model_R2']):
+    #    val_R2s[0]=val_R2s[0]*(1-beta) + val_R2_split*beta
+    #    val_R2s[1]=val_R2s[1]*(1-beta) + val_R2*beta
+    #final_score = min(val_R2s)
     print(final_score)
-    print(val_R2s)
-    print(history)
     main.exprExec = exprExec # this may be of interest to the caller
     return final_score
 
@@ -102,7 +99,7 @@ main.default_cfg = {'zmix': 'N', 'ipscaler': None, 'opscaler': 'MinMaxScaler', '
                     'activation': 'selu', 'width': 512, 'dropout_rate': 0.0, 'batch_norm_dynamic': False,
                     'kernel_constraint': 'N', 'kernel_regularizer': 'N', 'activity_regularizer': 'N', 'batch_size': 256,
                     'loss_weights': {'static_source_prediction': 1.0, 'dynamic_source_prediction': 1.0}}
-main.default_cfg.update({'epochs': 1 if debug_mode else 500, 'train_portion': 0.8, 'n_models_override': 1,
+main.default_cfg.update({'epochs': 10 if debug_mode else 500, 'train_portion': 0.8, 'n_models_override': 1,
                          'use_dynamic_pred': True, 'use_dependants': True, 'W_batch_norm': False})
 # add variables generally held as constant
 
