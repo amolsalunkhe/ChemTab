@@ -12,11 +12,11 @@ from optuna_train import *
 field_names = lambda x: list(vars(x).keys())
 
 # you override these values based with the config values you pass (via dict.update())
-cfg = {'zmix': 'N', 'ipscaler': None, 'opscaler': 'MinMaxScaler', 'noOfCpv': 4, 'loss': 'R2',
-       'activation': 'selu', 'width': 512, 'dropout_rate': 0.0, 'batch_norm_dynamic': False,
-       'kernel_constraint': 'N', 'kernel_regularizer': 'N', 'activity_regularizer': 'N', 'batch_size': 256,
-       'loss_weights': {'static_source_prediction': 1.0, 'dynamic_source_prediction': 1.0},
-       'epochs': 10000}
+cfg = {'zmix': 'N', 'ipscaler': None, 'opscaler': None, 'noOfCpv': 4, 'loss': 'R2',
+       'activation': 'selu', 'width': 800, 'dropout_rate': 0.25, 'batch_norm_dynamic': False,
+       'kernel_constraint': 'Y', 'kernel_regularizer': 'Y', 'activity_regularizer': 'N', 'batch_size': 400,
+       'loss_weights': {'static_source_prediction': 3.0, 'dynamic_source_prediction': 1.0}}
+cfg['epochs'] = 10000 # special because it should always be large
 
 final_score = main(cfg)
 print('model final (R^2) score:', final_score)
