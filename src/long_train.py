@@ -19,6 +19,7 @@ cfg = {'zmix': 'N', 'ipscaler': None, 'opscaler': 'MinMaxScaler', 'noOfCpv': 4, 
        'epochs': 10000}
 
 final_score = main(cfg)
+print('model final (R^2) score:', final_score)
 exprExec = main.exprExec
 dm = exprExec.dm
 exprExec.modelFactory.saveCurrModelAsBestModel('./long_train_best')

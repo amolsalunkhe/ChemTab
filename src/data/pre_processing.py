@@ -15,10 +15,10 @@ from sklearn.decomposition import PCA, SparsePCA
 # demonstrate data normalization with sklearn
 
 class DataPreparer:
-    def __init__(self):
+    def __init__(self, fn='../NewData_flames_data_with_L1_L2_errors_CH4-AIR_without_trimming(SouSpec_Included).txt'):
         # read the data into a dataframe
-        # self.df = pd.read_csv('../NewData_flames_data_with_L1_L2_errors_CH4-AIR_with_trimming.txt')
-        self.df = pd.read_csv('../NewData_flames_data_with_L1_L2_errors_CH4-AIR_without_trimming(SouSpec_Included).txt')
+        # self.df = pd.read_csv('../NewData_flames_data_with_L1_L2_errors_CH4-AIR_without_trimming(SouSpec_Included).txt')
+        self.df = pd.read_csv(fn)
         #self.df = pd.read_csv('../full_master_simit.csv').sample(frac=1.0)
 
         #self.df = pd.read_csv('./real_data_augmented.csv').sample(frac=1.0)
@@ -92,7 +92,8 @@ class DataPreparer:
 
         PCAs = PCA_model.predict({"species_input": X})
         CPV_sources = PCA_model.predict({"species_input": sources})
-        predictions = model_factory.model.predict(inputs)['static_source_prediction'].squeeze()
+        all_predictions = model_factory.getEmbRegressor().predict(inputs)
+        predictions = all_predictions['static_source_prediction'].squeeze()
         Y = Y.squeeze()  # you get nasty broadcast errors when you don't squeeze Y & predictions!
 
         if dm.outputScaler:  # These errors need to be raw
@@ -116,8 +117,10 @@ class DataPreparer:
 
         # We assume & assert elsewhere that index of souener is 0
         # And Amol told me to make error only of souener prediction
-        self.df['L1_ERR'] = L1_ERR[:, dm.souener_index]
-        self.df['L2_ERR'] = L2_ERR[:, dm.souener_index]
+        self.df['L1_ERR_souener'] = L1_ERR[:, dm.souener_index]
+        self.df['L2_ERR_souener'] = L2_ERR[:, dm.souener_index]
+        self.df['L1_ERR'] = np.mean(L1_ERR, axis=1)
+        self.df['L1_ERR'] = np.mean(L2_ERR, axis=1)
         warnings.warn('model error is only recored for souener prediction')
 
     def createPCAs(self):
