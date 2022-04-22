@@ -13,7 +13,7 @@ import sys
 # util for getting objects' fields' names
 field_names = lambda x: list(vars(x).keys())
 
-debug_mode = True 
+debug_mode = False 
 if debug_mode: print('debugging!', file=sys.stderr)
 
 def main(cfg={}):
@@ -26,7 +26,7 @@ def main(cfg={}):
     cfg = full_cfg
 
     #Prepare the DataFrame that will be used downstream
-    dp = DataPreparer()
+    dp = DataPreparer(cfg['data_fn'])
     dp.createPCAs()
     dp.sparsePCAs()
     dp.zmixOrthogonalPCAs()
@@ -99,8 +99,10 @@ main.default_cfg = {'zmix': 'N', 'ipscaler': None, 'opscaler': 'MinMaxScaler', '
                     'activation': 'selu', 'width': 512, 'dropout_rate': 0.0, 'batch_norm_dynamic': False,
                     'kernel_constraint': 'N', 'kernel_regularizer': 'N', 'activity_regularizer': 'N', 'batch_size': 256,
                     'loss_weights': {'static_source_prediction': 1.0, 'dynamic_source_prediction': 1.0}}
-main.default_cfg.update({'epochs': 10 if debug_mode else 500, 'train_portion': 0.8, 'n_models_override': 1,
-                         'use_dynamic_pred': True, 'use_dependants': True, 'W_batch_norm': False})
+constants = {'epochs': 10 if debug_mode else 500, 'train_portion': 0.8, 'n_models_override': 1,
+             'use_dynamic_pred': True, 'use_dependants': True, 'data_fn': '../NewData_flames_data_with_L1_L2_errors_CH4-AIR_without_trimming(SouSpec_Included).txt',
+             'W_batch_norm': False}
+main.default_cfg.update(constants)
 # add variables generally held as constant
 
 # wrapper for main use in optuna (protects against crashes & uses trials to populate cfg dict)
@@ -130,7 +132,7 @@ def main_safe(trial=None):
         raise optuna.exceptions.TrialPruned() # prune this trial if there is an exception!
 
 if __name__ == '__main__':
-    study = optuna.create_study()
+    study = optuna.create_study(direction='maximize')
     study.optimize(main_safe, n_trials=5 if debug_mode else 500)
     import pickle
     with open('study.pickle', 'wb') as f:
