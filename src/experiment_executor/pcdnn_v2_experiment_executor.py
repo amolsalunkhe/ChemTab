@@ -67,7 +67,7 @@ class PCDNNV2ExperimentExecutor:
             # immediately update best model score as soon as possible
             model, experiment_record = self._modelFactory.openBestModel()
             self.best_model_score = experiment_record['model_R2']
-        except OSError:
+        except (OSError, KeyError) as e:
             pass
 
     def setModel(self, model):
