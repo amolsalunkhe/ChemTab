@@ -119,9 +119,14 @@ class DataPreparer:
         # And Amol told me to make error only of souener prediction
         self.df['L1_ERR_souener'] = L1_ERR[:, dm.souener_index]
         self.df['L2_ERR_souener'] = L2_ERR[:, dm.souener_index]
-        self.df['L1_ERR'] = np.mean(L1_ERR, axis=1)
-        self.df['L1_ERR'] = np.mean(L2_ERR, axis=1)
-        warnings.warn('model error is only recored for souener prediction')
+        self.df['L1_ERR_static'] = np.mean(L1_ERR, axis=1)
+        self.df['L2_ERR_static'] = np.mean(L2_ERR, axis=1)
+
+        # add dynamic prediction error as well 
+        L1_ERR_dynamic = np.abs(all_predictions['dynamic_source_prediction'] - CPV_sources)
+        self.df['L1_ERR_dynamic'] = np.mean(L1_ERR_dynamic, axis=1)
+        self.df['L2_ERR_dynamic'] = np.mean(L1_ERR_dynamic**2, axis=1)
+
 
     def createPCAs(self):
 
