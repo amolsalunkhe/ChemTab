@@ -100,7 +100,8 @@ main.default_cfg = {'zmix': 'N', 'ipscaler': None, 'opscaler': 'MinMaxScaler', '
                     'kernel_constraint': 'N', 'kernel_regularizer': 'N', 'activity_regularizer': 'N', 'batch_size': 256,
                     'loss_weights': {'static_source_prediction': 1.0, 'dynamic_source_prediction': 1.0}}
 constants = {'epochs': 10 if debug_mode else 500, 'train_portion': 0.8, 'n_models_override': 1,
-             'use_dynamic_pred': True, 'use_dependants': True, 'data_fn': '../NewData_flames_data_with_L1_L2_errors_CH4-AIR_without_trimming(SouSpec_Included).txt',
+             'use_dynamic_pred': True, 'use_dependants': True, 'data_fn': '../wax_master_simit.csv',
+             #'../NewData_flames_data_with_L1_L2_errors_CH4-AIR_without_trimming(SouSpec_Included).txt',
              'W_batch_norm': False}
 main.default_cfg.update(constants)
 # add variables generally held as constant
@@ -132,14 +133,19 @@ def main_safe(trial=None):
         raise optuna.exceptions.TrialPruned() # prune this trial if there is an exception!
 
 if __name__ == '__main__':
-    study = optuna.create_study(direction='maximize')
+    import os
+    study_name = os.environ.setdefault('STUDY_NAME', 'optuna')
+    study = optuna.create_study(study_name=study_name, direction='maximize')
     study.optimize(main_safe, n_trials=5 if debug_mode else 500)
     import pickle
-    with open('study.pickle', 'wb') as f:
+    with open(f'{study_name}_study.pickle', 'wb') as f:
         pickle.dump(study, f)
-    
-    print('best params:')
-    print(study.best_params)  # E.g. {'x': 2.002108042}
+
+    print('='*50)
+    print('study:', study_name, 'complete!')
+    print('best value:', study.best_value)
+    print('best params:', study.best_params)  # E.g. {'x': 2.002108042}
+    print('='*50)
 
 #def build_mass_fraction_model(n_species=53):
 #    mass_fraction_pred = keras.models.Sequential()
