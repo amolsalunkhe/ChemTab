@@ -97,19 +97,19 @@ def main(cfg={}):
 # you override these values based with the config values you pass (via dict.update())
 main.default_cfg = {'zmix': 'N', 'ipscaler': None, 'opscaler': 'MinMaxScaler', 'noOfCpv': 4, 'loss': 'R2',
                     'activation': 'selu', 'width': 512, 'dropout_rate': 0.0, 'batch_norm_dynamic': False,
-                    'kernel_constraint': 'N', 'kernel_regularizer': 'N', 'activity_regularizer': 'N', 'batch_size': 256,
+                    'batch_size': 256, 'kernel_regularizer': 'N', 'activity_regularizer': 'N', #'kernel_constraint': 'N', 
                     'loss_weights': {'static_source_prediction': 1.0, 'dynamic_source_prediction': 1.0}}
 constants = {'epochs': 10 if debug_mode else 500, 'train_portion': 0.8, 'n_models_override': 1,
-             'use_dynamic_pred': True, 'use_dependants': True, 'data_fn': '../wax_master_simit.csv',
-             #'../NewData_flames_data_with_L1_L2_errors_CH4-AIR_without_trimming(SouSpec_Included).txt',
-             'W_batch_norm': False}
+             'use_dynamic_pred': True, 'use_dependants': True, 'data_fn': #'../wax_master_simit.csv',
+             '../NewData_flames_data_with_L1_L2_errors_CH4-AIR_without_trimming(SouSpec_Included).txt',
+             'W_batch_norm': False, 'kernel_constraint': 'N'}
 main.default_cfg.update(constants)
 # add variables generally held as constant
 
 # wrapper for main use in optuna (protects against crashes & uses trials to populate cfg dict)
 import traceback
 def main_safe(trial=None):
-    # default config
+    # (no changes default config)
     cfg = {}
 
     if trial:
@@ -120,7 +120,8 @@ def main_safe(trial=None):
                'loss': trial.suggest_categorical('loss', ['mae', 'mse', 'R2']), 'activation': trial.suggest_categorical('activation', ['selu', 'relu']),
                'width': trial.suggest_int('width', *[256, 1024]), 'dropout_rate': trial.suggest_float('dropout_rate', *[0, 0.4]),
                'batch_norm_dynamic': trial.suggest_categorical('batch_norm_dynamic', [True, False]),
-               'kernel_constraint': trial.suggest_categorical('kernel_constraint', ['Y', 'N']), 'kernel_regularizer': trial.suggest_categorical('kernel_regularizer', ['Y', 'N']),
+               #'kernel_constraint': trial.suggest_categorical('kernel_constraint', ['Y', 'N']),
+               'kernel_regularizer': trial.suggest_categorical('kernel_regularizer', ['Y', 'N']),
                'activity_regularizer': trial.suggest_categorical('activity_regularizer', ['Y', 'N']), 'batch_size': trial.suggest_int('batch_size', *[128, 1028]),
                'loss_weights': {'static_source_prediction': trial.suggest_float('static_loss_weight', *[0.1, 10.0]),
                                 'dynamic_source_prediction': trial.suggest_float('dynamic_loss_weight', *[0.1, 10.0])}} 
@@ -136,7 +137,7 @@ if __name__ == '__main__':
     import os
     study_name = os.environ.setdefault('STUDY_NAME', 'optuna')
     study = optuna.create_study(study_name=study_name, direction='maximize')
-    study.optimize(main_safe, n_trials=5 if debug_mode else 500)
+    study.optimize(main_safe, n_trials=5 if debug_mode else 1000)
     import pickle
     with open(f'{study_name}_study.pickle', 'wb') as f:
         pickle.dump(study, f)

@@ -14,8 +14,9 @@ from tensorflow.keras.callbacks import EarlyStopping
 # patient early stopping
 es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=45)
 
-from tensorflow.keras.constraints import UnitNorm, Constraint
+from tensorflow.keras.constraints import UnitNorm, Constraint, NonNeg
 from .dnnmodel_model_factory import DNNModelFactory
+from warnings import warn
 
 
 class WeightsOrthogonalityConstraint(Constraint):
@@ -201,9 +202,11 @@ class PCDNNV2ModelFactory(DNNModelFactory):
         self.use_dynamic_pred = False
         self.batch_norm_dynamic_pred = False
 
-    def get_layer_constraints(self, noOfCpv, kernel_constraint='Y', kernel_regularizer='Y', activity_regularizer='Y'):
+    def get_layer_constraints(self, noOfCpv, kernel_constraint='N', kernel_regularizer='Y', activity_regularizer='Y'):
         layer_constraints = {}
+        layer_constraints['kernel_constraint'] = NonNeg() # required for numerical reasons!
         if kernel_constraint == 'Y':
+            raise NotImplementedError('UnitNorm Kernel Constraint is no longer supported, now a mandatory non-negative kernel constraint is used. This makes the "kernel_constraint" cfg option invalid')
             layer_constraints['kernel_constraint'] = UnitNorm(axis=0)
         if kernel_regularizer == 'Y':
             layer_constraints['kernel_regularizer'] = WeightsOrthogonalityConstraint(noOfCpv, weightage=1., axis=0)
@@ -220,7 +223,7 @@ class PCDNNV2ModelFactory(DNNModelFactory):
         return layer(x)
 
     def build_and_compile_model(self, noOfInputNeurons, noOfOutputNeurons, noOfCpv, concatenateZmix,
-                                kernel_constraint='Y', kernel_regularizer='Y', activity_regularizer='Y'):
+                                kernel_constraint='N', kernel_regularizer='Y', activity_regularizer='Y'):
         print(noOfInputNeurons, noOfCpv, concatenateZmix, kernel_constraint, kernel_regularizer, activity_regularizer)
 
         # The following 2 lines make up the Auto-encoder
