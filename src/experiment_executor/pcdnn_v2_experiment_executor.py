@@ -9,6 +9,7 @@ import time
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import warnings
 
 from .error_manager import ErrorManager
 from tensorflow import keras
@@ -68,7 +69,7 @@ class PCDNNV2ExperimentExecutor:
             model, experiment_record = self._modelFactory.openBestModel()
             self.best_model_score = experiment_record['model_R2']
         except (OSError, KeyError) as e:
-            pass
+            warnings.warn('unable to check previous "best models" score!')
 
     def setModel(self, model):
         self.model = model
