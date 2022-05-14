@@ -9,6 +9,7 @@ from copy import deepcopy
 from main import *
 import optuna
 import sys
+import numpy as np
 
 # util for getting objects' fields' names
 field_names = lambda x: list(vars(x).keys())
@@ -83,13 +84,6 @@ def main(cfg={}):
     final_score = exprExec.executeSingleExperiment(noOfNeurons,dataSetMethod,dataType,inputType,ZmixPresent,noOfCpv,concatenateZmix,kernel_constraint,
                                                    kernel_regularizer,activity_regularizer,opscaler=opscaler, ipscaler=ipscaler)
     
-    ## to compute 'final R^2 score', we take the exponentially weighted average of the 2 val_R2 metrics then choose the lowest one (pessimistic estimate)
-    #val_R2s = [0,0]
-    #beta = 0.7
-    #for val_R2_split, val_R2 in zip(history['val_dynamic_source_prediction_R2_split'], history['val_emb_and_regression_model_R2']):
-    #    val_R2s[0]=val_R2s[0]*(1-beta) + val_R2_split*beta
-    #    val_R2s[1]=val_R2s[1]*(1-beta) + val_R2*beta
-    #final_score = min(val_R2s)
     print(final_score)
     main.exprExec = exprExec # this may be of interest to the caller
     return final_score
@@ -100,8 +94,8 @@ main.default_cfg = {'opscaler': 'MinMaxScaler', 'noOfCpv': 4, 'loss': 'R2',
                     'batch_size': 256, 'activity_regularizer': 'N', #'kernel_regularizer': 'N', #'kernel_constraint': 'N', 
                     'loss_weights': {'static_source_prediction': 1.0, 'dynamic_source_prediction': 1.0}}
 constants = {'epochs': 10 if debug_mode else 500, 'train_portion': 0.8, 'n_models_override': 1,
-             'use_dynamic_pred': True, 'use_dependants': True, 'data_fn': '../wax_master_simit.csv',
-             #'../NewData_flames_data_with_L1_L2_errors_CH4-AIR_without_trimming(SouSpec_Included).txt',
+             'use_dynamic_pred': True, 'use_dependants': True, 'data_fn': #'../wax_master_simit.csv',
+             '../NewData_flames_data_with_L1_L2_errors_CH4-AIR_without_trimming(SouSpec_Included).txt',
              'kernel_constraint': 'N', 'kernel_regularizer': 'Y', 'zmix': 'Y', 
              'ipscaler': None, 'W_batch_norm': False, 'batch_norm_dynamic': False} # this line is all garbage configs
 main.default_cfg.update(constants)
@@ -110,22 +104,25 @@ main.default_cfg.update(constants)
 # wrapper for main use in optuna (protects against crashes & uses trials to populate cfg dict)
 import traceback
 def main_safe(trial=None):
-    # (no changes default config)
-    cfg = {}
+    cfg = {} # (no changes default config)
 
     if trial:
         scalers_types = [None, 'MinMaxScaler', 'MaxAbsScaler', 'StandardScaler', 'RobustScaler']#,'QuantileTransformer']
 
-        cfg = {'zmix': trial.suggest_categorical('zmix', ['Y', 'N']), 'ipscaler': trial.suggest_categorical('input_scaler', scalers_types),
+        cfg = {#'zmix': trial.suggest_categorical('zmix', ['Y', 'N']), #'ipscaler': trial.suggest_categorical('input_scaler', scalers_types),
                'opscaler': trial.suggest_categorical('output_scaler', scalers_types), 'noOfCpv': trial.suggest_int('noOfCpv', *[3, 10]),
                'loss': trial.suggest_categorical('loss', ['mae', 'mse', 'R2']), 'activation': trial.suggest_categorical('activation', ['selu', 'relu']),
                'width': trial.suggest_int('width', *[256, 1024]), 'dropout_rate': trial.suggest_float('dropout_rate', *[0, 0.4]),
-               'batch_norm_dynamic': trial.suggest_categorical('batch_norm_dynamic', [True, False]),
+               #'batch_norm_dynamic': trial.suggest_categorical('batch_norm_dynamic', [True, False]),
                #'kernel_constraint': trial.suggest_categorical('kernel_constraint', ['Y', 'N']),
-               'kernel_regularizer': trial.suggest_categorical('kernel_regularizer', ['Y', 'N']),
+               #'kernel_regularizer': trial.suggest_categorical('kernel_regularizer', ['Y', 'N']),
                'activity_regularizer': trial.suggest_categorical('activity_regularizer', ['Y', 'N']), 'batch_size': trial.suggest_int('batch_size', *[128, 1028]),
                'loss_weights': {'static_source_prediction': trial.suggest_float('static_loss_weight', *[0.1, 10.0]),
                                 'dynamic_source_prediction': trial.suggest_float('dynamic_loss_weight', *[0.1, 10.0])}} 
+        global constants
+        constant_names, cfg_names = set(constants.keys()), set(cfg.keys())
+        overlapping_names = constant_names.intersection(cfg_names)
+        if len(overlapping_names): raise RuntimeError(f'Invalid config, these constants: {",".join(overlapping_names)} are being overridden!') 
     try:
         return main(cfg)
     except:
