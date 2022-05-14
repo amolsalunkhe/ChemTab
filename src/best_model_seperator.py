@@ -8,8 +8,9 @@ from tensorflow import keras
 import numpy as np
 import sys, os
 import pandas as pd
+import sklearn.linear_model
 from main import *
-
+from fit_rescaling_layer import fit_rescaling_layer
 
 #dp = DataPreparer() #Prepare the DataFrame that will be used downstream
 #df = dp.getDataframe()
@@ -55,6 +56,7 @@ CPV_names = [f'CPV_{i}' for i in range(w.shape[1])]
 weight_df = pd.DataFrame(w, index=dm.input_data_cols, columns=CPV_names) # dm.input_data_cols is why we recreate training data
 
 if 'zmix' in layers_by_name:
+    raise NotImplemented('zmix not implemented')
     zmix_weights = derive_Zmix_weights(dm.df) # get weights as dict, then convert to df
     zmix_weights = pd.DataFrame({'Zmix': zmix_weights.values()}, index=zmix_weights.keys())
     weight_df = pd.concat([zmix_weights, weight_df],axis=1) # checked on 10/10/21: that zmix comes first
@@ -64,23 +66,18 @@ linear_embedder.save(f'{decomp_dir}/linear_embedding') # usually not needed but 
 
 # give regressor special input name that works with cpp tensorflow
 regressor = layers_by_name['regressor']
-#input_ = keras.layers.Input(shape=regressor.input_shape[1:], name='input_1')
-#output = regressor(input_)
+input_ = keras.layers.Input(shape=regressor.input_shape[1:], name='input_1')
+output = regressor(input_)
 
-# below equations only work for minmax scaler!
-assert experimentSettings['opscaler']=='MinMaxScaler'
+rescaling_layer, (m,b) = fit_rescaling_layer(dm.outputScaler, layer_name='static_source_prediction')
 
 # m & b from y=mx+b
-m = dm.outputScaler.data_range_ # aka scale in RescaleLayer
-b = dm.outputScaler.data_min_ # aka offset in RescaleLayer
-assert np.all(m == (dm.outputScaler.data_max_ - dm.outputScaler.data_min_))
-#output['static_source_prediction'] = keras.layers.Rescaling(m, b, name='static_source_prediction')(output['static_source_prediction']) # TODO: only apply to static source prediction!
-#output['dynamic_source_prediction'] = keras.layers.Rescaling(1, name='dynamic_source_prediction')(output['dynamic_source_prediction']) # identity layer to rename properly
-#wrapper = keras.models.Model(inputs=input_, outputs=output, name='regressor')
-wrapper = regressor
+output['static_source_prediction'] = rescaling_layer(output['static_source_prediction'])
+output['dynamic_source_prediction'] = keras.layers.Rescaling(1, name='dynamic_source_prediction')(output['dynamic_source_prediction']) # identity layer to rename properly
+wrapper = keras.models.Model(inputs=input_, outputs=output, name='regressor')
 
 #wrapper.add(keras.layers.Input(shape=regressor.input_shape[1:], name='input_1'))
 #wrapper.add(regressor)
 wrapper.save(f'{decomp_dir}/regressor')
-scaling_params = np.stack([m,b])
-np.savetxt(f'{decomp_dir}/scaling_params.txt', scaling_params)
+#scaling_params = np.stack([m,b])
+#np.savetxt(f'{decomp_dir}/scaling_params.txt', scaling_params)
