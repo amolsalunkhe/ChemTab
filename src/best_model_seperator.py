@@ -51,6 +51,13 @@ def derive_Zmix_weights(df):
 
     return {k: v for k,v in zip(X_data.columns, lm.coef_)}
 
+# verified to work 5/24/22
+def get_weight_inv_df(weights_df):
+    weights_array = np.asarray(weights_df)
+    weights_inv = np.linalg.pinv(weights_array)
+    weights_inv_df = pd.DataFrame(data=weights_inv, columns=weights_df.index, index=weights_df.columns)
+    return weights_inv_df
+
 # convert to df to prepare for csv saving
 CPV_names = [f'CPV_{i}' for i in range(w.shape[1])]
 weight_df = pd.DataFrame(w, index=dm.input_data_cols, columns=CPV_names) # dm.input_data_cols is why we recreate training data
@@ -61,6 +68,9 @@ if 'zmix' in layers_by_name:
     zmix_weights = pd.DataFrame({'Zmix': zmix_weights.values()}, index=zmix_weights.keys())
     weight_df = pd.concat([zmix_weights, weight_df],axis=1) # checked on 10/10/21: that zmix comes first
 
+# save pseudo inverse for Varun
+weight_inv_df = get_weight_inv_df(weight_df)
+weight_inv_df.to_csv(f'{decomp_dir}/weights_inv.csv', index=True, header=True)
 weight_df.to_csv(f'{decomp_dir}/weights.csv', index=True, header=True)
 linear_embedder.save(f'{decomp_dir}/linear_embedding') # usually not needed but included for completeness
 
