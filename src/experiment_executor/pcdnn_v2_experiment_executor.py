@@ -167,7 +167,7 @@ class PCDNNV2ExperimentExecutor:
         history = history.history
         # to compute 'final R^2 score', we take the exponentially weighted average of the 2 val_R2 metrics then choose the lowest one (pessimistic estimate)
         val_R2s = [0,0]
-        for val_R2_split, val_R2 in zip(history['val_dynamic_source_prediction_R2_split'], history['val_emb_and_regression_model_R2']):
+        for val_R2, val_R2_split in zip(history['val_static_source_prediction_R2'], history['val_dynamic_source_prediction_R2_split']):
             val_R2s[0]=val_R2s[0]*(1-beta) + val_R2*beta
             val_R2s[1]=val_R2s[1]*(1-beta) + val_R2_split*beta
         final_score = min(val_R2s) if self.use_dynamic_pred else val_R2s[0]  

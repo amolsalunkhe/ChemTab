@@ -18,6 +18,23 @@ from tensorflow.keras.constraints import UnitNorm, Constraint, NonNeg
 from .dnnmodel_model_factory import DNNModelFactory
 from warnings import warn
 
+## verified to work 6/8/22 (but make sure names are *actually* inconsistent!)
+#def make_output_tensor_names_consistent(out_tensor_dict):
+#    for name in out_tensor_dict:
+#        out_tensor_dict[name] = layers.Rescaling(1.0,name=name)(out_tensor_dict[name])
+#    return out_tensor_dict
+
+# verified to work for TF version: 2.8.0 
+def make_output_tensor_names_consistent(out_tensor_dict):
+    """ fixes issue where outputs seem to have two different names! """
+    if tf.__version__!='2.8.0':
+        warn('make_output_tensor_names_consistent() is not tested for this version of tensorflow! It is tested for version 2.8.0')
+    for name in out_tensor_dict:
+        assert '/' in out_tensor_dict[name].name
+        if out_tensor_dict[name].name.split('/')[0] != name:
+            out_tensor_dict[name] = layers.Rescaling(1.0,name=name)(out_tensor_dict[name])
+            assert out_tensor_dict[name].name.split('/')[0] == name
+    return out_tensor_dict
 
 class WeightsOrthogonalityConstraint(Constraint):
     def __init__(self, encoding_dim, weightage=1.0, axis=0):
@@ -176,11 +193,13 @@ def dynamic_source_term_pred_wrap(base_regression_model, batch_norm_dynamic_pred
     # dynamic_source_all: contains predicted and true values for computing loss
     # give it the same name as the original layer name, so it is easier to drop-in place 
 
+    outputs={'static_source_prediction': regression_outputs['static_source_prediction'],
+             'dynamic_source_prediction': dynamic_source_all}
+    outputs=make_output_tensor_names_consistent(outputs)
     # This + source_term_truth_model facilitates dynamic source term training!
     container_model = keras.Model(
         inputs=copied_inputs + [all_species_source_inputs],
-        outputs={'static_source_prediction': regression_outputs['static_source_prediction'],
-                 'dynamic_source_prediction': dynamic_source_all},
+        outputs=outputs,
         name='container_model'
     )
     return container_model
@@ -245,6 +264,7 @@ class PCDNNV2ModelFactory(DNNModelFactory):
                                 activity_regularizer=activity_regularizer)
 
         source_term_pred = self.addRegressorModel(x, noOfOutputNeurons, noOfCpv)
+        source_term_pred = make_output_tensor_names_consistent(source_term_pred)
         model = keras.Model(inputs=inputs, outputs=source_term_pred, name='emb_and_regression_model')
 
         if self.use_dynamic_pred:  # if use all dependents is on this will be a hybrid model
