@@ -11,9 +11,6 @@ import optuna
 import sys
 import numpy as np
 
-# util for getting objects' fields' names
-field_names = lambda x: list(vars(x).keys())
-
 debug_mode = False 
 if debug_mode: print('debugging!', file=sys.stderr)
 
@@ -79,8 +76,6 @@ def main(cfg={}):
     exprExec.df_experimentTracker = pd.DataFrame()
     exprExec.modelType = 'PCDNNV2'
     
-    # this will save the model as the best (since it starts with min_mae=-inf), but that is ok because it will also be the best
-    #assert exprExec.epochs_override >= 10000 # ensure this model is the best!
     final_score = exprExec.executeSingleExperiment(noOfNeurons,dataSetMethod,dataType,inputType,ZmixPresent,noOfCpv,concatenateZmix,kernel_constraint,
                                                    kernel_regularizer,activity_regularizer,opscaler=opscaler, ipscaler=ipscaler)
     
