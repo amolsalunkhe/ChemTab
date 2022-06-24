@@ -49,7 +49,7 @@ test_targets = {'testName': f'{os.path.basename(model_path)}_parameter_set_1',
 				'output_mass_fractions': output_mass.tolist(),
 				'input_mass_fractions': input_mass.tolist(),
 				'output_cpvs': output_cpv.tolist(),
-				'output_source_terms': source_output['dynamic_source_prediction'].numpy().tolist(),
+				'output_source_terms': source_output['dynamic_source_prediction'].numpy().squeeze().tolist(),
 				'output_source_energy': souener_output.item()}
 
 print('\n'+'='*50)

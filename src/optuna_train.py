@@ -1,15 +1,23 @@
-# set TF GPU memory growth so that it doesn't hog everything at once
+import os  # this enables XLA optimized computations
+os.environ['TF_XLA_FLAGS'] = '--tf_xla_enable_xla_devices'
 import tensorflow as tf
+from tensorflow import keras
+
 physical_devices = tf.config.list_physical_devices('GPU')
 tf.config.experimental.set_memory_growth(physical_devices[0], True)
+
+from data.pre_processing import DataPreparer
+from data.train_test_manager import DataManager
+from experiment_executor.pcdnn_v2_experiment_executor import PCDNNV2ExperimentExecutor
+from models.pcdnnv2_model_factory import PCDNNV2ModelFactory
 
 from tensorflow import keras
 from tensorflow.keras import layers as L
 from copy import deepcopy
-from main import *
 import optuna
 import sys
 import numpy as np
+import pandas as pd
 
 debug_mode = False 
 if debug_mode: print('debugging!', file=sys.stderr)

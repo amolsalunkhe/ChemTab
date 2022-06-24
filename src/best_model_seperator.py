@@ -1,13 +1,27 @@
 #!/bin/python3
 
+import os  # this enables XLA optimized computations
+os.environ['TF_XLA_FLAGS'] = '--tf_xla_enable_xla_devices'
 import tensorflow as tf
 from tensorflow import keras
+
+physical_devices = tf.config.list_physical_devices('GPU')
+tf.config.experimental.set_memory_growth(physical_devices[0], True)
+
+from data.pre_processing import DataPreparer
+from data.train_test_manager import DataManager
+from experiment_executor.pcdnn_v2_experiment_executor import PCDNNV2ExperimentExecutor
+from models.pcdnnv2_model_factory import PCDNNV2ModelFactory
+
 import numpy as np
 import sys, os
 import pandas as pd
 import sklearn.linear_model
-from main import *
 from fit_rescaling_layer import fit_rescaling_layer
+import yaml
+
+decomp_dir = f'./PCDNNV2_decomp'
+os.system(f'rm -r {decomp_dir}; mkdir {decomp_dir}')
 
 exprExec = PCDNNV2ExperimentExecutor()
 exprExec.setModelFactory(PCDNNV2ModelFactory())
@@ -16,11 +30,13 @@ assert experimentSettings['ipscaler']==None # we cannot center data, as it makes
 bestModel = exprExec.modelFactory.getEmbRegressor() # shed container model
 dm = experimentSettings['data_manager']
 
+del experimentSettings['data_manager']
+del experimentSettings['history']
+with open(f'{decomp_dir}/experiment_record.yaml', 'w') as f:
+	yaml.dump(experimentSettings, f)
+
 composite_model = bestModel
 composite_model.summary()
-
-decomp_dir = f'./PCDNNV2_decomp'
-os.system(f'rm -r {decomp_dir}; mkdir {decomp_dir}')
 
 get_layers_by_name = lambda model: {layer.name: layer for layer in model.layers}
 layers_by_name = get_layers_by_name(composite_model)
@@ -60,7 +76,7 @@ assert 'zmix' in layers_by_name
 weight_inv_df = get_weight_inv_df(weight_df)
 weight_inv_df.to_csv(f'{decomp_dir}/weights_inv.csv', index=True, header=True)
 weight_df.to_csv(f'{decomp_dir}/weights.csv', index=True, header=True)
-linear_embedder.save(f'{decomp_dir}/linear_embedding') # usually not needed but included for completeness
+#linear_embedder.save(f'{decomp_dir}/linear_embedding') # usually not needed but included for completeness
 
 # give regressor special input name that works with cpp tensorflow
 regressor = layers_by_name['regressor']
