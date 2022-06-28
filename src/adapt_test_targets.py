@@ -51,15 +51,16 @@ test_targets = {'testName': f'{os.path.basename(model_path)}_parameter_set_1',
 				'output_cpvs': output_cpv.tolist(),
 				'output_source_terms': source_output['dynamic_source_prediction'].numpy().squeeze().tolist(),
 				'output_source_energy': souener_output.item()}
+test_targets = [test_targets] # Matt wants a 'sequence' for some reason?
 
 print('\n'+'='*50)
-print('test_targets (dict):')
+print('test_targets ([dict]):')
 print('='*50)
 print(test_targets)
 
 import yaml
 with open(f'{model_path}/testTargets.yaml', 'w') as f:
-	yaml.dump(test_targets, f)
+	yaml.dump(test_targets, f, default_flow_style=None)
 
 #import os
 #os.system('clang-format test_targets.h > test_targets.h.formatted')
