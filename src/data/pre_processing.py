@@ -15,13 +15,9 @@ from sklearn.decomposition import PCA, SparsePCA
 # demonstrate data normalization with sklearn
 
 class DataPreparer:
-    def __init__(self, fn='../NewData_flames_data_with_L1_L2_errors_CH4-AIR_without_trimming(SouSpec_Included).txt'):
+    def __init__(self, fn='../methane_air_master.csv'):
         # read the data into a dataframe
-        # self.df = pd.read_csv('../NewData_flames_data_with_L1_L2_errors_CH4-AIR_without_trimming(SouSpec_Included).txt')
-        self.df = pd.read_csv(fn)
-        #self.df = pd.read_csv('../full_master_simit.csv').sample(frac=1.0)
-
-        #self.df = pd.read_csv('./real_data_augmented.csv').sample(frac=1.0)
+		self.df = pd.read_csv(fn)
         #self.df['Zmix'] = self.df['Xpos'] = self.df['X'] = self.df['flame_key'] = 0
        
         self.df.columns = map(lambda x: x.strip(), self.df.columns)  # deal with annoying spaces in column names
@@ -32,9 +28,6 @@ class DataPreparer:
         # create an integer representation of the flame-id and add to the data frame
         self.df['flame_key_int'] = self.df['flame_key'].mul(10000000).astype(int)
 
-        # create an integer to determine if the flame is included by the framework in the manifold creation and reverselookup
-        # framework_untrimmed_flameids = [0.00115982, 0.00122087, 0.00128512, 0.00135276, 0.00142396, 0.0014989, 0.00157779, 0.00166083, 0.00174825, 0.00184026, 0.00193711, 0.00203907, 0.00214639, 0.00225936, 0.00237827, 0.01]
-
         self.framework_untrimmed_flameids = ['2.0276547153583627E-4', '2.1343733845877503E-4', '2.2467088258818426E-4',
                                              '2.3649566588229923E-4', '2.4894280619189394E-4', '2.6204505914936203E-4',
                                              '2.7583690436774953E-4', '2.903546361765785E-4', '3.056364591332405E-4',
@@ -44,9 +37,6 @@ class DataPreparer:
                                                    range(len(self.framework_untrimmed_flameids))]
 
         self.df['is_flame_included_by_framework'] = self.df['flame_key_int'].map(lambda x: self.isFlame_included(x))
-
-        # causes weird saving error
-        #self.df['souener_deciles'] = pd.qcut(self.df['souener'], 10)
 
         self.icovariates = []
         for c in self.df.columns:

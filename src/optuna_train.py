@@ -98,8 +98,7 @@ main.default_cfg = {'opscaler': 'MinMaxScaler', 'noOfCpv': 4, 'loss': 'R2',
                     'loss_weights': {'static_source_prediction': 1.0, 'dynamic_source_prediction': 1.0}}
 constants = {'epochs': 10 if debug_mode else 500, 'train_portion': 0.8, 'n_models_override': 1,
              'use_dynamic_pred': True, 'use_dependants': True, 'data_fn': #'../wax_master_simit.csv',
-             '../NewData_flames_data_with_L1_L2_errors_CH4-AIR_without_trimming(SouSpec_Included).txt',
-             'kernel_constraint': 'Y', 'kernel_regularizer': 'Y', 'zmix': 'Y', 
+             '../methane_air_master.csv', 'kernel_constraint': 'Y', 'kernel_regularizer': 'Y', 'zmix': 'Y', 
              'ipscaler': None, 'W_batch_norm': False, 'batch_norm_dynamic': False} # this line is all garbage configs
 main.default_cfg.update(constants)
 # add variables generally held as constant
