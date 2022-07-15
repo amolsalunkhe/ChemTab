@@ -5,7 +5,6 @@ tf.config.experimental.set_memory_growth(physical_devices[0], True)
 
 from tensorflow import keras
 from tensorflow.keras import layers as L
-from main import *
 from optuna_train import *
 
 # util for getting objects' fields' names

@@ -17,7 +17,7 @@ from sklearn.decomposition import PCA, SparsePCA
 class DataPreparer:
     def __init__(self, fn='../methane_air_master.csv'):
         # read the data into a dataframe
-		self.df = pd.read_csv(fn)
+        self.df = pd.read_csv(fn)
         #self.df['Zmix'] = self.df['Xpos'] = self.df['X'] = self.df['flame_key'] = 0
        
         self.df.columns = map(lambda x: x.strip(), self.df.columns)  # deal with annoying spaces in column names
@@ -141,57 +141,6 @@ class DataPreparer:
         df_sparse_pca = pd.DataFrame(sparsepca.transform(X), columns=self.sparse_pca_dim_cols)
 
         self.df = pd.concat([self.df, df_sparse_pca], axis=1)
-
-    def zmixOrthogonalPCAs(self):
-        X = self.df[self.icovariates].values
-
-        # these are the weights calculated on the basis of molar weight of Hydrogen
-        wopt = np.array([0.25131806468584, 1.0, 0.0, 0.0, 0.05926499970012948, 0.11189834407236524, 0.03053739933116691,
-                         0.05926499970012948, 0.0, 0.07742283372149472, 0.14371856860332313, 0.14371856860332313,
-                         0.20112514400193687, 1.0, 0.0, 0.0, 0.03473494419333629, 0.06713785861443991,
-                         0.09743596683886535, 0.09743596683886535, 0.12582790137651187, 0.04027033873046593,
-                         0.07742283372149472, 0.11180607885607882, 0.14371856860332313, 0.17341738612784788,
-                         0.20112514400193687, 0.024566681794273966, 0.04795526192839207, 0.04795526192839207, 0.0,
-                         0.06713048065088474, 0.12581494366075874, 0.17755300484072126, 0.034730994502665966, 0.0, 0.0,
-                         0.0, 0.03249947443158002, 0.0, 0.0372961080230628, 0.07191024382448291, 0.024564706019978535,
-                         0.023426986426879046, 0.023426986426879046, 0.023426986426879046, 0.0, 0.16374935944566987,
-                         0.18286442054789118, 0.07024850027715426, 0.09152158240065958, 0.0, 0.0], dtype=float)
-
-        w = wopt[:, np.newaxis]
-
-        # center the data
-        Xcenter = X - np.mean(X)
-
-        A = np.cov(X.T)
-
-        # calculate A - ww^TA
-        L = A - np.dot(np.dot(w, w.T), A)
-
-        # get the first eigen vector
-        values, vectors = np.linalg.eig(L)
-
-        vectors = np.real(vectors)
-
-        values = np.real(values)
-
-        df_zmix_pca = pd.DataFrame()
-
-        '''
-        To reproduce Zmix the actual formula should be 
-        
-        df_zmix_pca[zmix_pca_dim_cols[0]] = X.dot(wopt)/0.25131806468584
-        
-        instead of
-        
-        df_zmix_pca[zmix_pca_dim_cols[0]] = Xcenter.dot(wopt)
-        '''
-
-        df_zmix_pca[self.zmix_pca_dim_cols[0]] = X.dot(wopt) / 0.25131806468584
-
-        for i in range(len(self.zmix_pca_dim_cols) - 1):
-            df_zmix_pca[self.zmix_pca_dim_cols[i + 1]] = Xcenter.dot(vectors.T[i])
-
-        self.df = pd.concat([self.df, df_zmix_pca], axis=1)
 
     def getDataframe(self):
         return self.df

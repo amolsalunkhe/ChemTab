@@ -35,7 +35,6 @@ def main(cfg={}):
     dp = DataPreparer(cfg['data_fn'])
     dp.createPCAs()
     dp.sparsePCAs()
-    dp.zmixOrthogonalPCAs()
     df = dp.getDataframe()
     
     # currently passing dp eventually we want to abstract all the constants into 1 class
@@ -59,7 +58,9 @@ def main(cfg={}):
     kernel_regularizer = cfg['kernel_regularizer']
     activity_regularizer = cfg['activity_regularizer']
     noOfCpv = cfg['noOfCpv']
-    noOfNeurons = 53
+    df = pd.read_csv(cfg['data_fn'])
+    Yi_cols = [col for col in df.columns if col.startswith('Yi')]
+    noOfNeurons = len(Yi_cols)
     
     exprExec.modelFactory.loss=cfg['loss']
     exprExec.modelFactory.activation_func=cfg['activation']
@@ -97,8 +98,8 @@ main.default_cfg = {'opscaler': 'MinMaxScaler', 'noOfCpv': 4, 'loss': 'R2',
                     'batch_size': 256, 'activity_regularizer': 'N', #'kernel_regularizer': 'N', #'kernel_constraint': 'N', 
                     'loss_weights': {'static_source_prediction': 1.0, 'dynamic_source_prediction': 1.0}}
 constants = {'epochs': 10 if debug_mode else 500, 'train_portion': 0.8, 'n_models_override': 1,
-             'use_dynamic_pred': True, 'use_dependants': True, 'data_fn': #'../wax_master_simit.csv',
-             '../methane_air_master.csv', 'kernel_constraint': 'Y', 'kernel_regularizer': 'Y', 'zmix': 'Y', 
+             'use_dynamic_pred': True, 'use_dependants': True, 'data_fn': '../2D_PMMA-Air_master.csv', #'../wax_master_simit.csv', '../methane_air_master.csv',
+			 'kernel_constraint': 'Y', 'kernel_regularizer': 'Y', 'zmix': 'Y', 
              'ipscaler': None, 'W_batch_norm': False, 'batch_norm_dynamic': False} # this line is all garbage configs
 main.default_cfg.update(constants)
 # add variables generally held as constant
