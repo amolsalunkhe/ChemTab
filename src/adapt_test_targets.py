@@ -14,7 +14,7 @@ print_array = lambda x: ','.join([str(i) for i in np.asarray(x).squeeze()])
 print_str_array = lambda x: ','.join([f'"{i}"' for i in np.asarray(x).squeeze()]) 
 print(W)
 
-input_mass = m = np.linspace(0.1,5.3,53)
+input_mass = m = np.linspace(0.1,5.3,len(W.index))
 m = m[:,np.newaxis]
 output_cpv = cpv = np.dot(W.T,m).flatten()
 print('CPVs <-- mass_fractions:')

@@ -97,7 +97,7 @@ main.default_cfg = {'opscaler': 'MinMaxScaler', 'noOfCpv': 4, 'loss': 'R2',
                     'activation': 'selu', 'width': 512, 'dropout_rate': 0.0,
                     'batch_size': 256, 'activity_regularizer': 'N', #'kernel_regularizer': 'N', #'kernel_constraint': 'N', 
                     'loss_weights': {'static_source_prediction': 1.0, 'dynamic_source_prediction': 1.0}}
-constants = {'epochs': 10 if debug_mode else 500, 'train_portion': 0.8, 'n_models_override': 1,
+constants = {'epochs': 10 if debug_mode else 1000, 'train_portion': 0.8, 'n_models_override': 1,
              'use_dynamic_pred': True, 'use_dependants': True, 'data_fn': '../2D_PMMA-Air_master.csv', #'../wax_master_simit.csv', '../methane_air_master.csv',
 			 'kernel_constraint': 'Y', 'kernel_regularizer': 'Y', 'zmix': 'Y', 
              'ipscaler': None, 'W_batch_norm': False, 'batch_norm_dynamic': False} # this line is all garbage configs

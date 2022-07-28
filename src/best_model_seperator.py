@@ -76,7 +76,7 @@ assert 'zmix' in layers_by_name
 weight_inv_df = get_weight_inv_df(weight_df)
 weight_inv_df.to_csv(f'{decomp_dir}/weights_inv.csv', index=True, header=True)
 weight_df.to_csv(f'{decomp_dir}/weights.csv', index=True, header=True)
-#linear_embedder.save(f'{decomp_dir}/linear_embedding') # usually not needed but included for completeness
+linear_embedder.save(f'{decomp_dir}/linear_embedding') # usually not needed but included for completeness
 
 # give regressor special input name that works with cpp tensorflow
 regressor = layers_by_name['regressor']

@@ -7,12 +7,9 @@ from tensorflow import keras
 from tensorflow.keras import layers as L
 from optuna_train import *
 
-# util for getting objects' fields' names
-field_names = lambda x: list(vars(x).keys())
-
 # you override these values based with the config values you pass (via dict.update())
-cfg = {'zmix': 'N', 'ipscaler': None, 'opscaler': None, 'noOfCpv': 4, 'loss': 'R2',
-       'activation': 'selu', 'width': 800, 'dropout_rate': 0.25, 'batch_norm_dynamic': False,
+cfg = {'zmix': 'Y', 'ipscaler': None, 'opscaler': 'RobustScaler', 'noOfCpv': 8, 'loss': 'R2',
+       'activation': 'selu', 'width': 800, 'dropout_rate': 0.0, 'batch_norm_dynamic': False,
        'kernel_constraint': 'Y', 'kernel_regularizer': 'Y', 'activity_regularizer': 'N', 'batch_size': 400,
        'loss_weights': {'static_source_prediction': 3.0, 'dynamic_source_prediction': 1.0}}
 cfg['epochs'] = 10000 # special because it should always be large
