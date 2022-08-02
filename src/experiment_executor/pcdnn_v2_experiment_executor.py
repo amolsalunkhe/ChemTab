@@ -164,8 +164,9 @@ class PCDNNV2ExperimentExecutor:
     # computes "final score" of the model (pessimistic R^2) used to determine which model is best
     # computed from model training history, we don't care that technically best weights are restored...
     def compute_model_score(self, history, beta=0.7):
-        history = history.history
-        # to compute 'final R^2 score', we take the exponentially weighted average of the 2 val_R2 metrics then choose the lowest one (pessimistic estimate)
+        try: history = history.history
+        except: None
+		# to compute 'final R^2 score', we take the exponentially weighted average of the 2 val_R2 metrics then choose the lowest one (pessimistic estimate)
         val_R2s = [0,0]
         for val_R2, val_R2_split in zip(history['val_static_source_prediction_R2'], history['val_dynamic_source_prediction_R2_split']):
             val_R2s[0]=val_R2s[0]*(1-beta) + val_R2*beta
@@ -255,7 +256,7 @@ class PCDNNV2ExperimentExecutor:
             if model_R2 > self.best_model_score:
                 self.best_model_score = model_R2
                 path = self.best_model_path+self.modelFactory.modelName
-                val_losses = self.model.evaluate(input_dict_test, output_dict_test, verbose=1, return_dict=True)
+                val_losses = self.model.evaluate(input_dict_test, output_dict_test, batch_size=1000, verbose=1, return_dict=True)
                 experiment_results = {'val_losses': val_losses, 'model_R2': self.best_model_score, 'history': self.history.history}
                 self.modelFactory.saveCurrModelAsBestModel(path=path, experiment_results=experiment_results)
                 self.dm.include_PCDNNV2_PCA_data(self.modelFactory, concatenateZmix=concatenateZmix)

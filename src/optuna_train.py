@@ -114,7 +114,7 @@ def main_safe(trial=None):
 
         cfg = {#'zmix': trial.suggest_categorical('zmix', ['Y', 'N']), #'ipscaler': trial.suggest_categorical('input_scaler', scalers_types),
                'opscaler': trial.suggest_categorical('output_scaler', scalers_types), 'noOfCpv': trial.suggest_int('noOfCpv', *[3, 10]),
-               'loss': trial.suggest_categorical('loss', ['mae', 'mse', 'R2']), 'activation': trial.suggest_categorical('activation', ['selu', 'relu']),
+               'loss': trial.suggest_categorical('loss', ['mae', 'mse', 'R2', 'mape']), 'activation': trial.suggest_categorical('activation', ['tanh', 'selu', 'relu']),
                'width': trial.suggest_int('width', *[256, 1024]), 'dropout_rate': trial.suggest_float('dropout_rate', *[0, 0.4]),
                #'batch_norm_dynamic': trial.suggest_categorical('batch_norm_dynamic', [True, False]),
                #'kernel_constraint': trial.suggest_categorical('kernel_constraint', ['Y', 'N']),

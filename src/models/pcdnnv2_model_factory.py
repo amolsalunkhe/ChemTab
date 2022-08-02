@@ -275,7 +275,7 @@ class PCDNNV2ModelFactory(DNNModelFactory):
         losses = {'static_source_prediction': self.loss, 'dynamic_source_prediction': dynamic_source_loss}
         if self.use_R2_losses:
             losses={'static_source_prediction': lambda yt, yp: -R2(yt, yp), 'dynamic_source_prediction': lambda yt, yp: -R2_split(yt, yp)}
-        metrics = {'static_source_prediction': ['mae', 'mse', R2],
+        metrics = {'static_source_prediction': ['mae', 'mse', R2, 'mape'],
                    'dynamic_source_prediction': [R2_split, source_pred_mean, source_true_mean]}
         # for metric definitions see get_metric_dict()
 
