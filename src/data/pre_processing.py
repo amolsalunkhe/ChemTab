@@ -119,14 +119,14 @@ class DataPreparer:
 
 
     def createPCAs(self):
-
+        # necessary to make PCA work properly
+        from sklearn.preprocessing import StandardScaler
         pca = PCA(n_components=self.num_principal_components)
 
         X = self.df[self.icovariates].values
+        X = StandardScaler().fit_transform(X)
 
-        pca.fit_transform(X)
-
-        df_pure_pca = pd.DataFrame(pca.transform(X), columns=self.pure_pca_dim_cols)
+        df_pure_pca = pd.DataFrame(pca.fit_transform(X), columns=self.pure_pca_dim_cols)
 
         self.df = pd.concat([self.df, df_pure_pca], axis=1)
 
