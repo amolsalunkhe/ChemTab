@@ -128,7 +128,8 @@ class DataPreparer:
 
         df_pure_pca = pd.DataFrame(pca.fit_transform(X), columns=self.pure_pca_dim_cols)
 
-        self.df = pd.concat([self.df, df_pure_pca], axis=1)
+        self.df[self.pure_pca_dim_cols] = df_pure_pca
+        #self.df = pd.concat([self.df, df_pure_pca], axis=1)
 
     def sparsePCAs(self):
 

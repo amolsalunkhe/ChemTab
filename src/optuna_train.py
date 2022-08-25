@@ -66,7 +66,8 @@ def main(cfg={}):
     exprExec.modelFactory.activation_func=cfg['activation']
     exprExec.modelFactory.width=cfg['width']
     exprExec.modelFactory.dropout_rate=cfg['dropout_rate']
-    #exprExec.modelFactory.use_R2_losses = exprExec.modelFactory.loss=='R2' # happens automatically when loss=='R2'
+    exprExec.modelFactory.regressor_skip_connections = cfg['regressor_skip_connections']
+    exprExec.modelFactory.regressor_batch_norm = cfg['regressor_batch_norm']
     exprExec.modelFactory.batch_norm_dynamic_pred = cfg['batch_norm_dynamic']
     exprExec.modelFactory.loss_weights = cfg['loss_weights'] 
     exprExec.modelFactory.W_batch_norm = cfg['W_batch_norm']
@@ -93,12 +94,13 @@ def main(cfg={}):
     return final_score
 
 # you override these values based with the config values you pass (via dict.update())
-main.default_cfg = {'opscaler': 'MinMaxScaler', 'noOfCpv': 4, 'loss': 'R2',
-                    'activation': 'selu', 'width': 512, 'dropout_rate': 0.0,
+main.default_cfg = {'opscaler': 'MinMaxScaler', 'noOfCpv': 8, 'loss': 'R2',
+                    'activation': 'selu', 'width': 2048, 'dropout_rate': 0.0,
                     'batch_size': 256, 'activity_regularizer': 'N', #'kernel_regularizer': 'N', #'kernel_constraint': 'N', 
-                    'loss_weights': {'static_source_prediction': 1.0, 'dynamic_source_prediction': 1.0}}
-constants = {'epochs': 10 if debug_mode else 1000, 'train_portion': 0.8, 'n_models_override': 1,
-             'use_dynamic_pred': True, 'use_dependants': True, 'data_fn': '../2D_PMMA-Air_master.csv', #'../wax_master_simit.csv', '../methane_air_master.csv',
+                    'loss_weights': {'static_source_prediction': 1.0, 'dynamic_source_prediction': 1.0},
+                    'regressor_batch_norm': False, 'regressor_skip_connections': False}
+constants = {'epochs': 10 if debug_mode else 500, 'train_portion': 0.7, 'n_models_override': 1,
+             'use_dynamic_pred': True, 'use_dependants': True, 'data_fn': '../2D_PMMA-Air+Radiation_master.csv', #'../2D_PMMA-Air_master.csv', #'../wax_master_simit.csv', '../methane_air_master.csv',
 			 'kernel_constraint': 'Y', 'kernel_regularizer': 'Y', 'zmix': 'Y', 
              'ipscaler': None, 'W_batch_norm': False, 'batch_norm_dynamic': False} # this line is all garbage configs
 main.default_cfg.update(constants)
@@ -113,9 +115,11 @@ def main_safe(trial=None):
         scalers_types = [None, 'MinMaxScaler', 'MaxAbsScaler', 'StandardScaler', 'RobustScaler']#,'QuantileTransformer']
 
         cfg = {#'zmix': trial.suggest_categorical('zmix', ['Y', 'N']), #'ipscaler': trial.suggest_categorical('input_scaler', scalers_types),
-               'opscaler': trial.suggest_categorical('output_scaler', scalers_types), 'noOfCpv': trial.suggest_int('noOfCpv', *[3, 10]),
+               'opscaler': trial.suggest_categorical('output_scaler', scalers_types), 'noOfCpv': trial.suggest_int('noOfCpv', *[6, 12]),
                'loss': trial.suggest_categorical('loss', ['mae', 'mse', 'R2', 'mape']), 'activation': trial.suggest_categorical('activation', ['tanh', 'selu', 'relu']),
-               'width': trial.suggest_int('width', *[256, 1024]), 'dropout_rate': trial.suggest_float('dropout_rate', *[0, 0.4]),
+               'width': trial.suggest_int('width', *[1024, 4096]), 'dropout_rate': trial.suggest_float('dropout_rate', *[0, 0.4]),
+               'regressor_batch_norm': trial.suggest_categorical('regressor_batch_norm', [True, False]),
+               'regressor_skip_connections': trial.suggest_categorical('regressor_skip_connections', [True, False]),
                #'batch_norm_dynamic': trial.suggest_categorical('batch_norm_dynamic', [True, False]),
                #'kernel_constraint': trial.suggest_categorical('kernel_constraint', ['Y', 'N']),
                #'kernel_regularizer': trial.suggest_categorical('kernel_regularizer', ['Y', 'N']),
@@ -136,6 +140,10 @@ def main_safe(trial=None):
 
 if __name__ == '__main__':
     import os
+    import random
+    os.system(f'mv models/best_models/PCDNNV2Model models/best_models/PCDNNV2Model-{random.random()}')
+    # we should start with a fresh slate because usually settings change across optuna runs
+
     study_name = os.environ.setdefault('STUDY_NAME', 'optuna')
     study = optuna.create_study(study_name=study_name, direction='maximize')
     study.optimize(main_safe, n_trials=5 if debug_mode else 1000)
