@@ -100,7 +100,8 @@ main.default_cfg = {'opscaler': 'MinMaxScaler', 'noOfCpv': 8, 'loss': 'R2',
                     'loss_weights': {'static_source_prediction': 1.0, 'dynamic_source_prediction': 1.0},
                     'regressor_batch_norm': False, 'regressor_skip_connections': False}
 constants = {'epochs': 10 if debug_mode else 500, 'train_portion': 0.7, 'n_models_override': 1,
-             'use_dynamic_pred': True, 'use_dependants': True, 'data_fn': '../2D_PMMA-Air+Radiation_master.csv', #'../2D_PMMA-Air_master.csv', #'../wax_master_simit.csv', '../methane_air_master.csv',
+             'use_dynamic_pred': True, 'use_dependants': True, 'data_fn': os.environ['DATASET'],#, '../2D_PMMA-Air_master.csv'),
+             #'../2D_PMMA-Air+Radiation_master.csv', #'../wax_master_simit.csv', '../methane_air_master.csv',
 			 'kernel_constraint': 'Y', 'kernel_regularizer': 'Y', 'zmix': 'Y', 
              'ipscaler': None, 'W_batch_norm': False, 'batch_norm_dynamic': False} # this line is all garbage configs
 main.default_cfg.update(constants)
@@ -120,9 +121,6 @@ def main_safe(trial=None):
                'width': trial.suggest_int('width', *[1024, 4096]), 'dropout_rate': trial.suggest_float('dropout_rate', *[0, 0.4]),
                'regressor_batch_norm': trial.suggest_categorical('regressor_batch_norm', [True, False]),
                'regressor_skip_connections': trial.suggest_categorical('regressor_skip_connections', [True, False]),
-               #'batch_norm_dynamic': trial.suggest_categorical('batch_norm_dynamic', [True, False]),
-               #'kernel_constraint': trial.suggest_categorical('kernel_constraint', ['Y', 'N']),
-               #'kernel_regularizer': trial.suggest_categorical('kernel_regularizer', ['Y', 'N']),
                'activity_regularizer': trial.suggest_categorical('activity_regularizer', ['Y', 'N']), 'batch_size': trial.suggest_int('batch_size', *[128, 1028]),
                'loss_weights': {'static_source_prediction': trial.suggest_float('static_loss_weight', *[0.1, 10.0]),
                                 'dynamic_source_prediction': trial.suggest_float('dynamic_loss_weight', *[0.1, 10.0])}} 
@@ -143,6 +141,10 @@ if __name__ == '__main__':
     import random
     os.system(f'mv models/best_models/PCDNNV2Model models/best_models/PCDNNV2Model-{random.random()}')
     # we should start with a fresh slate because usually settings change across optuna runs
+
+    if not os.path.exists(os.environ['DATASET']):
+        err_msg = f"DATASET: {os.environ['DATASET']} does not exist!\n Here are valid files in the chosen directory: {', '.join(os.listdir(os.path.dirname(os.environ['DATASET'])))}"
+        raise RuntimeError(err_msg)
 
     study_name = os.environ.setdefault('STUDY_NAME', 'optuna')
     study = optuna.create_study(study_name=study_name, direction='maximize')
