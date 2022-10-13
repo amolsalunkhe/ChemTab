@@ -100,7 +100,7 @@ main.default_cfg = {'opscaler': 'MinMaxScaler', 'noOfCpv': 8, 'loss': 'R2',
                     'loss_weights': {'static_source_prediction': 1.0, 'dynamic_source_prediction': 1.0},
                     'regressor_batch_norm': False, 'regressor_skip_connections': False}
 constants = {'epochs': 10 if debug_mode else 500, 'train_portion': 0.7, 'n_models_override': 1,
-             'use_dynamic_pred': True, 'use_dependants': True, 'data_fn': os.environ['DATASET'],#, '../2D_PMMA-Air_master.csv'),
+             'use_dynamic_pred': True, 'use_dependants': True, 'data_fn': os.environ.setdefault('DATASET', '../2D_PMMA-Air_master.csv'),
              #'../2D_PMMA-Air+Radiation_master.csv', #'../wax_master_simit.csv', '../methane_air_master.csv',
 			 'kernel_constraint': 'Y', 'kernel_regularizer': 'Y', 'zmix': 'Y', 
              'ipscaler': None, 'W_batch_norm': False, 'batch_norm_dynamic': False} # this line is all garbage configs
