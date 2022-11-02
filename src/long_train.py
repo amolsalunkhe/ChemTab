@@ -8,11 +8,12 @@ from tensorflow.keras import layers as L
 from optuna_train import *
 
 # you override these values based with the config values you pass (via dict.update())
-cfg = {'zmix': 'Y', 'ipscaler': None, 'opscaler': 'RobustScaler', 'noOfCpv': 8, 'loss': 'R2',
-       'activation': 'selu', 'width': 800, 'dropout_rate': 0.0, 'batch_norm_dynamic': False,
+cfg = {'zmix': 'Y', 'ipscaler': None, 'opscaler': 'StandardScaler', 'noOfCpv': 10, 'loss': 'R2',
+       'activation': 'selu', 'width': 800, 'dropout_rate': 0.0, 
+       'regressor_batch_norm': False, 'regressor_skip_connections': False, 'batch_norm_dynamic': True,
        'kernel_constraint': 'Y', 'kernel_regularizer': 'Y', 'activity_regularizer': 'N', 'batch_size': 400,
        'loss_weights': {'static_source_prediction': 3.0, 'dynamic_source_prediction': 1.0}}
-cfg['epochs'] = 10000 # special because it should always be large
+cfg['epochs'] = 1000 # special because it should always be large
 
 final_score = main(cfg)
 print('model final (R^2) score:', final_score)

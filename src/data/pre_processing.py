@@ -121,7 +121,7 @@ class DataPreparer:
     def createPCAs(self):
         # necessary to make PCA work properly
         from sklearn.preprocessing import StandardScaler
-        pca = PCA(n_components=self.num_principal_components)
+        pca = PCA(n_components=self.num_principal_components, whiten=True)
 
         X = self.df[self.icovariates].values
         X = StandardScaler().fit_transform(X)

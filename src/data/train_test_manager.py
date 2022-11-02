@@ -80,8 +80,11 @@ class PositiveLogNormal:
             cols_data.append(self.log_col_transformers[i].inverse_transform(data[:, i]))
         return np.concatenate(cols_data, axis=1)  # .squeeze()
 
-
-all_dependants = ["souener", "souspecO2", "souspecCO", "souspecCO2", "souspecH2O", "souspecOH", "souspecH2", "souspecCH4"]
+def get_df_IQR(df):
+	df = pd.DataFrame(df)
+	q1 = df.quantile(.25)
+	q3 = df.quantile(.75)
+	return q3-q1
 
 class DataManager:
     def __init__(self, df_totalData, constants):
@@ -97,6 +100,10 @@ class DataManager:
         #source_term_cols = ['souspec' + col[2:] for col in Yi_cols]
         #all_dependants = ["souener"] + source_term_cols
         #all_dependants.remove('souspecAR')
+
+        global all_dependants
+        #all_dependants = ["souener", "souspecO2", "souspecCO", "souspecCO2", "souspecH2O", "souspecOH", "souspecH2", "souspecCH4"]
+        all_dependants = ['souener'] + [col for col in self.df.columns if col.startswith('Yi')]
 
         self.outputScaler = None
         self.inputScaler = None
