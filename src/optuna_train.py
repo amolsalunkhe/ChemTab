@@ -91,7 +91,7 @@ def main(cfg={}):
     
     print(final_score)
     main.exprExec = exprExec # this may be of interest to the caller
-    return final_score
+    return final_score - noOfCpv*0.001 # small penalty for using more CPVs...
 
 # you override these values based with the config values you pass (via dict.update())
 main.default_cfg = {'opscaler': 'StandardScaler', 'noOfCpv': 10, 'loss': 'R2',
