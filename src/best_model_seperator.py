@@ -52,11 +52,13 @@ def derive_Zmix_weights(df):
     X_data = df[Yi_cols]
     Y_data = df['Zmix']
 
+    # verified (empirically) that it is ok to not use intercept 12/27/22
     lm = sklearn.linear_model.LinearRegression(fit_intercept=False)
     lm.fit(X_data, Y_data)
     assert lm.score(X_data, Y_data)>0.95 # assert R^2=1 (since zmix should be linear combinatino of Yi's)
-
-    return {k: v for k,v in zip(X_data.columns, lm.coef_)}
+    Zmix_weights = pd.Series({k: v for k,v in zip(X_data.columns, lm.coef_)}) 
+    return Zmix_weights # seems more reasonable to return a series, even though it is later needed as DF...
+    #return pd.DataFrame(Zmix_weights, columns=['Zmix'])
 
 # verified to work 5/24/22
 def get_weight_inv_df(weights_df):
@@ -73,8 +75,12 @@ weight_df = pd.DataFrame(w, index=dm.input_data_cols, columns=CPV_names) # dm.in
 assert 'zmix' in layers_by_name
 
 # save pseudo inverse for Varun
-weight_inv_df = get_weight_inv_df(weight_df)
-weight_inv_df.to_csv(f'{decomp_dir}/weights_inv.csv', index=True, header=True)
+#weight_inv_df = get_weight_inv_df(weight_df)
+#weight_inv_df.to_csv(f'{decomp_dir}/weights_inv.csv', index=True, header=True)
+Zmix_weights = derive_Zmix_weights(dm.df)
+Zmix_weights = pd.DataFrame(Zmix_weights, columns=['zmix'])
+weight_df = pd.concat([Zmix_weights, weight_df], axis=1)
+
 weight_df.to_csv(f'{decomp_dir}/weights.csv', index=True, header=True)
 linear_embedder.save(f'{decomp_dir}/linear_embedding') # usually not needed but included for completeness
 

@@ -14,19 +14,21 @@ print_array = lambda x: ','.join([str(i) for i in np.asarray(x).squeeze()])
 print_str_array = lambda x: ','.join([f'"{i}"' for i in np.asarray(x).squeeze()]) 
 print(W)
 
-input_mass = m = np.linspace(0.1,5.3,len(W.index))
+input_mass = m = np.random.rand(len(W.index))
+input_mass = m = m/m.sum() # should sum to 1 as per definition 
+#np.linspace(0.1,5.3,len(W.index))
 m = m[:,np.newaxis]
 output_cpv = cpv = np.dot(W.T,m).flatten()
 print('CPVs <-- mass_fractions:')
 print('CPVs:', print_array(cpv), '<-- mass_fractions:', print_array(m))
 
 # use only 1 input CPV for both tests (for simplicity)
-input_cpv = cpv = np.linspace(0.1,1,len(cpv)) 
+input_cpv = cpv = np.random.rand(len(cpv))#np.linspace(0.1,1,len(cpv)) 
 cpv = cpv[:,np.newaxis]
 
 # pad with Zmix value
-input_cpv = np.concatenate([[0], input_cpv])
-output_cpv = np.concatenate([[0], output_cpv])
+#input_cpv = np.concatenate([[0], input_cpv])
+#output_cpv = np.concatenate([[0], output_cpv])
 
 regressor = keras.models.load_model(f"{model_path}/regressor")
 source_output = regressor(input_cpv[:,np.newaxis].T)
@@ -46,7 +48,7 @@ print('CPVs:', print_array(cpv), '--> mass_fractions:', print_array(m))
 
 import os
 test_targets = {'testName': f'{os.path.basename(model_path)}_parameter_set_1', 
-				'cpv_names': ['zmix'] + list(W.columns),
+				'cpv_names': list(W.columns),
 				'species_names': list(W.index),
 				'input_cpvs': input_cpv.tolist(),
 				'output_mass_fractions': output_mass.tolist(),
@@ -64,7 +66,3 @@ print(test_targets)
 import yaml
 with open(f'{model_path}/testTargets.yaml', 'w') as f:
 	yaml.dump(test_targets, f, default_flow_style=None)
-
-#import os
-#os.system('clang-format test_targets.h > test_targets.h.formatted')
-#os.system('mv test_targets.h.formatted test_targets.h')
