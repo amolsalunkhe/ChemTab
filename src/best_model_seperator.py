@@ -30,8 +30,11 @@ assert experimentSettings['ipscaler']==None # we cannot center data, as it makes
 bestModel = exprExec.modelFactory.getEmbRegressor() # shed container model
 dm = experimentSettings['data_manager']
 
-del experimentSettings['data_manager']
-del experimentSettings['history']
+try:
+    del experimentSettings['data_manager']
+    del experimentSettings['history']
+except: None
+
 with open(f'{decomp_dir}/experiment_record.yaml', 'w') as f:
 	yaml.dump(experimentSettings, f)
 

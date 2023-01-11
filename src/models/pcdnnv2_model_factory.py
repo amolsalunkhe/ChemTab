@@ -18,6 +18,20 @@ from tensorflow.keras.constraints import UnitNorm, Constraint, NonNeg
 from .dnnmodel_model_factory import DNNModelFactory
 from warnings import warn
 
+def add_unit_L1_layer_constraint(x, first_n_preserved=1):
+    """ this is designed to constraint the [first_n_preserved:]
+        outputs from the inversion layer to fall between 0 & 1 and to sum to 1 """
+    from tensorflow.keras import layers
+    model = keras.models.Sequential(name='Unit_L1_constraint')
+    model.add(layers.Activation('softplus'))
+    #model.add(layers.Activation(tf.math.log))
+    #model.add(layers.Activation('softmax'))
+    
+    out = model(x[:,first_n_preserved:])
+    out = out/tf.math.reduce_sum(out, axis=-1, keepdims=True)
+    out = layers.Concatenate(axis=-1)([x[:,:first_n_preserved], out])
+    return out
+
 ## verified to work 6/8/22 (but make sure names are *actually* inconsistent!)
 #def make_output_tensor_names_consistent(out_tensor_dict):
 #    for name in out_tensor_dict:
@@ -47,7 +61,7 @@ class WeightsOrthogonalityConstraint(Constraint):
         if (self.axis == 1):
             w = tf.transpose(w)
         if (self.encoding_dim > 1):
-            m = tf.matmul(tf.transpose(w), w) - tf.eye(self.encoding_dim)
+            m = tf.matmul(tf.transpose(w), w) - tf.eye(self.encoding_dim, dtype=tf.keras.backend.floatx())
             return self.weightage * tf.math.sqrt(tf.math.reduce_sum(tf.math.square(m)))
         else:
             m = tf.math.reduce_sum(w ** 2) - 1.
@@ -58,7 +72,6 @@ class WeightsOrthogonalityConstraint(Constraint):
 
     def get_config(self):
         return {'axis': self.axis, 'weightage': self.weightage, 'encoding_dim': self.encoding_dim}
-
 
 class UncorrelatedFeaturesConstraint(Constraint):
 
@@ -112,7 +125,8 @@ def get_metric_dict():
     def exp_mae_mag(x, y): return tf.math.log(
         tf.math.reduce_mean(tf.math.abs(tf.math.exp(x) - tf.math.exp(y)))) / tf.math.log(10.0)
 
-    def R2(yt,yp): return tf.reduce_mean(1-tf.reduce_mean((yp-yt)**2, axis=0)/(tf.math.reduce_std(yt,axis=0)**2))
+    def R2(yt,yp): return tf.reduce_mean(1-tf.reduce_mean((yp/tf.math.reduce_std(yt,axis=0)-yt/tf.math.reduce_std(yt,axis=0))**2, axis=0))
+    #def R2(yt,yp): return tf.reduce_mean(1-tf.reduce_mean((yp-yt)**2, axis=0)/(tf.math.reduce_std(yt,axis=0)**2))
 
     def exp_R2(yt, yp):  # these are actual names above is for convenience
         return R2(tf.math.exp(yt), tf.math.exp(yp))
@@ -217,9 +231,9 @@ class PCDNNV2ModelFactory(DNNModelFactory):
         self.loss = 'mean_absolute_error'
         
         self.loss_weights = {'static_source_prediction': 1.0, 'dynamic_source_prediction': 1.0}
-        #self.use_R2_losses = False
         self.use_dynamic_pred = False
         self.batch_norm_dynamic_pred = False
+        self.use_L1_constrained_inversion = False
 
     @property # setting this manually was redundant...
     def use_R2_losses(self):
@@ -264,6 +278,8 @@ class PCDNNV2ModelFactory(DNNModelFactory):
                                 activity_regularizer=activity_regularizer)
 
         source_term_pred = self.addRegressorModel(x, noOfOutputNeurons, noOfCpv)
+        if self.use_L1_constrained_inversion: 
+            source_term_pred['static_source_prediction'] = add_unit_L1_layer_constraint(source_term_pred['static_source_prediction'], first_n_preserved=1) 
         source_term_pred = make_output_tensor_names_consistent(source_term_pred)
         model = keras.Model(inputs=inputs, outputs=source_term_pred, name='emb_and_regression_model')
 

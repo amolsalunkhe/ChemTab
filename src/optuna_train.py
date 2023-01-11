@@ -69,9 +69,9 @@ def main(cfg={}):
     exprExec.modelFactory.regressor_skip_connections = cfg['regressor_skip_connections']
     exprExec.modelFactory.regressor_batch_norm = cfg['regressor_batch_norm']
     exprExec.modelFactory.batch_norm_dynamic_pred = cfg['batch_norm_dynamic']
+    exprExec.modelFactory.use_L1_constrained_inversion = cfg['use_L1_constrained_inversion']    
     exprExec.modelFactory.loss_weights = cfg['loss_weights'] 
     exprExec.modelFactory.W_batch_norm = cfg['W_batch_norm']
-        
     exprExec.debug_mode = False
     exprExec.batch_size = cfg['batch_size'] 
     exprExec.epochs_override = cfg['epochs'] 
@@ -98,7 +98,8 @@ main.default_cfg = {'opscaler': 'StandardScaler', 'noOfCpv': 10, 'loss': 'R2',
                     'activation': 'selu', 'width': 2048, 'dropout_rate': 0.0,
                     'batch_size': 256, 'activity_regularizer': 'N', #'kernel_regularizer': 'N', #'kernel_constraint': 'N', 
                     'loss_weights': {'static_source_prediction': 1.0, 'dynamic_source_prediction': 1.0},
-                    'regressor_batch_norm': False, 'regressor_skip_connections': False}
+                    'regressor_batch_norm': False, 'regressor_skip_connections': False,
+                    'use_L1_constrained_inversion': False}
 constants = {'epochs': 10 if debug_mode else 500, 'train_portion': 0.7, 'n_models_override': 1,
              'use_dynamic_pred': True, 'use_dependants': True, 'data_fn': os.environ.setdefault('DATASET', ''),
 			 'kernel_constraint': 'Y', 'kernel_regularizer': 'Y', 'zmix': 'Y', 
@@ -119,6 +120,7 @@ def main_safe(trial=None):
                'width': trial.suggest_int('width', *[1024, 4096]), 'dropout_rate': trial.suggest_float('dropout_rate', *[0, 0.4]),
                'regressor_batch_norm': trial.suggest_categorical('regressor_batch_norm', [True, False]),
                'regressor_skip_connections': trial.suggest_categorical('regressor_skip_connections', [True, False]),
+               'use_L1_constrained_inversion': trial.suggest_categorical('use_L1_constrained_inversion', [True, False]),
                'activity_regularizer': trial.suggest_categorical('activity_regularizer', ['Y', 'N']), 'batch_size': trial.suggest_int('batch_size', *[128, 1028]),
                'loss_weights': {'static_source_prediction': trial.suggest_float('static_loss_weight', *[0.1, 10.0]),
                                 'dynamic_source_prediction': trial.suggest_float('dynamic_loss_weight', *[0.1, 10.0])}} 

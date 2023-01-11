@@ -94,16 +94,10 @@ class DataManager:
         self.df = df_totalData
         self.df['souspecAR'] = 0  # dummy value since it is constant
 
-        ## Add **ALL** souspec dependants
-        #global all_dependants
-        #Yi_cols = [col for col in self.df.columns if col[:2]=='Yi']
-        #source_term_cols = ['souspec' + col[2:] for col in Yi_cols]
-        #all_dependants = ["souener"] + source_term_cols
-        #all_dependants.remove('souspecAR')
-
         global all_dependants
         #all_dependants = ["souener", "souspecO2", "souspecCO", "souspecCO2", "souspecH2O", "souspecOH", "souspecH2", "souspecCH4"]
         all_dependants = ['souener'] + [col for col in self.df.columns if col.startswith('Yi')]
+        #all_dependants = [col for col in self.df.columns if col.startswith('Yi')]
 
         self.outputScaler = None
         self.inputScaler = None
@@ -278,6 +272,7 @@ class DataManager:
 
     @property
     def souener_index(self):
+        import pdb; pdb.set_trace()
         souener_index = self.output_data_cols.index('souener')
         assert souener_index == 0  # souener_index MUST BE 0 this is an assumption made in other parts of the code too
         # DON'T REMOVE THIS ASSERT!     
@@ -325,9 +320,17 @@ class DataManager:
             self.zmix_scaled_test = None
 
         if self.outputScaler is not None:
-            self.outputScaler.fit(np.concatenate((self.Y_train, self.Y_test),axis=0))
-            self.Y_scaled_train = self.outputScaler.transform(self.Y_train)
-            self.Y_scaled_test = self.outputScaler.transform(self.Y_test)
+            ## apply to everything
+            #self.outputScaler.fit(np.concatenate((self.Y_train, self.Y_test),axis=0))
+            #self.Y_scaled_train = self.outputScaler.transform(self.Y_train)
+            #self.Y_scaled_test = self.outputScaler.transform(self.Y_test)
+
+            # only apply to source energy
+            self.Y_scaled_train = np.copy(self.Y_train)
+            self.Y_scaled_test = np.copy(self.Y_test)
+            self.outputScaler.fit(np.concatenate((self.Y_train[:,0:1], self.Y_test[:,0:1]),axis=0))
+            self.Y_scaled_train[:,0:1] = self.outputScaler.transform(self.Y_train[:,0:1])
+            self.Y_scaled_test[:,0:1] = self.outputScaler.transform(self.Y_test[:,0:1])
         else:
             self.Y_scaled_train = None
             self.Y_scaled_test = None
