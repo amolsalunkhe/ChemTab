@@ -45,6 +45,19 @@ linear_embedder = layers_by_name['linear_embedding']
 w = np.asarray(get_layers_by_name(linear_embedder)['linear_embedding'].weights[0])
 print(f'linear embedder weights shape: {w.shape}') # shape is [53, nCPV]
 
+def add_unit_L1_layer_constraint(x, first_n_preserved=1, layer_name=None):
+    """ this is designed to constraint the [first_n_preserved:]
+    outputs from the inversion layer to fall between 0 & 1 and to sum to 1 """
+    from tensorflow.keras import layers
+    
+    inputs_ = layers.Input((x.shape[1]-first_n_preserved,))
+    out = tf.math.maximum(inputs_, 0)
+    out = tf.math.minimum(out, 1)
+    
+    out = out/tf.math.reduce_sum(out, axis=-1, keepdims=True)
+    model = keras.models.Model(inputs=inputs_, outputs=out, name='Unit_L1_constraint')
+    return layers.Concatenate(axis=-1, name=layer_name)([x[:,:first_n_preserved], model(x[:,first_n_preserved:])])
+
 # verified to work 6/20/22
 def derive_Zmix_weights(df):
     import sklearn.linear_model
@@ -53,7 +66,7 @@ def derive_Zmix_weights(df):
     Y_data = df['Zmix']
 
     # verified (empirically) that it is ok to not use intercept 12/27/22
-    lm = sklearn.linear_model.LinearRegression(fit_intercept=False)
+    lm = sklearn.linear_model.LinearRegression(fit_intercept=False, positive=True)
     lm.fit(X_data, Y_data)
     assert lm.score(X_data, Y_data)>0.95 # assert R^2=1 (since zmix should be linear combinatino of Yi's)
     Zmix_weights = pd.Series({k: v for k,v in zip(X_data.columns, lm.coef_)}) 
@@ -91,8 +104,9 @@ output = regressor(input_)
 
 rescaling_layer, (m,b) = fit_rescaling_layer(dm.outputScaler, layer_name='static_source_prediction')
 
-# m & b from y=mx+b
+## m & b from y=mx+b
 output['static_source_prediction'] = rescaling_layer(output['static_source_prediction'])
+#output['static_source_prediction'] = add_unit_L1_layer_constraint(output['static_source_prediction'], 1, layer_name='static_source_prediction')
 output['dynamic_source_prediction'] = keras.layers.Rescaling(1, name='dynamic_source_prediction')(output['dynamic_source_prediction']) # identity layer to rename properly
 wrapper = keras.models.Model(inputs=input_, outputs=output, name='regressor')
 

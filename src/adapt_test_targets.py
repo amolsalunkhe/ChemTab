@@ -1,29 +1,42 @@
-import numpy as np
-import pandas as pd
 from tensorflow import keras
-import os
+import pandas as pd
+import numpy as np
 import yaml
+import os
 
 #model_path = f'../inputs/chemistry/chemTabTestModel_1' 
 #model_path = f'{os.environ["ABLATE_MASTER"]}/ablate/tests/ablateLibrary/inputs/chemistry/chemTabTestModel_1/'
 model_path = 'PCDNNV2_decomp'
 
 W = pd.read_csv(f'{model_path}/weights.csv', index_col=0)
-#Winv = pd.read_csv(f'{model_path}/weights_inv.csv', index_col=0)
+Winv = np.linalg.pinv(W.T) #Winv = pd.read_csv(f'{model_path}/weights_inv.csv', index_col=0)
 print_array = lambda x: ','.join([str(i) for i in np.asarray(x).squeeze()]) 
 print_str_array = lambda x: ','.join([f'"{i}"' for i in np.asarray(x).squeeze()]) 
 print(W)
 
-input_mass = m = np.random.rand(len(W.index))
-input_mass = m = m/m.sum() # should sum to 1 as per definition 
-#np.linspace(0.1,5.3,len(W.index))
-m = m[:,np.newaxis]
+#input_mass = m = np.random.rand(len(W.index))
+#input_mass = m = m/m.sum() # should sum to 1 as per definition 
+#m = m[:,np.newaxis]
+
+# Here we derive the masses from several known constraints (to make them more realistic)
+#INTERESTING: we proved given orthonormality constraint (via scharts inequality) that all CPVs < 1 (including Zmix)
+start_cpvs = np.random.rand(len(W.columns)) # NOTE: rand gives uniform distribution between 0 & 1 to satisfy above mentioned constraint
+masses = np.dot(Winv, start_cpvs[:,np.newaxis])
+masses = np.maximum(masses, 0) # must be positive!
+masses /= np.sum(masses) # should sum to 1 as per definition 
+input_mass = m = masses
+# NOTE: even all of these measures aren't enough to ensure that the Zmix prediction isn't garbage...
+# it seems the linear fit is very sensitive to out of distribution data? maybe try a real datum?
+
+import pdb; pdb.set_trace()
+
+#INTERESTING: we proved given orthonormality constraint (via scharts inequality) that all CPVs < 1 (including Zmix)
 output_cpv = cpv = np.dot(W.T,m).flatten()
 print('CPVs <-- mass_fractions:')
 print('CPVs:', print_array(cpv), '<-- mass_fractions:', print_array(m))
 
 # use only 1 input CPV for both tests (for simplicity)
-input_cpv = cpv = np.random.rand(len(cpv))#np.linspace(0.1,1,len(cpv)) 
+input_cpv = cpv# = np.random.rand(len(cpv))#np.linspace(0.1,1,len(cpv)) 
 cpv = cpv[:,np.newaxis]
 
 # pad with Zmix value
