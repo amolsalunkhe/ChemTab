@@ -66,7 +66,7 @@ def derive_Zmix_weights(df):
     Y_data = df['Zmix']
 
     # verified (empirically) that it is ok to not use intercept 12/27/22
-    lm = sklearn.linear_model.LinearRegression(fit_intercept=False, positive=True)
+    lm = sklearn.linear_model.LassoCV(fit_intercept=False, positive=True)
     lm.fit(X_data, Y_data)
     assert lm.score(X_data, Y_data)>0.95 # assert R^2=1 (since zmix should be linear combinatino of Yi's)
     Zmix_weights = pd.Series({k: v for k,v in zip(X_data.columns, lm.coef_)}) 

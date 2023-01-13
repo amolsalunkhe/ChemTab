@@ -25,10 +25,6 @@ masses = np.dot(Winv, start_cpvs[:,np.newaxis])
 masses = np.maximum(masses, 0) # must be positive!
 masses /= np.sum(masses) # should sum to 1 as per definition 
 input_mass = m = masses
-# NOTE: even all of these measures aren't enough to ensure that the Zmix prediction isn't garbage...
-# it seems the linear fit is very sensitive to out of distribution data? maybe try a real datum?
-
-import pdb; pdb.set_trace()
 
 #INTERESTING: we proved given orthonormality constraint (via scharts inequality) that all CPVs < 1 (including Zmix)
 output_cpv = cpv = np.dot(W.T,m).flatten()

@@ -47,7 +47,7 @@ class WeightsOrthogonalityConstraint(Constraint):
         if (self.axis == 1):
             w = tf.transpose(w)
         if (self.encoding_dim > 1):
-            m = tf.matmul(tf.transpose(w), w) - tf.eye(self.encoding_dim)
+            m = tf.matmul(tf.transpose(w), w) - tf.eye(self.encoding_dim, dtype=tf.keras.backend.floatx()) 
             return self.weightage * tf.math.sqrt(tf.math.reduce_sum(tf.math.square(m)))
         else:
             m = tf.math.reduce_sum(w ** 2) - 1.
