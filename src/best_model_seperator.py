@@ -94,6 +94,7 @@ Zmix_weights = derive_Zmix_weights(dm.df)
 Zmix_weights = pd.DataFrame(Zmix_weights, columns=['zmix'])
 weight_df = pd.concat([Zmix_weights, weight_df], axis=1)
 
+weight_df.index = list(map(lambda x: x[2:], weight_df.index))
 weight_df.to_csv(f'{decomp_dir}/weights.csv', index=True, header=True)
 linear_embedder.save(f'{decomp_dir}/linear_embedding') # usually not needed but included for completeness
 
@@ -102,11 +103,11 @@ regressor = layers_by_name['regressor']
 input_ = keras.layers.Input(shape=regressor.input_shape[1:], name='input_1')
 output = regressor(input_)
 
-rescaling_layer, (m,b) = fit_rescaling_layer(dm.outputScaler, layer_name='static_source_prediction')
+rescaling_layer, (m,b) = fit_rescaling_layer(dm.outputScaler)#, layer_name='static_source_prediction')
 
 ## m & b from y=mx+b
 output['static_source_prediction'] = rescaling_layer(output['static_source_prediction'])
-#output['static_source_prediction'] = add_unit_L1_layer_constraint(output['static_source_prediction'], 1, layer_name='static_source_prediction')
+output['static_source_prediction'] = add_unit_L1_layer_constraint(output['static_source_prediction'], 1, layer_name='static_source_prediction')
 output['dynamic_source_prediction'] = keras.layers.Rescaling(1, name='dynamic_source_prediction')(output['dynamic_source_prediction']) # identity layer to rename properly
 wrapper = keras.models.Model(inputs=input_, outputs=output, name='regressor')
 

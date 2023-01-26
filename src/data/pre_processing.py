@@ -24,7 +24,7 @@ class DataPreparer:
         self.df = self.df.drop(columns=['L1_ERR', 'L2_ERR'], errors='ignore')
         # include space misspelling & correct spelling (in-case it is fixed) 
 
-        self.num_principal_components = 5
+        self.num_principal_components = 12
         # create an integer representation of the flame-id and add to the data frame
         self.df['flame_key_int'] = self.df['flame_key'].mul(10000000).astype(int)
 

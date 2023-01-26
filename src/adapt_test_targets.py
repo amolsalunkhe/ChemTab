@@ -4,8 +4,6 @@ import numpy as np
 import yaml
 import os
 
-#model_path = f'../inputs/chemistry/chemTabTestModel_1' 
-#model_path = f'{os.environ["ABLATE_MASTER"]}/ablate/tests/ablateLibrary/inputs/chemistry/chemTabTestModel_1/'
 model_path = 'PCDNNV2_decomp'
 
 W = pd.read_csv(f'{model_path}/weights.csv', index_col=0)
@@ -61,7 +59,7 @@ test_targets = {'testName': f'{os.path.basename(model_path)}_parameter_set_1',
 				'species_names': list(W.index),
 				'input_cpvs': input_cpv.tolist(),
 				'output_mass_fractions': output_mass.tolist(),
-				'input_mass_fractions': input_mass.tolist(),
+				'input_mass_fractions': input_mass.squeeze().tolist(),
 				'output_cpvs': output_cpv.tolist(),
 				'output_source_terms': [0.0]+source_output['dynamic_source_prediction'].numpy().squeeze().tolist(),
 				'output_source_energy': souener_output.item()}
