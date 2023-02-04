@@ -189,7 +189,7 @@ class PCDNNV2ExperimentExecutor:
     #    self.dm.include_PCDNNV2_PCA_data(self.modelFactory, concatenateZmix=concatenateZmix)
     #    self.dm.save_PCA_data(fn=path+'/PCA_data.csv') 
 
-    def fitModelAndCalcErr(self, dm=None, concatenateZmix='N'):
+    def fitModelAndCalcErr(self, dm=None, concatenateZmix='Y', rebuild=True):
         self.model.summary(expand_nested=True)
 
         if dm is None: dm = self.dm
@@ -203,7 +203,7 @@ class PCDNNV2ExperimentExecutor:
             Y_test_raw = Y_scaler.inverse_transform(Y_test_raw)
 
         # setup params
-        n = 2 if self.debug_mode else 3
+        n = 2 #if self.debug_mode else 3
         epochs = 5 if self.debug_mode else 100
         if self.epochs_override: epochs = self.epochs_override
         if self.n_models_override: n = self.n_models_override + 1
@@ -217,16 +217,14 @@ class PCDNNV2ExperimentExecutor:
         my_callbacks = [keras.callbacks.EarlyStopping(monitor='val_loss', patience=epochs//5, restore_best_weights=True)] # [tf.keras.callbacks.TensorBoard(log_dir='./tb_logs', histogram_freq=1)]
 
         for itr in range(1, n):
-            self.model = self.modelFactory.rebuild_model()
+            if rebuild: self.model = self.modelFactory.rebuild_model()
             print(f'training model: {itr}')
             t = time.process_time()
 
             self.history = self.model.fit(input_dict_train, output_dict_train, verbose=1,
                                      batch_size=self.batch_size, epochs=epochs, shuffle=True,
                                      validation_split=1-self.dm.train_portion,
-                                     #validation_data=(input_dict_test, output_dict_test),
                                      callbacks=my_callbacks)
-            # self.plot_loss_physics_and_regression(history)
 
             fit_times.append(time.process_time() - t)
 

@@ -7,13 +7,15 @@ from tensorflow import keras
 from tensorflow.keras import layers as L
 from optuna_train import *
 
+# {'dataSetMethod': 'AllSpecies_randomequaltraintestsplit_AllDependants', 'ipscaler': None, 'opscaler': 'StandardScaler', 'noOfCpv': 12, 'ZmixPresent': 'Y', 'concatenateZmix': 'Y', 'kernel_constraint': 'Y', 'kernel_regularizer': 'Y', 'activity_regularizer': 'N', 'input_data_cols': ['YiCH4', 'YiH', 'YiO', 'YiO2', 'YiOH', 'YiH2O', 'YiHO2', 'YiH2O2', 'YiC', 'YiCH', 'YiCH2', 'YiCH2(S)', 'YiCH3', 'YiH2', 'YiCO', 'YiCO2', 'YiHCO', 'YiCH2O', 'YiCH2OH', 'YiCH3O', 'YiCH3OH', 'YiC2H', 'YiC2H2', 'YiC2H3', 'YiC2H4', 'YiC2H5', 'YiC2H6', 'YiHCCO', 'YiCH2CO', 'YiHCCOH', 'YiN', 'YiNH', 'YiNH2', 'YiNH3', 'YiNNH', 'YiNO', 'YiNO2', 'YiN2O', 'YiHNO', 'YiCN', 'YiHCN', 'YiH2CN', 'YiHCNN', 'YiHCNO', 'YiHOCN', 'YiHNCO', 'YiNCO', 'YiC3H7', 'YiC3H8', 'YiCH2CHO', 'YiCH3CHO', 'YiN2', 'YiAR'], 'val_losses': {'loss': -1.7983406782150269, 'dynamic_source_prediction_loss': -0.9774019122123718, 'static_source_prediction_loss': -0.8507312536239624, 'dynamic_source_prediction_R2_split': 0.9772778153419495, 'dynamic_source_prediction_source_pred_mean': 1.224331021308899, 'dynamic_source_prediction_source_true_mean': 1.7918648719787598, 'static_source_prediction_mae': 0.10440650582313538, 'static_source_prediction_mse': 0.15989357233047485, 'static_source_prediction_R2': 0.850985586643219, 'static_source_prediction_mape': 435.87158203125}, 'model_R2': 0.8515233500441262}
+
 # you override these values based with the config values you pass (via dict.update())
-cfg = {'zmix': 'Y', 'ipscaler': None, 'opscaler': 'StandardScaler', 'noOfCpv': 10, 'loss': 'R2',
-       'activation': 'selu', 'width': 800, 'dropout_rate': 0.0, 
+cfg = {'zmix': 'Y', 'ipscaler': None, 'opscaler': 'StandardScaler', 'noOfCpv': 12, 'loss': 'R2',
+       'activation': 'selu', 'width': 10000, 'dropout_rate': 0.1, 
        'regressor_batch_norm': False, 'regressor_skip_connections': False, 'batch_norm_dynamic': True,
-       'kernel_constraint': 'Y', 'kernel_regularizer': 'Y', 'activity_regularizer': 'N', 'batch_size': 400,
-       'loss_weights': {'static_source_prediction': 3.0, 'dynamic_source_prediction': 1.0}}
-cfg['epochs'] = 1000 # special because it should always be large
+       'kernel_constraint': 'Y', 'kernel_regularizer': 'N', 'activity_regularizer': 'N', 'batch_size': 400,
+       'loss_weights': {'static_source_prediction': 5.0, 'dynamic_source_prediction': 1.0}}
+cfg['epochs'] = 10000 # special because it should always be large
 
 final_score = main(cfg)
 print('model final (R^2) score:', final_score)

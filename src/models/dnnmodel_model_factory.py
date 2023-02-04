@@ -48,10 +48,12 @@ class DNNModelFactory:
         self.concreteClassCustomObject = concreteClassCustomObject
         
     def getOptimizer(self):
-        starter_learning_rate = 0.0001
+        starter_learning_rate = 0.000001
+
+        lr_schedule = tf.keras.optimizers.schedules.ExponentialDecay(starter_learning_rate, decay_steps=100000, decay_rate=0.96, staircase=True)
 
         # NOTE: we are testing this again for compatibility with benchmark notebook 
-        opt = keras.optimizers.Adam(learning_rate=starter_learning_rate, clipnorm=2.5)
+        opt = keras.optimizers.Adam(learning_rate=lr_schedule, clipnorm=2.5)
         return opt
 
     # reimplmeneted to non-trivial version in PCDNNv2
