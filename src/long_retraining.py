@@ -33,6 +33,7 @@ dm = DataManager(df, dp)
 """ prepare PCDNNV2 for loading (from prior experiments) """
 
 exprExec = PCDNNV2ExperimentExecutor()
+exprExec.debug_mode = False
 exprExec.setModelFactory(PCDNNV2ModelFactory())
 
 # for recording in custom objects dict
@@ -94,8 +95,8 @@ metrics = {'static_source_prediction': ['mae', 'mse', R2, 'mape', R2_inv],
 
 bestModel.compile(loss=losses, optimizer=opt, metrics=metrics)
 
-exprExec.epochs_override = 10000
-exprExec.batch_size=10000
+exprExec.epochs_override = 1000000
+exprExec.batch_size=3000
 exprExec.dm = experimentSettings['data_manager']
 exprExec.model = bestModel
 exprExec.use_dynamic_pred = True
