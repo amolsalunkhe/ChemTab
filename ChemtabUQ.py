@@ -12,9 +12,9 @@ class UQMomentsDataset(Dataset):
         df.index=df[group_key]
         if inputs_like: inputs_df = df.filter(like=inputs_like)
         if outputs_like: outs_df = df.filter(like=outputs_like)
-        self.df_mu = th.Tensor(inputs_df.groupby(group_key).mean().values).cuda()
-        self.df_sigma = th.Tensor(inputs_df.groupby(group_key).std().values).cuda()
-        self.outs_df = th.Tensor(outs_df.groupby(group_key).mean().values).cuda()
+        self.df_mu = th.Tensor(inputs_df.groupby(group_key).mean().values)
+        self.df_sigma = th.Tensor(inputs_df.groupby(group_key).std().values)
+        self.outs_df = th.Tensor(outs_df.groupby(group_key).mean().values)
 
         print('original df len: ', len(df))
         print('reduced df len: ', self.df_sigma.shape[0])
@@ -108,15 +108,15 @@ def fit_UQ_model(dataset, name, max_epochs=1, **kwd_args):
 
 if __name__=='__main__':
     ##################### Fit Mean Regressor: #####################
-    df_fn = f'{os.environ["HOME"]}/chrest_head2.csv'
+    df_fn = f'{os.environ["HOME"]}/chrest_head.csv'
     moments_dataset = UQMomentsDataset(df_fn, inputs_like='Yi', outputs_like='souspec', group_key='group')
     samples_dataset = UQSamplesDataset(moments_dataset)
-    mean_regressor = fit_UQ_model(samples_dataset, 'mean_regressor', max_epochs=100000, workers=8)
+    mean_regressor = fit_UQ_model(samples_dataset, 'mean_regressor', max_epochs=100000, batch_size=128, workers=8)
     #########################################################################
     
     ##################### Fit Standard Deviation Regressor: #####################
     STD_dataset = UQErrorPredictionDataset(mean_regressor, moments_dataset)
-    mean_regressor = fit_UQ_model(STD_dataset, 'std_regressor', max_epochs=100000, workers=8)
+    mean_regressor = fit_UQ_model(STD_dataset, 'std_regressor', max_epochs=100000, batch_size=128, workers=8)
     #########################################################################
 
 
