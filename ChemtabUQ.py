@@ -98,26 +98,27 @@ def make_data_loaders(dataset, batch_size=32, train_portion=0.8, workers=8):
 def fit_UQ_model(dataset, name, max_epochs=1, **kwd_args):
     train_loader, val_loader = make_data_loaders(dataset, **kwd_args)
     x,y=next(iter(val_loader)) # hack to find dataset input size!
-    mean_regressor = UQModel(input_size=x.shape[1], output_size=y.shape[1])
+    regressor = UQModel(input_size=x.shape[1], output_size=y.shape[1])
     trainer = pl.Trainer(max_epochs=max_epochs, accelerator='gpu', devices=1)
-    trainer.fit(mean_regressor, train_loader, val_loader)
+    trainer.fit(regressor, train_loader, val_loader)
     with open(f'{name}.pt', 'wb') as f:
-        th.save(mean_regressor, f)
+        th.save(regressor, f)
     print(f'done fitting {name}!')
-    return mean_regressor
+    return regressor
 
 if __name__=='__main__':
     ##################### Fit Mean Regressor: #####################
     df_fn = f'{os.environ["HOME"]}/chrest_head.csv'
     moments_dataset = UQMomentsDataset(df_fn, inputs_like='Yi', outputs_like='souspec', group_key='group')
     samples_dataset = UQSamplesDataset(moments_dataset)
-    mean_regressor = fit_UQ_model(samples_dataset, 'mean_regressor', max_epochs=100000, batch_size=128, workers=8)
+    batch_multiplier = 4
+    num_base_epochs = 2000
+    mean_regressor = fit_UQ_model(samples_dataset, 'mean_regressor', max_epochs=num_base_epochs*batch_multiplier,
+                                  batch_size=128*batch_multiplier, workers=8)
     #########################################################################
     
     ##################### Fit Standard Deviation Regressor: #####################
     STD_dataset = UQErrorPredictionDataset(mean_regressor, moments_dataset)
-    mean_regressor = fit_UQ_model(STD_dataset, 'std_regressor', max_epochs=100000, batch_size=128, workers=8)
+    std_regressor = fit_UQ_model(STD_dataset, 'std_regressor', max_epochs=num_base_epochs*batch_multiplier,
+                                 batch_size=128*batch_multiplier, workers=8)
     #########################################################################
-
-
-    
