@@ -24,7 +24,7 @@ assert pd.__path__[0]!='/opt/anaconda/lib/python3.8/site-packages/pandas', 'Erro
 # lightly more superficial root cause is that you sometimes use jupyter lab which triggers you to use the /opt/anaconda/bin path backup when it sees jupyter lab isn't in local environment which breaks everything (uses outdated pandas)
 
 #Prepare the DataFrame that will be used downstream
-dp = DataPreparer(fn='../datasets/wax_master.csv')
+dp = DataPreparer(fn=os.environ.setdefault('DATASET', ''))
 df = dp.getDataframe()
 
 # currently passing dp eventually we want to abstract all the constants into 1 class
@@ -95,9 +95,14 @@ metrics = {'static_source_prediction': ['mae', 'mse', R2, 'mape', R2_inv],
 
 bestModel.compile(loss=losses, optimizer=opt, metrics=metrics)
 
-exprExec.epochs_override = 1000000
+exprExec.epochs_override = 100000
 exprExec.batch_size=3000
-exprExec.dm = experimentSettings['data_manager']
+
+# settings for training on full dataset (gets slightly better performance of course)
+dm.train_portion=0.9
+dm.createTrainTestData(experimentSettings['dataSetMethod'], experimentSettings['noOfCpv'], experimentSettings['ipscaler'], experimentSettings['opscaler'])
+exprExec.dm = dm#experimentSettings['data_manager']
+
 exprExec.model = bestModel
 exprExec.use_dynamic_pred = True
 
