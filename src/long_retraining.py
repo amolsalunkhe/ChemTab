@@ -23,6 +23,8 @@ assert pd.__path__[0]!='/opt/anaconda/lib/python3.8/site-packages/pandas', 'Erro
 # this is a nefarious problem with current version of anaconda, root cause is conda version install your own local one!
 # lightly more superficial root cause is that you sometimes use jupyter lab which triggers you to use the /opt/anaconda/bin path backup when it sees jupyter lab isn't in local environment which breaks everything (uses outdated pandas)
 
+raise NotImplemented('Hazard: This code is broken and gives fake results! (reloading the container module implicitly creates 2 weight matrices which can be trained independently rather than having them each reference the same. So naturally the results are fake.')
+
 #Prepare the DataFrame that will be used downstream
 dp = DataPreparer(fn=os.environ.setdefault('DATASET', ''))
 df = dp.getDataframe()
