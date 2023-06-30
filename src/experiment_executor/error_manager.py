@@ -79,7 +79,7 @@ class ErrorManager:
                                                                    target_key: error_df[target_key].mean(),
                                                                    'MAX-' + target_key: error_df[target_key].max()}
         # TODO: add R^2 error in here!
-        err_names = ['MAE', 'TAE', 'MSE', 'TSE', 'MRE', 'TRE']
+        err_names = ['MAE', 'MSE', 'MRE']
         errorResults = {'#Pts': err_df['#Pts'].mean()}
         for name in err_names:
             errorResults.update(distribution_summary_stats(err_df, name))
@@ -88,10 +88,6 @@ class ErrorManager:
     def printError (self,err):
         if type(err) is pd.DataFrame:
             print(err.describe())
-        TotalAbsoluteError = err['TAE']
-
-        TotalSquaredError = err['TSE']
-
         MeanAbsoluteError = err['MAE']
 
         MeanSquaredError = err['MSE']
@@ -100,9 +96,7 @@ class ErrorManager:
 
         NumPoints = err['#Pts']
         
-        print ('Total Absolute Error: ', TotalAbsoluteError)
         print ('Mean Absolute Error: ', MeanAbsoluteError)
         print ('Mean Percentage Error: ', MeanPercentageError)
-        print ('Total Squared Error: ', TotalSquaredError)
         print ('Mean Squared Error: ', MeanSquaredError)
         print ('Number of Points: ', NumPoints)

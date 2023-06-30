@@ -255,7 +255,7 @@ class PCDNNV2ExperimentExecutor:
                 self.best_model_score = model_R2
                 path = self.best_model_path+self.modelFactory.modelName
                 val_losses = self.model.evaluate(input_dict_test, output_dict_test, batch_size=1000, verbose=1, return_dict=True)
-                experiment_results = {'val_losses': val_losses, 'model_R2': self.best_model_score, 'history': self.history.history}
+                experiment_results = {'val_losses': val_losses, 'model_R2': self.best_model_score, 'history': self.history.history, 'souener_errors': curr_errs}
                 self.modelFactory.saveCurrModelAsBestModel(path=path, experiment_results=experiment_results)
                 self.dm.include_PCDNNV2_PCA_data(self.modelFactory, concatenateZmix=concatenateZmix)
                 self.dm.save_PCA_data(fn=path+'/PCA_data.csv')
