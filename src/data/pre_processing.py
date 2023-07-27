@@ -6,11 +6,9 @@ Created on Wed Aug  4 17:52:13 2021
 """
 
 import warnings
-
 import numpy as np
 import pandas as pd
 from sklearn.decomposition import PCA, SparsePCA
-
 
 # demonstrate data normalization with sklearn
 
@@ -18,58 +16,70 @@ class DataPreparer:
     def __init__(self, fn='../methane_air_master.csv'):
         # read the data into a dataframe
         self.df = pd.read_csv(fn)
+        if 'zmix' in self.df.columns: 
+            self.df['Zmix']=self.df['zmix']
+            self.df=self.df.drop(columns='zmix')
         #self.df['Zmix'] = self.df['Xpos'] = self.df['X'] = self.df['flame_key'] = 0
        
         self.df.columns = map(lambda x: x.strip(), self.df.columns)  # deal with annoying spaces in column names
         self.df = self.df.drop(columns=['L1_ERR', 'L2_ERR'], errors='ignore')
         # include space misspelling & correct spelling (in-case it is fixed) 
 
+        self.other_tracking_cols=['Xpos', 'flame_key']
+        self.other_tracking_cols=[col for col in self.other_tracking_cols if col in self.df.columns]
         self.num_principal_components = 12
-        # create an integer representation of the flame-id and add to the data frame
-        self.df['flame_key_int'] = self.df['flame_key'].mul(10000000).astype(int)
-
-        self.framework_untrimmed_flameids = ['2.0276547153583627E-4', '2.1343733845877503E-4', '2.2467088258818426E-4',
-                                             '2.3649566588229923E-4', '2.4894280619189394E-4', '2.6204505914936203E-4',
-                                             '2.7583690436774953E-4', '2.903546361765785E-4', '3.056364591332405E-4',
-                                             '3.2172258856130585E-4', '3.3865535638032194E-4', '0.0032353354497370902']
-
-        self.framework_untrimmed_flame_key_ints = [int(float(self.framework_untrimmed_flameids[i]) * 10000000) for i in
-                                                   range(len(self.framework_untrimmed_flameids))]
-
-        self.df['is_flame_included_by_framework'] = self.df['flame_key_int'].map(lambda x: self.isFlame_included(x))
-
+        
         self.icovariates = []
         for c in self.df.columns:
             if c[0:2] == 'Yi':
                 self.icovariates.append(c)
 
-        self.zmix_pca_dim_cols = ["Zmix_PCA_" + str(i + 1) for i in range(self.num_principal_components)]
 
-        self.pure_pca_dim_cols = ["PURE_PCA_" + str(i + 1) for i in range(self.num_principal_components)]
+        ## create an integer representation of the flame-id and add to the data frame
+        #self.df['flame_key_int'] = self.df['flame_key'].mul(10000000).astype(int)
 
-        self.sparse_pca_dim_cols = ["SPARSE_PCA_" + str(i + 1) for i in range(self.num_principal_components)]
+        #self.framework_untrimmed_flameids = ['2.0276547153583627E-4', '2.1343733845877503E-4', '2.2467088258818426E-4',
+        #                                     '2.3649566588229923E-4', '2.4894280619189394E-4', '2.6204505914936203E-4',
+        #                                     '2.7583690436774953E-4', '2.903546361765785E-4', '3.056364591332405E-4',
+        #                                     '3.2172258856130585E-4', '3.3865535638032194E-4', '0.0032353354497370902']
 
-        self.framework_included_flames_int = self.df[self.df['is_flame_included_by_framework'] == 1][
-            'flame_key_int'].unique()
+        #self.framework_untrimmed_flame_key_ints = [int(float(self.framework_untrimmed_flameids[i]) * 10000000) for i in
+        #                                           range(len(self.framework_untrimmed_flameids))]
 
-        self.framework_excluded_flames_int = self.df[self.df['is_flame_included_by_framework'] == 0][
-            'flame_key_int'].unique()
+        #self.df['is_flame_included_by_framework'] = self.df['flame_key_int'].map(lambda x: self.isFlame_included(x))
 
-        self.all_flames_int = self.df['flame_key_int'].unique()
+        #self.icovariates = []
+        #for c in self.df.columns:
+        #    if c[0:2] == 'Yi':
+        #        self.icovariates.append(c)
 
-        self.other_tracking_cols = ['is_flame_included_by_framework', 'Xpos', 'flame_key', 'flame_key_int']
+        #self.zmix_pca_dim_cols = ["Zmix_PCA_" + str(i + 1) for i in range(self.num_principal_components)]
 
-        #cut_labels = ['0.0 - 0.11', '0.11 - 0.22', '0.22 - 0.33', '0.33 - 0.44', '0.44 - 0.55', '0.55 - 0.66',
-        #              '0.66 - 0.77', '0.77 - 0.88', '0.88 - 0.99', '0.99 - 1.1']
-        #cut_bins = np.linspace(0, 1.1, 11)
-        #self.df['X_bins'] = pd.cut(self.df['X'], bins=cut_bins, labels=cut_labels)
+        #self.pure_pca_dim_cols = ["PURE_PCA_" + str(i + 1) for i in range(self.num_principal_components)]
 
-    def isFlame_included(self, flame_key_int):
-        if flame_key_int in self.framework_untrimmed_flame_key_ints:
-            ret_val = 1
-        else:
-            ret_val = 0
-        return ret_val
+        #self.sparse_pca_dim_cols = ["SPARSE_PCA_" + str(i + 1) for i in range(self.num_principal_components)]
+
+        #self.framework_included_flames_int = self.df[self.df['is_flame_included_by_framework'] == 1][
+        #    'flame_key_int'].unique()
+
+        #self.framework_excluded_flames_int = self.df[self.df['is_flame_included_by_framework'] == 0][
+        #    'flame_key_int'].unique()
+
+        #self.all_flames_int = self.df['flame_key_int'].unique()
+
+        #self.other_tracking_cols = ['is_flame_included_by_framework', 'Xpos', 'flame_key', 'flame_key_int']
+
+        ##cut_labels = ['0.0 - 0.11', '0.11 - 0.22', '0.22 - 0.33', '0.33 - 0.44', '0.44 - 0.55', '0.55 - 0.66',
+        ##              '0.66 - 0.77', '0.77 - 0.88', '0.88 - 0.99', '0.99 - 1.1']
+        ##cut_bins = np.linspace(0, 1.1, 11)
+        ##self.df['X_bins'] = pd.cut(self.df['X'], bins=cut_bins, labels=cut_labels)
+
+    #def isFlame_included(self, flame_key_int):
+    #    if flame_key_int in self.framework_untrimmed_flame_key_ints:
+    #        ret_val = 1
+    #    else:
+    #        ret_val = 0
+    #    return ret_val
 
     def include_PCDNNV2_PCA_data(self, dm, model_factory, concatenateZmix: str):
         # this appends (train, test) data in that order
@@ -118,30 +128,30 @@ class DataPreparer:
         self.df['L2_ERR_dynamic'] = np.mean(L1_ERR_dynamic**2, axis=1)
 
 
-    def createPCAs(self):
-        # necessary to make PCA work properly
-        from sklearn.preprocessing import StandardScaler
-        pca = PCA(n_components=self.num_principal_components, whiten=True)
+    #def createPCAs(self):
+    #    # necessary to make PCA work properly
+    #    from sklearn.preprocessing import StandardScaler
+    #    pca = PCA(n_components=self.num_principal_components, whiten=True)
 
-        X = self.df[self.icovariates].values
-        X = StandardScaler().fit_transform(X)
+    #    X = self.df[self.icovariates].values
+    #    X = StandardScaler().fit_transform(X)
 
-        df_pure_pca = pd.DataFrame(pca.fit_transform(X), columns=self.pure_pca_dim_cols)
+    #    df_pure_pca = pd.DataFrame(pca.fit_transform(X), columns=self.pure_pca_dim_cols)
 
-        self.df[self.pure_pca_dim_cols] = df_pure_pca
-        #self.df = pd.concat([self.df, df_pure_pca], axis=1)
+    #    self.df[self.pure_pca_dim_cols] = df_pure_pca
+    #    #self.df = pd.concat([self.df, df_pure_pca], axis=1)
 
-    def sparsePCAs(self):
+    #def sparsePCAs(self):
 
-        sparsepca = SparsePCA(n_components=self.num_principal_components)
+    #    sparsepca = SparsePCA(n_components=self.num_principal_components)
 
-        X = self.df[self.icovariates].values
+    #    X = self.df[self.icovariates].values
 
-        sparsepca.fit_transform(X)
+    #    sparsepca.fit_transform(X)
 
-        df_sparse_pca = pd.DataFrame(sparsepca.transform(X), columns=self.sparse_pca_dim_cols)
+    #    df_sparse_pca = pd.DataFrame(sparsepca.transform(X), columns=self.sparse_pca_dim_cols)
 
-        self.df = pd.concat([self.df, df_sparse_pca], axis=1)
+    #    self.df = pd.concat([self.df, df_sparse_pca], axis=1)
 
     def getDataframe(self):
         return self.df

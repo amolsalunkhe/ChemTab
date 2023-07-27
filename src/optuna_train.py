@@ -19,7 +19,7 @@ import sys
 import numpy as np
 import pandas as pd
 
-debug_mode = False 
+debug_mode = False #True
 if debug_mode: print('debugging!', file=sys.stderr)
 
 def main(cfg={}):
@@ -33,8 +33,6 @@ def main(cfg={}):
 
     #Prepare the DataFrame that will be used downstream
     dp = DataPreparer(cfg['data_fn'])
-    dp.createPCAs()
-    dp.sparsePCAs()
     df = dp.getDataframe()
     
     # currently passing dp eventually we want to abstract all the constants into 1 class
@@ -97,7 +95,7 @@ def main(cfg={}):
 main.default_cfg = {'opscaler': 'StandardScaler', 'noOfCpv': 10, 'loss': 'R2',
                     'activation': 'selu', 'width': 2048, 'dropout_rate': 0.0,
                     'batch_size': 256, 'activity_regularizer': 'N', #'kernel_regularizer': 'N', #'kernel_constraint': 'N', 
-                    'loss_weights': {'static_source_prediction': 1.0, 'dynamic_source_prediction': 1.0},
+                    'loss_weights': {'souener_prediction': 1.0, 'static_source_prediction': 1.0, 'dynamic_source_prediction': 1.0},
                     'regressor_batch_norm': False, 'regressor_skip_connections': False}
 constants = {'epochs': 10 if debug_mode else 500, 'train_portion': 0.7, 'n_models_override': 1,
              'use_dynamic_pred': True, 'use_dependants': True, 'data_fn': os.environ.setdefault('DATASET', ''),
@@ -114,13 +112,14 @@ def main_safe(trial=None):
     if trial:
         scalers_types = [None, 'MinMaxScaler', 'MaxAbsScaler', 'StandardScaler', 'RobustScaler']#,'QuantileTransformer']
 
-        cfg = {'opscaler': trial.suggest_categorical('output_scaler', scalers_types), 'noOfCpv': trial.suggest_int('noOfCpv', *[6, 12]),
+        cfg = {'opscaler': trial.suggest_categorical('output_scaler', scalers_types), 'noOfCpv': trial.suggest_int('noOfCpv', *[6, 15]),
                'loss': trial.suggest_categorical('loss', ['mae', 'mse', 'R2', 'mape']), 'activation': trial.suggest_categorical('activation', ['tanh', 'selu', 'relu']),
                'width': trial.suggest_int('width', *[1024, 4096]), 'dropout_rate': trial.suggest_float('dropout_rate', *[0, 0.4]),
                'regressor_batch_norm': trial.suggest_categorical('regressor_batch_norm', [True, False]),
                'regressor_skip_connections': trial.suggest_categorical('regressor_skip_connections', [True, False]),
                'activity_regularizer': trial.suggest_categorical('activity_regularizer', ['Y', 'N']), 'batch_size': trial.suggest_int('batch_size', *[128, 1028]),
                'loss_weights': {'static_source_prediction': trial.suggest_float('static_loss_weight', *[0.1, 10.0]),
+                                'souener_prediction': trial.suggest_float('souener_loss_weight', *[0.1, 10.0]),
                                 'dynamic_source_prediction': trial.suggest_float('dynamic_loss_weight', *[0.1, 10.0])}} 
         global constants
         constant_names, cfg_names = set(constants.keys()), set(cfg.keys())

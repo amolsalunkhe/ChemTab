@@ -166,11 +166,14 @@ class PCDNNV2ExperimentExecutor:
     def compute_model_score(self, history, beta=0.7):
         try: history = history.history
         except: None
-		# to compute 'final R^2 score', we take the exponentially weighted average of the 2 val_R2 metrics then choose the lowest one (pessimistic estimate)
-        val_R2s = [0,0]
-        for val_R2, val_R2_split in zip(history['val_static_source_prediction_R2'], history['val_dynamic_source_prediction_R2_split']):
-            val_R2s[0]=val_R2s[0]*(1-beta) + val_R2*beta
-            val_R2s[1]=val_R2s[1]*(1-beta) + val_R2_split*beta
+		
+        val_R2s = [] # to compute 'final R^2 score', we take the exponentially weighted average of the 2 val_R2 metrics then choose the lowest one (pessimistic estimate)
+        essential_metrics = ['val_static_source_prediction_R2_inv', 'val_static_source_prediction_R2_souener', 'val_dynamic_source_prediction_R2_split']
+        for metric in essential_metrics:
+            cum_val_R2 = 0
+            for val_R2 in history[metric]:
+                cum_val_R2=cum_val_R2*(1-beta) + val_R2*beta
+            val_R2s.append(cum_val_R2)
         final_score = min(val_R2s) if self.use_dynamic_pred else val_R2s[0]  
         # else just ignore split & use static
         return final_score
@@ -205,7 +208,7 @@ class PCDNNV2ExperimentExecutor:
         # setup params
         n = 2 #if self.debug_mode else 3
         epochs = 5 if self.debug_mode else 100
-        if self.epochs_override: epochs = self.epochs_override
+        if self.epochs_override is not None: epochs = self.epochs_override
         if self.n_models_override: n = self.n_models_override + 1
 
         fit_times = []

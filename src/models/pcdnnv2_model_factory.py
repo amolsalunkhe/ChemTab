@@ -117,17 +117,17 @@ def get_metric_dict():
     def exp_R2(yt, yp):  # these are actual names above is for convenience
         return R2(tf.math.exp(yt), tf.math.exp(yp))
 
-    def source_true_mean(yt, yp):
+    def source_true_std(yt, yp):
         encoding_dim = yt.shape[1] // 2
         yt = yp[:, encoding_dim:]
         yp = yp[:, :encoding_dim]
-        return tf.reduce_mean(yt, axis=-1)
+        return tf.math.reduce_std(yt, axis=-1)
 
-    def source_pred_mean(yt, yp):
+    def source_pred_std(yt, yp):
         encoding_dim = yt.shape[1] // 2
         yt = yp[:, encoding_dim:]
         yp = yp[:, :encoding_dim]
-        return tf.reduce_mean(yp, axis=-1)
+        return tf.math.reduce_std(yp, axis=-1)
 
     def dynamic_source_loss(y_true, y_pred):
         assert y_true.shape[1] // 2 == y_true.shape[1] / 2
@@ -216,9 +216,9 @@ class PCDNNV2ModelFactory(DNNModelFactory):
         self.setConcreteClassCustomObject(custom)
         self.loss = 'mean_absolute_error'
         
-        self.loss_weights = {'static_source_prediction': 1.0, 'dynamic_source_prediction': 1.0}
+        self.loss_weights = {'souener_prediction': 1.0, 'static_source_prediction': 1.0, 'dynamic_source_prediction': 1.0}
         #self.use_R2_losses = False
-        self.use_dynamic_pred = False
+        self.use_dynamic_pred = True
         self.batch_norm_dynamic_pred = False
 
     @property # setting this manually was redundant...
@@ -271,20 +271,42 @@ class PCDNNV2ModelFactory(DNNModelFactory):
             model = dynamic_source_term_pred_wrap(model)
 
         opt = self.getOptimizer()
-
+        
+        # creates combined loss function which emphasizes souener loss using self.loss_weights['souener_prediction'] & average
+        def souener_split_loss(loss):
+            if type(loss) is str: loss=vars(keras.losses)[loss]
+            souener_loss_weight = self.loss_weights['souener_prediction']
+            return lambda yt, yp: (souener_loss_weight*loss(yt[:,0],yp[:,0])+loss(yt[:, 1:], yp[:, 1:]))/(1+souener_loss_weight)
+        
+        def souener_split_metrics(metric, name: str = None):
+            if name is None:
+                assert type(metric) is str, 'must pass metric name if metric isn\'t a string!'
+                name=metric
+            # creates a metric either: only for souener or only for inversion
+            def souener_split_metric(metric, name: str, use_souener: bool):
+                if type(metric) is str: metric=vars(keras.metrics)[metric]
+                new_metric = lambda yt, yp: metric(yt[:,0],yp[:,0]) if use_souener else metric(yt[:,1:],yp[:,1:]) 
+                exec(f'def {name}(yt,yp): return new_metric(yt,yp)', locals())
+                return eval(f"{name}", locals())
+            return souener_split_metric(metric, name+'_souener', use_souener=True), souener_split_metric(metric, name+'_inv', use_souener=False)
+    
         losses = {'static_source_prediction': self.loss, 'dynamic_source_prediction': dynamic_source_loss}
         if self.use_R2_losses:
             losses={'static_source_prediction': lambda yt, yp: -R2(yt, yp), 'dynamic_source_prediction': lambda yt, yp: -R2_split(yt, yp)}
-        metrics = {'static_source_prediction': ['mae', 'mse', R2, 'mape'],
-                   'dynamic_source_prediction': [R2_split, source_pred_mean, source_true_mean]}
-        # for metric definitions see get_metric_dict()
+        losses['static_source_prediction'] = souener_split_loss(losses['static_source_prediction'])
+        metrics = {'static_source_prediction': ['mae', 'mse', 'mape'], # for metric definitions see get_metric_dict()
+                   'dynamic_source_prediction': [R2_split, source_pred_std, source_true_std]}
+       
+        new_metrics = list(souener_split_metrics(R2, name='R2'))
+        for metric in metrics['static_source_prediction']:
+            new_metrics += list(souener_split_metrics(metric))
+        metrics['static_source_prediction']=new_metrics
+        print('new metrics:')
+        print(new_metrics)
 
         model.compile(loss=losses, optimizer=opt, metrics=metrics)
 
         self.model = model
-        #tf.keras.utils.plot_model(self.model, to_file="model.png", show_shapes=True, show_layer_names=True,
-        #                          rankdir="TB", expand_nested=False, dpi=96)
-
         return model
 
     # extract emb+regression model from container model (if container model is being used)

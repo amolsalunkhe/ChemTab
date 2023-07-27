@@ -147,8 +147,8 @@ class DNNModelFactory:
         with open(path + "/experimentRecord", "wb") as file:
             pickle.dump(self.experimentRecord, file)
        
-        filePath = path +"/model.h5"
-        tf.keras.models.save_model(self.model, filePath, overwrite=True, include_optimizer=False, save_format='h5')
+        filePath = path +"/model" # NOTE: save_format="tf" will fix the bug related to reloading the tensorflow model & retraining!!
+        tf.keras.models.save_model(self.model, filePath, overwrite=True, include_optimizer=False, save_format='tf')
         
     def openBestModel(self):
         #print("current directory" + os.getcwd())
