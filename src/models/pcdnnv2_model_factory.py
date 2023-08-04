@@ -6,6 +6,7 @@ Created on Thu Aug	5 21:42:26 2021
 """
 
 import numpy as np
+import pandas as pd
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
@@ -117,6 +118,9 @@ def get_metric_dict():
     def exp_R2(yt, yp):  # these are actual names above is for convenience
         return R2(tf.math.exp(yt), tf.math.exp(yp))
 
+    def RPD(yt, yp): # this is like relative error but without singularities
+        return tf.reduce_mean(tf.math.abs(yt-yp)/((tf.math.abs(yt)+tf.math.abs(yp))/2))
+
     def source_true_std(yt, yp):
         encoding_dim = yt.shape[1] // 2
         yt = yp[:, encoding_dim:]
@@ -215,7 +219,8 @@ class PCDNNV2ModelFactory(DNNModelFactory):
         custom.update(get_metric_dict())
         self.setConcreteClassCustomObject(custom)
         self.loss = 'mean_absolute_error'
-        
+        self.W_load_fn = None
+
         self.loss_weights = {'souener_prediction': 1.0, 'static_source_prediction': 1.0, 'dynamic_source_prediction': 1.0}
         #self.use_R2_losses = False
         self.use_dynamic_pred = True
@@ -227,19 +232,33 @@ class PCDNNV2ModelFactory(DNNModelFactory):
 
     def get_layer_constraints(self, noOfCpv, kernel_constraint='Y', kernel_regularizer='Y', activity_regularizer='Y'):
         layer_constraints = {}
-        assert kernel_constraint=='Y'
-        layer_constraints['kernel_constraint'] = NonNeg() # required for numerical reasons!
+        #assert kernel_constraint=='Y'
+        if kernel_constraint=='Y': 
+            layer_constraints['kernel_constraint'] = NonNeg() # required for numerical reasons!
         if kernel_regularizer == 'Y':
             layer_constraints['kernel_regularizer'] = WeightsOrthogonalityConstraint(noOfCpv, weightage=1., axis=0)
         if activity_regularizer == 'Y':
             layer_constraints['activity_regularizer'] = UncorrelatedFeaturesConstraint(noOfCpv, weightage=1.)
         return layer_constraints
 
-    def addLinearLayer(self, x, noOfInputNeurons, noOfCpv, kernel_constraint='Y', kernel_regularizer='Y',
-                       activity_regularizer='Y'):
+    def addLinearLayer(self, x, noOfInputNeurons, noOfCpv, kernel_constraint='Y', kernel_regularizer='Y', activity_regularizer='Y'):
         constraints = self.get_layer_constraints(noOfCpv, kernel_constraint, kernel_regularizer, activity_regularizer)
-        layer = layers.Dense(noOfCpv, use_bias=False, name="linear_embedding", activation="linear", **constraints)
+        layer = layers.Dense(noOfCpv, use_bias=False, name="linear_embedding", activation="linear", trainable=(not self.W_load_fn), **constraints)
 #        x = layers.BatchNormalization(center=False, scale=False, name='batch_norm')(x)
+
+        if self.W_load_fn:
+            # must always use sorted index otherwise it won't be compatible with data order
+            pre_loaded_weights = pd.read_csv(self.W_load_fn).sort_index()
+            assert noOfInputNeurons == len(pre_loaded_weights.index)
+            layer_model = keras.models.Sequential(name='linear_embedding')
+            layer_model.add(layers.InputLayer((len(pre_loaded_weights.index),)))
+            layer.trainable=False
+            layer_model.add(layer)
+            layer_model.build()
+            pre_loaded_weights=pre_loaded_weights.reset_index().filter(like='CPV').values
+            layer_model.set_weights([tf.constant(np.asarray(pre_loaded_weights)[:,:noOfCpv])])
+            layer_model.trainable=False
+            layer = layer_model
 
         return layer(x)
 
@@ -297,7 +316,7 @@ class PCDNNV2ModelFactory(DNNModelFactory):
         metrics = {'static_source_prediction': ['mae', 'mse', 'mape'], # for metric definitions see get_metric_dict()
                    'dynamic_source_prediction': [R2_split, source_pred_std, source_true_std]}
        
-        new_metrics = list(souener_split_metrics(R2, name='R2'))
+        new_metrics = list(souener_split_metrics(R2, name='R2'))+list(souener_split_metrics(RPD, name='RPD'))
         for metric in metrics['static_source_prediction']:
             new_metrics += list(souener_split_metrics(metric))
         metrics['static_source_prediction']=new_metrics

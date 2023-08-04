@@ -59,7 +59,8 @@ def main(cfg={}):
     df = pd.read_csv(cfg['data_fn'])
     Yi_cols = [col for col in df.columns if col.startswith('Yi')]
     noOfNeurons = len(Yi_cols)
-    
+   
+    exprExec.modelFactory.W_load_fn=cfg['W_load_fn']
     exprExec.modelFactory.loss=cfg['loss']
     exprExec.modelFactory.activation_func=cfg['activation']
     exprExec.modelFactory.width=cfg['width']
@@ -69,7 +70,11 @@ def main(cfg={}):
     exprExec.modelFactory.batch_norm_dynamic_pred = cfg['batch_norm_dynamic']
     exprExec.modelFactory.loss_weights = cfg['loss_weights'] 
     exprExec.modelFactory.W_batch_norm = cfg['W_batch_norm']
-        
+    exprExec.modelFactory.starter_learning_rate = cfg['starter_learning_rate']
+    exprExec.modelFactory.decay_steps = cfg['decay_steps']
+    exprExec.modelFactory.decay_rate = cfg['decay_rate']
+    exprExec.modelFactory.clip_grad_norm = cfg['clip_grad_norm']
+
     exprExec.debug_mode = False
     exprExec.batch_size = cfg['batch_size'] 
     exprExec.epochs_override = cfg['epochs'] 
@@ -94,15 +99,33 @@ def main(cfg={}):
 # you override these values based with the config values you pass (via dict.update())
 main.default_cfg = {'opscaler': 'StandardScaler', 'noOfCpv': 10, 'loss': 'R2',
                     'activation': 'selu', 'width': 2048, 'dropout_rate': 0.0,
-                    'batch_size': 256, 'activity_regularizer': 'N', #'kernel_regularizer': 'N', #'kernel_constraint': 'N', 
+                    'batch_size': 500, 'activity_regularizer': 'N', 'kernel_regularizer': 'N', 'kernel_constraint': 'N', 
                     'loss_weights': {'souener_prediction': 1.0, 'static_source_prediction': 1.0, 'dynamic_source_prediction': 1.0},
-                    'regressor_batch_norm': False, 'regressor_skip_connections': False}
-constants = {'epochs': 10 if debug_mode else 500, 'train_portion': 0.7, 'n_models_override': 1,
+                    'regressor_batch_norm': False, 'regressor_skip_connections': False, 'W_load_fn': None}
+
+# add optimizer hyper-parameters:
+default_opt_hparams = {'starter_learning_rate': 0.000001, 'decay_steps': 100000, 'decay_rate': 0.96, 'clip_grad_norm': 2.5}
+main.default_cfg.update(default_opt_hparams)
+
+constants = {'epochs': 10 if debug_mode else 500, 'train_portion': 0.7, 'n_models_override': 1, 'zmix': 'Y',
              'use_dynamic_pred': True, 'use_dependants': True, 'data_fn': os.environ.setdefault('DATASET', ''),
-			 'kernel_constraint': 'Y', 'kernel_regularizer': 'Y', 'zmix': 'Y', 
+			 #'kernel_constraint': 'Y', 'kernel_regularizer': 'Y', 'zmix': 'Y', 
              'ipscaler': None, 'W_batch_norm': False, 'batch_norm_dynamic': False} # this line is all garbage configs
 main.default_cfg.update(constants)
 # add variables generally held as constant
+
+def auto_spread(trial, default_cfg, spread=0.5):
+    import math
+    trial_cfg = {}
+    for name,val  in default_cfg.items():
+        if type(val) is float:
+            trial_cfg[name]=trial.suggest_float(name, *sorted([math.exp(math.log(val)*spread), math.exp(math.log(val)*(1+spread))]))
+        elif type(val) is int:
+            trial_cfg[name]=trial.suggest_int(name, int(val*spread), int(val*(1+spread)))
+        elif type(val) is bool:
+            trial_cfg[name]=trial.suggest_categorical(name, [True, False])
+        else: trial_cfg[name]=default_cfg[name] # for e.g. categorical strings! 
+    return trial_cfg
 
 # wrapper for main use in optuna (protects against crashes & uses trials to populate cfg dict)
 import traceback
@@ -112,15 +135,25 @@ def main_safe(trial=None):
     if trial:
         scalers_types = [None, 'MinMaxScaler', 'MaxAbsScaler', 'StandardScaler', 'RobustScaler']#,'QuantileTransformer']
 
-        cfg = {'opscaler': trial.suggest_categorical('output_scaler', scalers_types), 'noOfCpv': trial.suggest_int('noOfCpv', *[6, 15]),
+        cfg = {'opscaler': trial.suggest_categorical('output_scaler', scalers_types), 'noOfCpv': trial.suggest_int('noOfCpv', *[6, 20]),
                'loss': trial.suggest_categorical('loss', ['mae', 'mse', 'R2', 'mape']), 'activation': trial.suggest_categorical('activation', ['tanh', 'selu', 'relu']),
                'width': trial.suggest_int('width', *[1024, 4096]), 'dropout_rate': trial.suggest_float('dropout_rate', *[0, 0.4]),
                'regressor_batch_norm': trial.suggest_categorical('regressor_batch_norm', [True, False]),
                'regressor_skip_connections': trial.suggest_categorical('regressor_skip_connections', [True, False]),
                'activity_regularizer': trial.suggest_categorical('activity_regularizer', ['Y', 'N']), 'batch_size': trial.suggest_int('batch_size', *[128, 1028]),
+               'kernel_regularizer': trial.suggest_categorical('kernel_regularizer', ['Y', 'N']), 'kernel_constraint': trial.suggest_categorical('kernel_constraint', ['Y', 'N']),
                'loss_weights': {'static_source_prediction': trial.suggest_float('static_loss_weight', *[0.1, 10.0]),
                                 'souener_prediction': trial.suggest_float('souener_loss_weight', *[0.1, 10.0]),
                                 'dynamic_source_prediction': trial.suggest_float('dynamic_loss_weight', *[0.1, 10.0])}} 
+       
+        # add optimizer hyper-parameters:
+        #manual_opt_bounds = {'starter_learning_rate': trial.suggest_float('starter_learning_rate': [0, 0.1]), 'decay_steps': trial.suggest_int('decay_steps': [10000, 100000]),
+        #'decay_rate': trial.suggest_float('decay_rate': [0, 0.1]), 'clip_grad_norm': trial.suggest_float('clip_grad_norm': [1.0,5.0)}
+        #print('manual_opt_bounds: ', manual_opt_bounds)
+        auto_opt_sample = auto_spread(trial, default_opt_hparams, spread=0.5)
+        cfg.update(auto_opt_sample)
+        print('auto_opt_sample: ', auto_opt_sample) 
+
         global constants
         constant_names, cfg_names = set(constants.keys()), set(cfg.keys())
         overlapping_names = constant_names.intersection(cfg_names)

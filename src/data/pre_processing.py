@@ -15,7 +15,7 @@ from sklearn.decomposition import PCA, SparsePCA
 class DataPreparer:
     def __init__(self, fn='../methane_air_master.csv'):
         # read the data into a dataframe
-        self.df = pd.read_csv(fn)
+        self.df = pd.read_csv(fn).sort_index(axis=1) # order needs to be sorted for pre-loaded weight matrices
         if 'zmix' in self.df.columns: 
             self.df['Zmix']=self.df['zmix']
             self.df=self.df.drop(columns='zmix')

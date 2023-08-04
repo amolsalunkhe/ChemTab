@@ -12,12 +12,14 @@ from tensorflow.keras import layers
 from tensorflow.keras.callbacks import EarlyStopping
 from copy import deepcopy
 
-# patient early stopping
-es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=45)
-
 
 class DNNModelFactory:
     def __init__(self):
+        self.starter_learning_rate = 0.000001
+        self.decay_steps = 100000
+        self.decay_rate = 0.96
+        self.clip_grad_norm = 2.5
+        
         self.width = 512
         self.dropout_rate = 0.0
         self.regressor_batch_norm = False
@@ -48,12 +50,12 @@ class DNNModelFactory:
         self.concreteClassCustomObject = concreteClassCustomObject
         
     def getOptimizer(self):
-        starter_learning_rate = 0.000001
+        #starter_learning_rate = 0.000001
 
-        lr_schedule = tf.keras.optimizers.schedules.ExponentialDecay(starter_learning_rate, decay_steps=100000, decay_rate=0.96, staircase=True)
+        lr_schedule = tf.keras.optimizers.schedules.ExponentialDecay(self.starter_learning_rate, decay_steps=self.decay_steps, decay_rate=self.decay_rate, staircase=True)
 
         # NOTE: we are testing this again for compatibility with benchmark notebook 
-        opt = keras.optimizers.Adam(learning_rate=lr_schedule, clipnorm=2.5)
+        opt = keras.optimizers.Adam(learning_rate=lr_schedule, clipnorm=self.clip_grad_norm)
         return opt
 
     # reimplmeneted to non-trivial version in PCDNNv2
