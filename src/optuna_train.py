@@ -108,8 +108,8 @@ default_opt_hparams = {'starter_learning_rate': 0.000001, 'decay_steps': 100000,
 main.default_cfg.update(default_opt_hparams)
 
 constants = {'epochs': 10 if debug_mode else 500, 'train_portion': 0.7, 'n_models_override': 1, 'zmix': 'Y',
-             'use_dynamic_pred': True, 'use_dependants': True, 'data_fn': os.environ.setdefault('DATASET', ''),
-			 #'kernel_constraint': 'Y', 'kernel_regularizer': 'Y', 'zmix': 'Y', 
+             'use_dynamic_pred': True, 'use_dependants': True, 'use_tensorboard': False, 'data_fn': os.environ.setdefault('DATASET', ''),
+             #'kernel_constraint': 'Y', 'kernel_regularizer': 'Y', 'zmix': 'Y', 
              'ipscaler': None, 'W_batch_norm': False, 'batch_norm_dynamic': False} # this line is all garbage configs
 main.default_cfg.update(constants)
 # add variables generally held as constant

@@ -12,10 +12,22 @@ from sklearn.decomposition import PCA, SparsePCA
 
 # demonstrate data normalization with sklearn
 
+def check_Yi_order(Yi_names):
+    expected_values = ['YiAR', 'YiC', 'YiC2H', 'YiC2H2', 'YiC2H3', 'YiC2H4', 'YiC2H5',
+       'YiC2H6', 'YiC3H7', 'YiC3H8', 'YiCH', 'YiCH2', 'YiCH2(S)', 'YiCH2CHO',
+       'YiCH2CO', 'YiCH2O', 'YiCH2OH', 'YiCH3', 'YiCH3CHO', 'YiCH3O',
+       'YiCH3OH', 'YiCH4', 'YiCN', 'YiCO', 'YiCO2', 'YiH', 'YiH2', 'YiH2CN',
+       'YiH2O', 'YiH2O2', 'YiHCCO', 'YiHCCOH', 'YiHCN', 'YiHCNN', 'YiHCNO',
+       'YiHCO', 'YiHNCO', 'YiHNO', 'YiHO2', 'YiHOCN', 'YiN', 'YiN2', 'YiN2O',
+       'YiNCO', 'YiNH', 'YiNH2', 'YiNH3', 'YiNNH', 'YiNO', 'YiNO2', 'YiO',
+       'YiO2', 'YiOH']
+    assert list(Yi_names)==sorted(expected_values), 'Yi sequence is wrong!!'
+
 class DataPreparer:
     def __init__(self, fn='../methane_air_master.csv'):
         # read the data into a dataframe
         self.df = pd.read_csv(fn).sort_index(axis=1) # order needs to be sorted for pre-loaded weight matrices
+        check_Yi_order(self.df.filter(like='Yi').columns)
         if 'zmix' in self.df.columns: 
             self.df['Zmix']=self.df['zmix']
             self.df=self.df.drop(columns='zmix')

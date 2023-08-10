@@ -208,6 +208,16 @@ def dynamic_source_term_pred_wrap(base_regression_model, batch_norm_dynamic_pred
     )
     return container_model
 
+def check_Yi_order(Yi_names):
+    expected_values = ['YiAR', 'YiC', 'YiC2H', 'YiC2H2', 'YiC2H3', 'YiC2H4', 'YiC2H5',
+       'YiC2H6', 'YiC3H7', 'YiC3H8', 'YiCH', 'YiCH2', 'YiCH2(S)', 'YiCH2CHO',
+       'YiCH2CO', 'YiCH2O', 'YiCH2OH', 'YiCH3', 'YiCH3CHO', 'YiCH3O',
+       'YiCH3OH', 'YiCH4', 'YiCN', 'YiCO', 'YiCO2', 'YiH', 'YiH2', 'YiH2CN',
+       'YiH2O', 'YiH2O2', 'YiHCCO', 'YiHCCOH', 'YiHCN', 'YiHCNN', 'YiHCNO',
+       'YiHCO', 'YiHNCO', 'YiHNO', 'YiHO2', 'YiHOCN', 'YiN', 'YiN2', 'YiN2O',
+       'YiNCO', 'YiNH', 'YiNH2', 'YiNH3', 'YiNNH', 'YiNO', 'YiNO2', 'YiO',
+       'YiO2', 'YiOH']
+    assert list(Yi_names)==sorted(expected_values), 'Yi sequence is wrong!!'
 
 class PCDNNV2ModelFactory(DNNModelFactory):
     def __init__(self):
@@ -248,8 +258,9 @@ class PCDNNV2ModelFactory(DNNModelFactory):
 
         if self.W_load_fn:
             # must always use sorted index otherwise it won't be compatible with data order
-            pre_loaded_weights = pd.read_csv(self.W_load_fn).sort_index()
+            pre_loaded_weights = pd.read_csv(self.W_load_fn, index_col=0).sort_index()
             assert noOfInputNeurons == len(pre_loaded_weights.index)
+            check_Yi_order(pre_loaded_weights.index)
             layer_model = keras.models.Sequential(name='linear_embedding')
             layer_model.add(layers.InputLayer((len(pre_loaded_weights.index),)))
             layer.trainable=False

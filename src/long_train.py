@@ -15,7 +15,7 @@ cfg = {'zmix': 'Y', 'ipscaler': None, 'opscaler': 'StandardScaler', 'noOfCpv': 2
        'regressor_batch_norm': False, 'regressor_skip_connections': False, 'batch_norm_dynamic': False, #True,
        'kernel_constraint': 'N', 'kernel_regularizer': 'Y', 'activity_regularizer': 'N', 'batch_size': 20000,
        'loss_weights': {'souener_prediction': 0.3, 'static_source_prediction': 1.0, 'dynamic_source_prediction': 1.0},
-       'W_load_fn': '../datasets/Q_rot.csv.gz'}
+       'W_load_fn': '../datasets/Q_rot.csv.gz', 'use_dependants': True}
 cfg['epochs'] = 10000 # special because it should always be large
 # NOTE: interestingly Amol's constraints are actually useful for dynamic prediction!
 # This is because they stabilitize the Weight matrix which is too unstable during regular dynamic prediction
