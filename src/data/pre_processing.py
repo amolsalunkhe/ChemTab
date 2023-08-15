@@ -24,7 +24,7 @@ def check_Yi_order(Yi_names):
     assert list(Yi_names)==sorted(expected_values), 'Yi sequence is wrong!!'
 
 class DataPreparer:
-    def __init__(self, fn='../methane_air_master.csv'):
+    def __init__(self, fn='../methane_air_master.csv', num_PCs=25, whiten_PCA=True):
         # read the data into a dataframe
         self.df = pd.read_csv(fn).sort_index(axis=1) # order needs to be sorted for pre-loaded weight matrices
         check_Yi_order(self.df.filter(like='Yi').columns)
@@ -39,13 +39,17 @@ class DataPreparer:
 
         self.other_tracking_cols=['Xpos', 'flame_key']
         self.other_tracking_cols=[col for col in self.other_tracking_cols if col in self.df.columns]
-        self.num_principal_components = 12
+        self.num_principal_components = num_PCs
+        self.whiten_PCA=whiten_PCA
         
         self.icovariates = []
         for c in self.df.columns:
             if c[0:2] == 'Yi':
                 self.icovariates.append(c)
 
+        self.zmix_pca_dim_cols = ["Zmix_PCA_" + str(i + 1) for i in range(self.num_principal_components)]
+        self.pure_pca_dim_cols = ["PURE_PCA_" + str(i + 1) for i in range(self.num_principal_components)]
+        self.sparse_pca_dim_cols = ["SPARSE_PCA_" + str(i + 1) for i in range(self.num_principal_components)]
 
         ## create an integer representation of the flame-id and add to the data frame
         #self.df['flame_key_int'] = self.df['flame_key'].mul(10000000).astype(int)
@@ -140,30 +144,30 @@ class DataPreparer:
         self.df['L2_ERR_dynamic'] = np.mean(L1_ERR_dynamic**2, axis=1)
 
 
-    #def createPCAs(self):
-    #    # necessary to make PCA work properly
-    #    from sklearn.preprocessing import StandardScaler
-    #    pca = PCA(n_components=self.num_principal_components, whiten=True)
+    def createPCAs(self):
+        # necessary to make PCA work properly
+        from sklearn.preprocessing import StandardScaler
+        pca = PCA(n_components=self.num_principal_components, whiten=self.whiten_PCA)
 
-    #    X = self.df[self.icovariates].values
-    #    X = StandardScaler().fit_transform(X)
+        X = self.df[self.icovariates].values
+        X = StandardScaler().fit_transform(X)
 
-    #    df_pure_pca = pd.DataFrame(pca.fit_transform(X), columns=self.pure_pca_dim_cols)
+        df_pure_pca = pd.DataFrame(pca.fit_transform(X), columns=self.pure_pca_dim_cols)
 
-    #    self.df[self.pure_pca_dim_cols] = df_pure_pca
-    #    #self.df = pd.concat([self.df, df_pure_pca], axis=1)
+        self.df[self.pure_pca_dim_cols] = df_pure_pca
+        #self.df = pd.concat([self.df, df_pure_pca], axis=1)
 
-    #def sparsePCAs(self):
+    def sparsePCAs(self):
 
-    #    sparsepca = SparsePCA(n_components=self.num_principal_components)
+        sparsepca = SparsePCA(n_components=self.num_principal_components, whiten=self.whiten_PCA)
 
-    #    X = self.df[self.icovariates].values
+        X = self.df[self.icovariates].values
 
-    #    sparsepca.fit_transform(X)
+        sparsepca.fit_transform(X)
 
-    #    df_sparse_pca = pd.DataFrame(sparsepca.transform(X), columns=self.sparse_pca_dim_cols)
+        df_sparse_pca = pd.DataFrame(sparsepca.transform(X), columns=self.sparse_pca_dim_cols)
 
-    #    self.df = pd.concat([self.df, df_sparse_pca], axis=1)
+        self.df = pd.concat([self.df, df_sparse_pca], axis=1)
 
     def getDataframe(self):
         return self.df
