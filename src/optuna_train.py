@@ -62,13 +62,13 @@ def main(cfg={}):
    
     exprExec.modelFactory.W_load_fn=cfg['W_load_fn']
     exprExec.modelFactory.loss=cfg['loss']
+    exprExec.modelFactory.loss_weights = cfg['loss_weights'] 
     exprExec.modelFactory.activation_func=cfg['activation']
     exprExec.modelFactory.width=cfg['width']
     exprExec.modelFactory.dropout_rate=cfg['dropout_rate']
     exprExec.modelFactory.regressor_skip_connections = cfg['regressor_skip_connections']
     exprExec.modelFactory.regressor_batch_norm = cfg['regressor_batch_norm']
     exprExec.modelFactory.batch_norm_dynamic_pred = cfg['batch_norm_dynamic']
-    exprExec.modelFactory.loss_weights = cfg['loss_weights'] 
     exprExec.modelFactory.W_batch_norm = cfg['W_batch_norm']
     exprExec.modelFactory.starter_learning_rate = cfg['starter_learning_rate']
     exprExec.modelFactory.decay_steps = cfg['decay_steps']
@@ -81,6 +81,9 @@ def main(cfg={}):
     exprExec.n_models_override = cfg['n_models_override']
     exprExec.use_dynamic_pred = cfg['use_dynamic_pred']
     exprExec.use_dependants = dependants == 'AllDependants'
+    
+    err_msg = 'inv_prediction weight must == 0.0 when not using all dependants, otherwise dependants will not be ignored.'
+    assert (dependants == 'AllDependants') == (cfg['loss_weights']['inv_prediction']>0.0), err_msg
     assert (dependants == 'AllDependants') == cfg['use_dependants']
     #exprExec.min_mae = -float('inf')
     
@@ -100,7 +103,7 @@ def main(cfg={}):
 main.default_cfg = {'opscaler': 'StandardScaler', 'noOfCpv': 10, 'loss': 'R2',
                     'activation': 'selu', 'width': 2048, 'dropout_rate': 0.0,
                     'batch_size': 500, 'activity_regularizer': 'N', 'kernel_regularizer': 'N', 'kernel_constraint': 'N', 
-                    'loss_weights': {'souener_prediction': 1.0, 'static_source_prediction': 1.0, 'dynamic_source_prediction': 1.0},
+                    'loss_weights': {'inv_prediction': 1.0, 'static_source_prediction': 1.0, 'dynamic_source_prediction': 1.0},
                     'regressor_batch_norm': False, 'regressor_skip_connections': False, 'W_load_fn': None}
 
 # add optimizer hyper-parameters:
@@ -143,7 +146,7 @@ def main_safe(trial=None):
                'activity_regularizer': trial.suggest_categorical('activity_regularizer', ['Y', 'N']), 'batch_size': trial.suggest_int('batch_size', *[128, 1028]),
                'kernel_regularizer': trial.suggest_categorical('kernel_regularizer', ['Y', 'N']), 'kernel_constraint': trial.suggest_categorical('kernel_constraint', ['Y', 'N']),
                'loss_weights': {'static_source_prediction': trial.suggest_float('static_loss_weight', *[0.1, 10.0]),
-                                'souener_prediction': trial.suggest_float('souener_loss_weight', *[0.1, 10.0]),
+                                'inv_prediction': trial.suggest_float('inv_loss_weight', *[0.01, 10.0]),
                                 'dynamic_source_prediction': trial.suggest_float('dynamic_loss_weight', *[0.1, 10.0])}} 
        
         # add optimizer hyper-parameters:

@@ -12,7 +12,7 @@ from tensorflow import keras
 from tensorflow.keras import layers
 from tensorflow.keras.callbacks import EarlyStopping
 
-# patient early stopping
+# patient early stopping:
 es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=45)
 
 from tensorflow.keras.constraints import UnitNorm, Constraint, NonNeg
@@ -98,14 +98,6 @@ class UncorrelatedFeaturesConstraint(Constraint):
     def get_config(self):
         return {'weightage': self.weightage, 'encoding_dim': self.encoding_dim}
 
-def copy_func(f):
-    """Based on http://stackoverflow.com/a/6528148/190597 (Glenn Maynard)"""
-    g = types.FunctionType(f.__code__, f.__globals__, name=f.__name__,
-                           argdefs=f.__defaults__, closure=f.__closure__)
-    g = functools.update_wrapper(g, f)
-    g.__kwdefaults__ = f.__kwdefaults__
-    return g
-
 # for recording in custom objects dict
 def get_metric_dict():
     def log_mse(x, y): return tf.math.log(tf.math.reduce_mean((x - y) ** 2))
@@ -117,17 +109,58 @@ def get_metric_dict():
 
     def exp_mae_mag(x, y): return tf.math.log(
         tf.math.reduce_mean(tf.math.abs(tf.math.exp(x) - tf.math.exp(y)))) / tf.math.log(10.0)
-  
-    #class CummR2:
-    #    def __init__(self, Beta=0.98, dynamic_split=False, negative=False):
-    #        vars(self).update(locals()); del self.self
-    #        self.cumm_var=0
-    #        self.neg_coef = -1 if negative else 1            
+        
 
-    #    def __call__(self, yt, yp):
-    #        self.cumm_var = Beta*self.cumm_var + (1-Beta)*tf.math.reduce_variance(yt, axis=0)
-    #        return tf.reduce_mean(1-tf.reduce_mean((yp-yt)**2, axis=0)/self.cumm_var)*self.neg_coef
-    
+    #class BinaryTruePositives(tf.keras.metrics.Metric):
+    #    def __init__(self, name='binary_true_positives', **kwargs):
+    #        super().__init__(name=name, **kwargs)
+    #        self.true_positives = self.add_weight(name='tp', initializer='zeros')
+
+    #    def update_state(self, y_true, y_pred, sample_weight=None):
+    #        y_true = tf.cast(y_true, tf.bool)
+    #        y_pred = tf.cast(y_pred, tf.bool)
+
+    #        values = tf.logical_and(tf.equal(y_true, True), tf.equal(y_pred, True))
+    #        values = tf.cast(values, self.dtype)
+    #        if sample_weight is not None:
+    #            sample_weight = tf.cast(sample_weight, self.dtype)
+    #            values = tf.multiply(values, sample_weight)
+    #        self.true_positives.assign_add(tf.reduce_sum(values))
+
+    #    def result(self):
+    #        return self.true_positives
+
+    #    def reset_states(self):
+    #        self.true_positives.assign(0)
+
+
+    class CummR2(tf.keras.metrics.R2Score):
+        def __init__(self, dynamic_split=False, negative=False, **kwdargs):
+            name='R2'
+            if dynamic_split: name+='_split'
+            if negative: name+='_negative'
+            super().__init__(name=name, **kwdargs)
+            self.neg_coef = -1 if negative else 1
+            self._preprocess_inputs = self._dynamic_split_inputs if dynamic_split else lambda yt, yp: (yt, yp) 
+            # we preprocess using dynamic split thing otherwise we just use identity
+
+        @staticmethod
+        def _dynamic_split_inputs(yt, yp):
+            assert yp.shape[1]//2 == yp.shape[1]/2
+            encoding_dim = yp.shape[1]//2
+            yt=yp[:,:encoding_dim]
+            yp=yp[:,encoding_dim:]
+            assert len(yp.shape)==2
+            # NOTES: verified that len(yt.shape)==2 and yt.shape[0] is batch_dim (not necessarily None)
+            return yt, yp
+
+        def update_state(self, y_true, y_pred, sample_weight=None):
+            yt, yp = self._preprocess_inputs(y_true, y_pred)
+            super().update_state(yt, yp, sample_weight) 
+
+        def result(self):
+            return super().result()*self.neg_coef
+
     def get_cumm_R2(Beta=0.98, dynamic_split=False, negative=False):
         neg_coef = -1 if negative else 1
         def R2(yt,yp):
@@ -344,6 +377,7 @@ class PCDNNV2ModelFactory(DNNModelFactory):
             return lambda yt, yp: (loss(yt[:,0],yp[:,0])+inv_loss_weight*loss(yt[:, 1:], yp[:, 1:]))/(1+inv_loss_weight)
         
         def souener_split_metrics(metric, name: str = None):
+            from copy import deepcopy
             if name is None:
                 assert type(metric) is str, 'must pass metric name if metric isn\'t a string!'
                 name=metric
@@ -353,18 +387,18 @@ class PCDNNV2ModelFactory(DNNModelFactory):
                 new_metric = lambda yt, yp: metric(yt[:,0],yp[:,0]) if use_souener else metric(yt[:,1:],yp[:,1:]) 
                 exec(f'def {name}(yt,yp): return new_metric(yt,yp)', locals())
                 return eval(f"{name}", locals())
-            return souener_split_metric(copy_func(metric), name+'_souener', use_souener=True), souener_split_metric(copy_fun(metric), name+'_inv', use_souener=False)
+            return souener_split_metric(deepcopy(metric), name+'_souener', use_souener=True), souener_split_metric(deepcopy(metric), name+'_inv', use_souener=False)
     
         losses = {'static_source_prediction': self.loss, 'dynamic_source_prediction': dynamic_source_loss}
         if self.use_R2_losses:
             #losses={'static_source_prediction': lambda yt, yp: -R2(yt, yp), 'dynamic_source_prediction': lambda yt, yp: -R2_split(yt, yp)}
-            losses={'static_source_prediction': get_cumm_R2(negative=True), 'dynamic_source_prediction': get_cumm_R2(dynamic_split=True, negative=True)}
-        metrics = {'static_source_prediction': ['mae', 'mse', 'mape', get_cumm_R2(), RPD], # for metric definitions see get_metric_dict()
-                   'dynamic_source_prediction': [get_cumm_R2(dynamic_split=True), source_pred_std, source_true_std]}
+            losses={'static_source_prediction': CummR2(negative=True), 'dynamic_source_prediction': CummR2(dynamic_split=True, negative=True)}
+        metrics = {'static_source_prediction': ['mae', 'mse', 'mape', CummR2(), RPD], # for metric definitions see get_metric_dict()
+                   'dynamic_source_prediction': [CummR2(dynamic_split=True), source_pred_std, source_true_std]}
        
         if self.loss_weights['inv_prediction']>0.0: # weight==0 implies no inverse!
             losses['static_source_prediction'] = souener_split_loss(losses['static_source_prediction'])
-            new_metrics = list(souener_split_metrics(get_cumm_R2(), name='R2'))+list(souener_split_metrics(RPD, name='RPD'))
+            new_metrics = list(souener_split_metrics(CummR2(), name='R2'))+list(souener_split_metrics(RPD, name='RPD'))
             for metric in metrics['static_source_prediction']:
                 if type(metric) is str: new_metrics += list(souener_split_metrics(metric))
             metrics['static_source_prediction']=new_metrics
