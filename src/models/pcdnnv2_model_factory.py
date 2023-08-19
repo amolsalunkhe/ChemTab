@@ -39,7 +39,6 @@ def make_output_tensor_names_consistent(out_tensor_dict):
 
 class WeightsOrthogonalityConstraint(Constraint):
     def __init__(self, encoding_dim, weightage=1.0, axis=0):
-
         self.encoding_dim = encoding_dim
         self.weightage = weightage
         self.axis = axis
@@ -62,7 +61,6 @@ class WeightsOrthogonalityConstraint(Constraint):
 
 
 class UncorrelatedFeaturesConstraint(Constraint):
-
     def __init__(self, encoding_dim, weightage=1.0):
         self.encoding_dim = encoding_dim
 
@@ -100,6 +98,13 @@ class UncorrelatedFeaturesConstraint(Constraint):
     def get_config(self):
         return {'weightage': self.weightage, 'encoding_dim': self.encoding_dim}
 
+def copy_func(f):
+    """Based on http://stackoverflow.com/a/6528148/190597 (Glenn Maynard)"""
+    g = types.FunctionType(f.__code__, f.__globals__, name=f.__name__,
+                           argdefs=f.__defaults__, closure=f.__closure__)
+    g = functools.update_wrapper(g, f)
+    g.__kwdefaults__ = f.__kwdefaults__
+    return g
 
 # for recording in custom objects dict
 def get_metric_dict():
@@ -112,8 +117,37 @@ def get_metric_dict():
 
     def exp_mae_mag(x, y): return tf.math.log(
         tf.math.reduce_mean(tf.math.abs(tf.math.exp(x) - tf.math.exp(y)))) / tf.math.log(10.0)
+  
+    #class CummR2:
+    #    def __init__(self, Beta=0.98, dynamic_split=False, negative=False):
+    #        vars(self).update(locals()); del self.self
+    #        self.cumm_var=0
+    #        self.neg_coef = -1 if negative else 1            
 
-    def R2(yt,yp): return tf.reduce_mean(1-tf.reduce_mean((yp-yt)**2, axis=0)/(tf.math.reduce_std(yt,axis=0)**2))
+    #    def __call__(self, yt, yp):
+    #        self.cumm_var = Beta*self.cumm_var + (1-Beta)*tf.math.reduce_variance(yt, axis=0)
+    #        return tf.reduce_mean(1-tf.reduce_mean((yp-yt)**2, axis=0)/self.cumm_var)*self.neg_coef
+    
+    def get_cumm_R2(Beta=0.98, dynamic_split=False, negative=False):
+        neg_coef = -1 if negative else 1
+        def R2(yt,yp):
+            R2.cumm_var = Beta*R2.cumm_var + (1-Beta)*tf.math.reduce_variance(yt, axis=0)
+            return tf.reduce_mean(1-tf.reduce_mean((yp-yt)**2, axis=0)/R2.cumm_var)*neg_coef
+        R2.cumm_var = 0
+
+        def R2_split(yt,yp):
+            assert yp.shape[1]//2 == yp.shape[1]/2
+            encoding_dim = yp.shape[1]//2
+            yt=yp[:,:encoding_dim]
+            yp=yp[:,encoding_dim:]
+            assert len(yp.shape)==2
+            # NOTES: verified that len(yt.shape)==2 and yt.shape[0] is batch_dim (not necessarily None)
+                                
+            return R2(yt, yp)
+
+        return R2_split if dynamic_split else R2
+
+    def R2(yt,yp): return tf.reduce_mean(1-tf.reduce_mean((yp-yt)**2, axis=0)/(tf.math.reduce_std(yt, axis=0)**2))
 
     def exp_R2(yt, yp):  # these are actual names above is for convenience
         return R2(tf.math.exp(yt), tf.math.exp(yp))
@@ -144,9 +178,10 @@ def get_metric_dict():
         encoding_dim = yp.shape[1]//2
         yt=yp[:,:encoding_dim]
         yp=yp[:,encoding_dim:]
-        # NOTES: verified that len(yt.shape)==2 and yt.shape[0] is batch_dim (not necessarily None)
         assert len(yp.shape)==2
-        return tf.reduce_mean(1-tf.math.reduce_mean((yp-yt)**2, axis=0)/(tf.math.reduce_std(yt,axis=0)**2))
+        # NOTES: verified that len(yt.shape)==2 and yt.shape[0] is batch_dim (not necessarily None)
+        
+        return R2(yt, yp)
     return locals()
 
 # fill globals with metric functions
@@ -232,8 +267,6 @@ class PCDNNV2ModelFactory(DNNModelFactory):
         self.W_load_fn = None
 
         self.loss_weights = {'inv_prediction': 1.0, 'static_source_prediction': 1.0, 'dynamic_source_prediction': 1.0}
-        #self.loss_weights = {'souener_prediction': 1.0, 'static_source_prediction': 1.0, 'dynamic_source_prediction': 1.0}
-        #self.use_R2_losses = False
         self.use_dynamic_pred = True
         self.batch_norm_dynamic_pred = False
 
@@ -320,17 +353,18 @@ class PCDNNV2ModelFactory(DNNModelFactory):
                 new_metric = lambda yt, yp: metric(yt[:,0],yp[:,0]) if use_souener else metric(yt[:,1:],yp[:,1:]) 
                 exec(f'def {name}(yt,yp): return new_metric(yt,yp)', locals())
                 return eval(f"{name}", locals())
-            return souener_split_metric(metric, name+'_souener', use_souener=True), souener_split_metric(metric, name+'_inv', use_souener=False)
+            return souener_split_metric(copy_func(metric), name+'_souener', use_souener=True), souener_split_metric(copy_fun(metric), name+'_inv', use_souener=False)
     
         losses = {'static_source_prediction': self.loss, 'dynamic_source_prediction': dynamic_source_loss}
         if self.use_R2_losses:
-            losses={'static_source_prediction': lambda yt, yp: -R2(yt, yp), 'dynamic_source_prediction': lambda yt, yp: -R2_split(yt, yp)}
-        metrics = {'static_source_prediction': ['mae', 'mse', 'mape', R2, RPD], # for metric definitions see get_metric_dict()
-                   'dynamic_source_prediction': [R2_split, source_pred_std, source_true_std]}
+            #losses={'static_source_prediction': lambda yt, yp: -R2(yt, yp), 'dynamic_source_prediction': lambda yt, yp: -R2_split(yt, yp)}
+            losses={'static_source_prediction': get_cumm_R2(negative=True), 'dynamic_source_prediction': get_cumm_R2(dynamic_split=True, negative=True)}
+        metrics = {'static_source_prediction': ['mae', 'mse', 'mape', get_cumm_R2(), RPD], # for metric definitions see get_metric_dict()
+                   'dynamic_source_prediction': [get_cumm_R2(dynamic_split=True), source_pred_std, source_true_std]}
        
         if self.loss_weights['inv_prediction']>0.0: # weight==0 implies no inverse!
             losses['static_source_prediction'] = souener_split_loss(losses['static_source_prediction'])
-            new_metrics = list(souener_split_metrics(R2, name='R2'))+list(souener_split_metrics(RPD, name='RPD'))
+            new_metrics = list(souener_split_metrics(get_cumm_R2(), name='R2'))+list(souener_split_metrics(RPD, name='RPD'))
             for metric in metrics['static_source_prediction']:
                 if type(metric) is str: new_metrics += list(souener_split_metrics(metric))
             metrics['static_source_prediction']=new_metrics
