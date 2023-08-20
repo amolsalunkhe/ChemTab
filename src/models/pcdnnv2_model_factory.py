@@ -136,8 +136,8 @@ def get_metric_dict():
     def dynamic_source_loss(y_true, y_pred):
         assert y_true.shape[1] // 2 == y_true.shape[1] / 2
         encoding_dim = y_true.shape[1] // 2
-        abs_diff = tf.math.abs(y_pred[:, :encoding_dim] - y_pred[:, encoding_dim:])
-        return tf.reduce_mean(abs_diff)
+        SSE = (y_pred[:, :encoding_dim] - y_pred[:, encoding_dim:])**2
+        return tf.reduce_mean(SSE)
 
     def R2_split(yt,yp):
         assert yp.shape[1]//2 == yp.shape[1]/2
@@ -325,8 +325,7 @@ class PCDNNV2ModelFactory(DNNModelFactory):
         losses = {'static_source_prediction': self.loss, 'dynamic_source_prediction': dynamic_source_loss}
         if self.use_R2_losses:
             losses={'static_source_prediction': lambda yt, yp: -R2(yt, yp), 'dynamic_source_prediction': lambda yt, yp: -R2_split(yt, yp)}
-        losses['static_source_prediction'] = souener_split_loss(losses['static_source_prediction'])
-        metrics = {'static_source_prediction': ['mae', 'mse', 'mape'], # for metric definitions see get_metric_dict()
+        metrics = {'static_source_prediction': ['mae', 'mse', 'mape', R2, RPD], # for metric definitions see get_metric_dict()
                    'dynamic_source_prediction': [R2_split, source_pred_std, source_true_std]}
        
         if self.loss_weights['inv_prediction']>0.0: # weight==0 implies no inverse!
@@ -338,7 +337,7 @@ class PCDNNV2ModelFactory(DNNModelFactory):
             print('new metrics:')
             print(new_metrics)
 
-        model.compile(loss=losses, optimizer=opt, metrics=metrics)
+        model.compile(loss=losses, optimizer=opt, metrics=metrics, loss_weights=self.loss_weights)
 
         self.model = model
         return model
