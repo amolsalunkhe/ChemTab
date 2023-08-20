@@ -231,7 +231,8 @@ class PCDNNV2ModelFactory(DNNModelFactory):
         self.loss = 'mean_absolute_error'
         self.W_load_fn = None
 
-        self.loss_weights = {'souener_prediction': 1.0, 'static_source_prediction': 1.0, 'dynamic_source_prediction': 1.0}
+        self.loss_weights = {'inv_prediction': 1.0, 'static_source_prediction': 1.0, 'dynamic_source_prediction': 1.0}
+        #self.loss_weights = {'souener_prediction': 1.0, 'static_source_prediction': 1.0, 'dynamic_source_prediction': 1.0}
         #self.use_R2_losses = False
         self.use_dynamic_pred = True
         self.batch_norm_dynamic_pred = False
@@ -305,8 +306,9 @@ class PCDNNV2ModelFactory(DNNModelFactory):
         # creates combined loss function which emphasizes souener loss using self.loss_weights['souener_prediction'] & average
         def souener_split_loss(loss):
             if type(loss) is str: loss=vars(keras.losses)[loss]
-            souener_loss_weight = self.loss_weights['souener_prediction']
-            return lambda yt, yp: (souener_loss_weight*loss(yt[:,0],yp[:,0])+loss(yt[:, 1:], yp[:, 1:]))/(1+souener_loss_weight)
+            inv_loss_weight = self.loss_weights['inv_prediction']
+            assert inv_loss_weight > 0.0 # otherwise we get NaNs, since it implies no inverse
+            return lambda yt, yp: (loss(yt[:,0],yp[:,0])+inv_loss_weight*loss(yt[:, 1:], yp[:, 1:]))/(1+inv_loss_weight)
         
         def souener_split_metrics(metric, name: str = None):
             if name is None:
@@ -327,12 +329,14 @@ class PCDNNV2ModelFactory(DNNModelFactory):
         metrics = {'static_source_prediction': ['mae', 'mse', 'mape'], # for metric definitions see get_metric_dict()
                    'dynamic_source_prediction': [R2_split, source_pred_std, source_true_std]}
        
-        new_metrics = list(souener_split_metrics(R2, name='R2'))+list(souener_split_metrics(RPD, name='RPD'))
-        for metric in metrics['static_source_prediction']:
-            new_metrics += list(souener_split_metrics(metric))
-        metrics['static_source_prediction']=new_metrics
-        print('new metrics:')
-        print(new_metrics)
+        if self.loss_weights['inv_prediction']>0.0: # weight==0 implies no inverse!
+            losses['static_source_prediction'] = souener_split_loss(losses['static_source_prediction'])
+            new_metrics = list(souener_split_metrics(R2, name='R2'))+list(souener_split_metrics(RPD, name='RPD'))
+            for metric in metrics['static_source_prediction']:
+                if type(metric) is str: new_metrics += list(souener_split_metrics(metric))
+            metrics['static_source_prediction']=new_metrics
+            print('new metrics:')
+            print(new_metrics)
 
         model.compile(loss=losses, optimizer=opt, metrics=metrics)
 
