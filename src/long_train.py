@@ -13,12 +13,12 @@ batch_size_exp=6
 
 # you override these values based with the config values you pass (via dict.update())
 cfg = {'zmix': 'Y', 'ipscaler': None, 'opscaler': 'StandardScaler', 'noOfCpv': 25,
-       'activation': 'selu', 'width': 10000, 'dropout_rate': 0.05, 'loss': 'mse', 
+       'activation': 'selu', 'width': 100, 'dropout_rate': 0.05, 'loss': 'mse', 
        'regressor_batch_norm': False, 'regressor_skip_connections': False, 'batch_norm_dynamic': False, #True,
        'kernel_constraint': 'N', 'kernel_regularizer': 'Y', 'activity_regularizer': 'N', 'batch_size': 2**batch_size_exp,
        'loss_weights': {'inv_prediction': 0.0, 'static_source_prediction': 1.0, 'dynamic_source_prediction': 1.0},
        'W_load_fn': '../datasets/Q_rot.csv.gz', 'use_dependants': False}
-cfg['epochs'] = 10000 # special because it should always be large
+cfg['epochs'] = 1 # special because it should always be large
 # NOTE: interestingly Amol's constraints are actually useful for dynamic prediction!
 # This is because they stabilitize the Weight matrix which is too unstable during regular dynamic prediction
 
