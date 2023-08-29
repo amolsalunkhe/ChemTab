@@ -113,7 +113,10 @@ def get_metric_dict():
     def exp_mae_mag(x, y): return tf.math.log(
         tf.math.reduce_mean(tf.math.abs(tf.math.exp(x) - tf.math.exp(y)))) / tf.math.log(10.0)
 
-    def R2(yt,yp): return tf.reduce_mean(1-tf.reduce_mean((yp-yt)**2, axis=0)/(tf.math.reduce_std(yt,axis=0)**2))
+    def R2(yt,yp, axis=0): return tf.reduce_mean(1-tf.reduce_mean((yp-yt)**2, axis=axis)/(tf.math.reduce_std(yt,axis=axis)**2))
+    def R2_var_weighted(yt, yp): return R2(yt, yp, axis=None)
+    # axis=None means reducing (e.g. variance & MSE) happens across 
+    # all output variable dimensions so R2 is variance weighted.
 
     def exp_R2(yt, yp):  # these are actual names above is for convenience
         return R2(tf.math.exp(yt), tf.math.exp(yp))
@@ -139,14 +142,17 @@ def get_metric_dict():
         SSE = (y_pred[:, :encoding_dim] - y_pred[:, encoding_dim:])**2
         return tf.reduce_mean(SSE)
 
-    def R2_split(yt,yp):
+    def R2_split(yt,yp, **kwd_args):
         assert yp.shape[1]//2 == yp.shape[1]/2
         encoding_dim = yp.shape[1]//2
         yt=yp[:,:encoding_dim]
         yp=yp[:,encoding_dim:]
         # NOTES: verified that len(yt.shape)==2 and yt.shape[0] is batch_dim (not necessarily None)
         assert len(yp.shape)==2
-        return tf.reduce_mean(1-tf.math.reduce_mean((yp-yt)**2, axis=0)/(tf.math.reduce_std(yt,axis=0)**2))
+        return R2(yt, yp, **kwd_args)
+    def R2_split_var_weighted(yt, yp): # see R2_tot for context on axis
+        return R2_split(yt, yp, axis=None) 
+ 
     return locals()
 
 # fill globals with metric functions
@@ -192,6 +198,9 @@ def dynamic_source_term_pred_wrap(base_regression_model, batch_norm_dynamic_pred
     W_emb_layer = base_regression_model.get_layer('linear_embedding')
     dynamic_source_truth_model = get_dynamic_source_truth_model(W_emb_layer)
     dynamic_source_truth = dynamic_source_truth_model(all_species_source_inputs)
+ 
+    # TODO: consider whether this is reasonable?
+    if batch_norm_dynamic_pred: dynamic_source_truth = layers.BatchNormalization()(dynamic_source_truth) 
     dynamic_source_all = layers.Concatenate(name='dynamic_source_prediction')(
         [dynamic_source_pred, dynamic_source_truth])
     # dynamic_source_all: contains predicted and true values for computing loss
@@ -325,8 +334,8 @@ class PCDNNV2ModelFactory(DNNModelFactory):
         losses = {'static_source_prediction': self.loss, 'dynamic_source_prediction': dynamic_source_loss}
         if self.use_R2_losses:
             losses={'static_source_prediction': lambda yt, yp: -R2(yt, yp), 'dynamic_source_prediction': lambda yt, yp: -R2_split(yt, yp)}
-        metrics = {'static_source_prediction': ['mae', 'mse', 'mape', R2, RPD], # for metric definitions see get_metric_dict()
-                   'dynamic_source_prediction': [R2_split, source_pred_std, source_true_std]}
+        metrics = {'static_source_prediction': ['mae', 'mse', 'mape', R2, R2_var_weighted, RPD], # for metric definitions see get_metric_dict()
+                   'dynamic_source_prediction': [R2_split, R2_split_var_weighted, source_pred_std, source_true_std, dynamic_source_loss]}
        
         if self.loss_weights['inv_prediction']>0.0: # weight==0 implies no inverse!
             losses['static_source_prediction'] = souener_split_loss(losses['static_source_prediction'])
