@@ -250,6 +250,10 @@ class PCDNNV2ModelFactory(DNNModelFactory):
     def use_R2_losses(self):
         return self.loss=='R2'
 
+    @property # setting this manually was redundant...
+    def use_R2_var_weighted_losses(self):
+        return self.loss=='R2_var_weighted'
+
     def get_layer_constraints(self, noOfCpv, kernel_constraint='Y', kernel_regularizer='Y', activity_regularizer='Y'):
         layer_constraints = {}
         #assert kernel_constraint=='Y'
@@ -334,6 +338,8 @@ class PCDNNV2ModelFactory(DNNModelFactory):
         losses = {'static_source_prediction': self.loss, 'dynamic_source_prediction': dynamic_source_loss}
         if self.use_R2_losses:
             losses={'static_source_prediction': lambda yt, yp: -R2(yt, yp), 'dynamic_source_prediction': lambda yt, yp: -R2_split(yt, yp)}
+        elif self.use_R2_var_weighted_losses:
+            losses={'static_source_prediction': lambda yt, yp: -R2_var_weighted(yt, yp), 'dynamic_source_prediction': lambda yt, yp: -R2_split_var_weighted(yt, yp)}
         metrics = {'static_source_prediction': ['mae', 'mse', 'mape', R2, R2_var_weighted, RPD], # for metric definitions see get_metric_dict()
                    'dynamic_source_prediction': [R2_split, R2_split_var_weighted, source_pred_std, source_true_std, dynamic_source_loss]}
        
