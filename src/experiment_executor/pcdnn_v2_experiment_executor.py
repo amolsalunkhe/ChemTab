@@ -171,11 +171,13 @@ class PCDNNV2ExperimentExecutor:
         essential_metrics = ['val_static_source_prediction_R2_inv', 'val_static_source_prediction_R2_souener', 'val_dynamic_source_prediction_R2_split']
         for metric in essential_metrics:
             cum_val_R2 = 0
-            for val_R2 in history[metric]:
-                cum_val_R2=cum_val_R2*(1-beta) + val_R2*beta
-            val_R2s.append(cum_val_R2)
-        final_score = min(val_R2s) if self.use_dynamic_pred else val_R2s[0]  
-        # else just ignore split & use static
+            try:
+                for val_R2 in history[metric]:
+                    cum_val_R2=cum_val_R2*(1-beta) + val_R2*beta
+                val_R2s.append(cum_val_R2)
+            except KeyError as e:
+                warnings.warn(f'essential metric is missing: {metric}!')
+        final_score = min(val_R2s) # pessimistic measure 
         return final_score
 
     #def save_current_model_as_best(path=None):

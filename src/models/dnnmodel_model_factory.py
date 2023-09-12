@@ -155,7 +155,7 @@ class DNNModelFactory:
     def openBestModel(self):
         #print("current directory" + os.getcwd())
         filePath = "./models/best_models/"+self.modelName+"/model"
-        self.model = tf.keras.models.load_model(filePath, custom_objects=self.concreteClassCustomObject)
+        self.model = tf.keras.models.load_model(filePath, compile=False, custom_objects=self.concreteClassCustomObject)
         
         # open a file, where you stored the pickled data
         file = open("./models/best_models/"+self.modelName+"/experimentRecord", "rb")

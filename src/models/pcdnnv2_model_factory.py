@@ -113,7 +113,10 @@ def get_metric_dict():
     def exp_mae_mag(x, y): return tf.math.log(
         tf.math.reduce_mean(tf.math.abs(tf.math.exp(x) - tf.math.exp(y)))) / tf.math.log(10.0)
 
-    def R2(yt,yp): return tf.reduce_mean(1-tf.reduce_mean((yp-yt)**2, axis=0)/(tf.math.reduce_std(yt,axis=0)**2))
+    def R2(yt,yp, axis=0): return tf.reduce_mean(1-tf.reduce_mean((yp-yt)**2, axis=axis)/(tf.math.reduce_std(yt,axis=axis)**2))
+    def R2_var_weighted(yt, yp): return R2(yt, yp, axis=None)
+    # axis=None means reducing (e.g. variance & MSE) happens across 
+    # all output variable dimensions so R2 is variance weighted.
 
     def exp_R2(yt, yp):  # these are actual names above is for convenience
         return R2(tf.math.exp(yt), tf.math.exp(yp))
@@ -136,17 +139,20 @@ def get_metric_dict():
     def dynamic_source_loss(y_true, y_pred):
         assert y_true.shape[1] // 2 == y_true.shape[1] / 2
         encoding_dim = y_true.shape[1] // 2
-        abs_diff = tf.math.abs(y_pred[:, :encoding_dim] - y_pred[:, encoding_dim:])
-        return tf.reduce_mean(abs_diff)
+        SSE = (y_pred[:, :encoding_dim] - y_pred[:, encoding_dim:])**2
+        return tf.reduce_mean(SSE)
 
-    def R2_split(yt,yp):
+    def R2_split(yt,yp, **kwd_args):
         assert yp.shape[1]//2 == yp.shape[1]/2
         encoding_dim = yp.shape[1]//2
         yt=yp[:,:encoding_dim]
         yp=yp[:,encoding_dim:]
         # NOTES: verified that len(yt.shape)==2 and yt.shape[0] is batch_dim (not necessarily None)
         assert len(yp.shape)==2
-        return tf.reduce_mean(1-tf.math.reduce_mean((yp-yt)**2, axis=0)/(tf.math.reduce_std(yt,axis=0)**2))
+        return R2(yt, yp, **kwd_args)
+    def R2_split_var_weighted(yt, yp): # see R2_tot for context on axis
+        return R2_split(yt, yp, axis=None) 
+ 
     return locals()
 
 # fill globals with metric functions
@@ -192,6 +198,9 @@ def dynamic_source_term_pred_wrap(base_regression_model, batch_norm_dynamic_pred
     W_emb_layer = base_regression_model.get_layer('linear_embedding')
     dynamic_source_truth_model = get_dynamic_source_truth_model(W_emb_layer)
     dynamic_source_truth = dynamic_source_truth_model(all_species_source_inputs)
+ 
+    # TODO: consider whether this is reasonable?
+    if batch_norm_dynamic_pred: dynamic_source_truth = layers.BatchNormalization()(dynamic_source_truth) 
     dynamic_source_all = layers.Concatenate(name='dynamic_source_prediction')(
         [dynamic_source_pred, dynamic_source_truth])
     # dynamic_source_all: contains predicted and true values for computing loss
@@ -231,7 +240,8 @@ class PCDNNV2ModelFactory(DNNModelFactory):
         self.loss = 'mean_absolute_error'
         self.W_load_fn = None
 
-        self.loss_weights = {'souener_prediction': 1.0, 'static_source_prediction': 1.0, 'dynamic_source_prediction': 1.0}
+        self.loss_weights = {'inv_prediction': 1.0, 'static_source_prediction': 1.0, 'dynamic_source_prediction': 1.0}
+        #self.loss_weights = {'souener_prediction': 1.0, 'static_source_prediction': 1.0, 'dynamic_source_prediction': 1.0}
         #self.use_R2_losses = False
         self.use_dynamic_pred = True
         self.batch_norm_dynamic_pred = False
@@ -239,6 +249,10 @@ class PCDNNV2ModelFactory(DNNModelFactory):
     @property # setting this manually was redundant...
     def use_R2_losses(self):
         return self.loss=='R2'
+
+    @property # setting this manually was redundant...
+    def use_R2_var_weighted_losses(self):
+        return self.loss=='R2_var_weighted'
 
     def get_layer_constraints(self, noOfCpv, kernel_constraint='Y', kernel_regularizer='Y', activity_regularizer='Y'):
         layer_constraints = {}
@@ -305,8 +319,9 @@ class PCDNNV2ModelFactory(DNNModelFactory):
         # creates combined loss function which emphasizes souener loss using self.loss_weights['souener_prediction'] & average
         def souener_split_loss(loss):
             if type(loss) is str: loss=vars(keras.losses)[loss]
-            souener_loss_weight = self.loss_weights['souener_prediction']
-            return lambda yt, yp: (souener_loss_weight*loss(yt[:,0],yp[:,0])+loss(yt[:, 1:], yp[:, 1:]))/(1+souener_loss_weight)
+            inv_loss_weight = self.loss_weights['inv_prediction']
+            assert inv_loss_weight > 0.0 # otherwise we get NaNs, since it implies no inverse
+            return lambda yt, yp: (loss(yt[:,0],yp[:,0])+inv_loss_weight*loss(yt[:, 1:], yp[:, 1:]))/(1+inv_loss_weight)
         
         def souener_split_metrics(metric, name: str = None):
             if name is None:
@@ -323,18 +338,21 @@ class PCDNNV2ModelFactory(DNNModelFactory):
         losses = {'static_source_prediction': self.loss, 'dynamic_source_prediction': dynamic_source_loss}
         if self.use_R2_losses:
             losses={'static_source_prediction': lambda yt, yp: -R2(yt, yp), 'dynamic_source_prediction': lambda yt, yp: -R2_split(yt, yp)}
-        losses['static_source_prediction'] = souener_split_loss(losses['static_source_prediction'])
-        metrics = {'static_source_prediction': ['mae', 'mse', 'mape'], # for metric definitions see get_metric_dict()
-                   'dynamic_source_prediction': [R2_split, source_pred_std, source_true_std]}
+        elif self.use_R2_var_weighted_losses:
+            losses={'static_source_prediction': lambda yt, yp: -R2_var_weighted(yt, yp), 'dynamic_source_prediction': lambda yt, yp: -R2_split_var_weighted(yt, yp)}
+        metrics = {'static_source_prediction': ['mae', 'mse', 'mape', R2, R2_var_weighted, RPD], # for metric definitions see get_metric_dict()
+                   'dynamic_source_prediction': [R2_split, R2_split_var_weighted, source_pred_std, source_true_std, dynamic_source_loss]}
        
-        new_metrics = list(souener_split_metrics(R2, name='R2'))+list(souener_split_metrics(RPD, name='RPD'))
-        for metric in metrics['static_source_prediction']:
-            new_metrics += list(souener_split_metrics(metric))
-        metrics['static_source_prediction']=new_metrics
-        print('new metrics:')
-        print(new_metrics)
+        if self.loss_weights['inv_prediction']>0.0: # weight==0 implies no inverse!
+            losses['static_source_prediction'] = souener_split_loss(losses['static_source_prediction'])
+            new_metrics = list(souener_split_metrics(R2, name='R2'))+list(souener_split_metrics(RPD, name='RPD'))
+            for metric in metrics['static_source_prediction']:
+                if type(metric) is str: new_metrics += list(souener_split_metrics(metric))
+            metrics['static_source_prediction']=new_metrics
+            print('new metrics:')
+            print(new_metrics)
 
-        model.compile(loss=losses, optimizer=opt, metrics=metrics)
+        model.compile(loss=losses, optimizer=opt, metrics=metrics, loss_weights=self.loss_weights)
 
         self.model = model
         return model
