@@ -13,6 +13,7 @@ import warnings
 
 from .error_manager import ErrorManager
 from tensorflow import keras
+from tensorflow.keras.callbacks import TerminateOnNaN
 
 
 # returns a wrapped model factory that supports rebuilding using previous config
@@ -219,7 +220,10 @@ class PCDNNV2ExperimentExecutor:
         model_R2_scores = []
 
         from tensorflow import keras
-        my_callbacks = [keras.callbacks.EarlyStopping(monitor='val_loss', patience=epochs//5, restore_best_weights=True)] # [tf.keras.callbacks.TensorBoard(log_dir='./tb_logs', histogram_freq=1)]
+        from tensorflow.keras.callbacks import TerminateOnNaN
+
+        my_callbacks = [TerminateOnNaN(), keras.callbacks.EarlyStopping(monitor='val_loss', patience=epochs//5, restore_best_weights=True)] 
+        #my_callbacks.append(tf.keras.callbacks.TensorBoard(log_dir='./tb_logs', histogram_freq=1))
 
         for itr in range(1, n):
             if rebuild: self.model = self.modelFactory.rebuild_model()
