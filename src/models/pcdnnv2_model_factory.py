@@ -10,10 +10,6 @@ import pandas as pd
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
-from tensorflow.keras.callbacks import EarlyStopping
-
-# patient early stopping
-es = EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=45)
 
 from tensorflow.keras.constraints import UnitNorm, Constraint, NonNeg
 from .dnnmodel_model_factory import DNNModelFactory
