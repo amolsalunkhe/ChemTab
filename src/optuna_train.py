@@ -97,20 +97,20 @@ def main(cfg={}):
     return final_score - noOfCpv*0.001 # small penalty for using more CPVs...
 
 # you override these values based with the config values you pass (via dict.update())
-main.default_cfg = {'opscaler': 'StandardScaler', 'noOfCpv': 10, 'loss': 'R2',
+main.default_cfg = {'ipscaler': None, 'opscaler': 'StandardScaler', 'noOfCpv': 10, 'loss': 'R2',
                     'activation': 'selu', 'width': 2048, 'dropout_rate': 0.0,
                     'batch_size': 500, 'activity_regularizer': 'N', 'kernel_regularizer': 'N', 'kernel_constraint': 'N', 
-                    'loss_weights': {'souener_prediction': 1.0, 'static_source_prediction': 1.0, 'dynamic_source_prediction': 1.0},
+                    'loss_weights': {'inv_prediction': 1.0, 'static_source_prediction': 1.0, 'dynamic_source_prediction': 1.0},
                     'regressor_batch_norm': False, 'regressor_skip_connections': False, 'W_load_fn': None}
 
 # add optimizer hyper-parameters:
-default_opt_hparams = {'starter_learning_rate': 0.000001, 'decay_steps': 100000, 'decay_rate': 0.96, 'clip_grad_norm': 2.5}
+default_opt_hparams = {'starter_learning_rate': 0.0001, 'decay_steps': 100000, 'decay_rate': 0.96, 'clip_grad_norm': 2.5}
 main.default_cfg.update(default_opt_hparams)
 
 constants = {'epochs': 10 if debug_mode else 500, 'train_portion': 0.7, 'n_models_override': 1, 'zmix': 'Y',
              'use_dynamic_pred': True, 'use_dependants': True, 'use_tensorboard': False, 'data_fn': os.environ.setdefault('DATASET', ''),
-             #'kernel_constraint': 'Y', 'kernel_regularizer': 'Y', 'zmix': 'Y', 
-             'ipscaler': None, 'W_batch_norm': False, 'batch_norm_dynamic': False} # this line is all garbage configs
+             #'kernel_constraint': 'Y', 'kernel_regularizer': 'Y',  
+             'W_batch_norm': False, 'batch_norm_dynamic': False} #, 'ipscaler': None} # this line is all garbage configs
 main.default_cfg.update(constants)
 # add variables generally held as constant
 
@@ -135,7 +135,8 @@ def main_safe(trial=None):
     if trial:
         scalers_types = [None, 'MinMaxScaler', 'MaxAbsScaler', 'StandardScaler', 'RobustScaler']#,'QuantileTransformer']
 
-        cfg = {'opscaler': trial.suggest_categorical('output_scaler', scalers_types), 'noOfCpv': trial.suggest_int('noOfCpv', *[6, 20]),
+        cfg = {'ipscaler': trial.suggest_categorical('input_scaler', scalers_types),
+               'opscaler': trial.suggest_categorical('output_scaler', scalers_types), 'noOfCpv': trial.suggest_int('noOfCpv', *[6, 20]),
                'loss': trial.suggest_categorical('loss', ['mae', 'mse', 'R2', 'mape']), 'activation': trial.suggest_categorical('activation', ['tanh', 'selu', 'relu']),
                'width': trial.suggest_int('width', *[1024, 4096]), 'dropout_rate': trial.suggest_float('dropout_rate', *[0, 0.4]),
                'regressor_batch_norm': trial.suggest_categorical('regressor_batch_norm', [True, False]),
@@ -143,9 +144,10 @@ def main_safe(trial=None):
                'activity_regularizer': trial.suggest_categorical('activity_regularizer', ['Y', 'N']), 'batch_size': trial.suggest_int('batch_size', *[128, 1028]),
                'kernel_regularizer': trial.suggest_categorical('kernel_regularizer', ['Y', 'N']), 'kernel_constraint': trial.suggest_categorical('kernel_constraint', ['Y', 'N']),
                'loss_weights': {'static_source_prediction': trial.suggest_float('static_loss_weight', *[0.1, 10.0]),
-                                'souener_prediction': trial.suggest_float('souener_loss_weight', *[0.1, 10.0]),
+                                'inv_prediction': trial.suggest_float('inv_loss_weight', *[0.1, 10.0]),
                                 'dynamic_source_prediction': trial.suggest_float('dynamic_loss_weight', *[0.1, 10.0])}} 
-       
+
+ 
         # add optimizer hyper-parameters:
         #manual_opt_bounds = {'starter_learning_rate': trial.suggest_float('starter_learning_rate': [0, 0.1]), 'decay_steps': trial.suggest_int('decay_steps': [10000, 100000]),
         #'decay_rate': trial.suggest_float('decay_rate': [0, 0.1]), 'clip_grad_norm': trial.suggest_float('clip_grad_norm': [1.0,5.0)}
